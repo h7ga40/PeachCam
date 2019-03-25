@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>HoikuCam</name>
+	<comment></comment>
+	<projects>
+		<project>FLIR_Lepton</project>
+		<project>HoikuCamApp</project>
+		<project>asp3_dcre</project>
+		<project>curl-7.57.0</project>
+		<project>expat-2.2.5</project>
+		<project>libcxx</project>
+		<project>libcxxabi</project>
+		<project>mbed-gr-libs</project>
+		<project>mbed-os</project>
+		<project>musl-1.1.18</project>
+		<project>opencv-lib</project>
+		<project>utilities</project>
+		<project>wolfssl-3.15.7</project>
+		<project>zlib-1.2.11</project>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.eclipse.cdt.managedbuilder.core.genmakebuilder</name>
+			<triggers>clean,full,incremental,</triggers>
+			<arguments>
+			</arguments>
+		</buildCommand>
+		<buildCommand>
+			<name>org.eclipse.cdt.managedbuilder.core.ScannerConfigBuilder</name>
+			<triggers>full,incremental,</triggers>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>org.eclipse.cdt.core.cnature</nature>
+		<nature>org.eclipse.cdt.core.ccnature</nature>
+		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
+		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
+	</natures>
+</projectDescription>

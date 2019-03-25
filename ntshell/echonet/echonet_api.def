@@ -1,0 +1,2 @@
+ECN_CRE_EOBJ #eobjid* { .eobjatr &enodid &exinf .eojx1 .eojx2 .eojx3 }
+ECN_DEF_EPRP &eobjid { .eprpcd .eprpatr .eprpsz &exinf &eprpset &eprpget }

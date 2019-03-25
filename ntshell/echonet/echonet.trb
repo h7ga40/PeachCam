@@ -1,0 +1,651 @@
+# =====================================================================
+# 
+#  TOPPERS ECHONET Lite Communication Middleware
+# 
+#  Copyright (C) 2014-2017 Cores Co., Ltd. Japan
+# 
+#  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
+#  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
+#  変・再配布（以下，利用と呼ぶ）することを無償で許諾する．
+#  (1) 本ソフトウェアをソースコードの形で利用する場合には，上記の著作
+#      権表示，この利用条件および下記の無保証規定が，そのままの形でソー
+#      スコード中に含まれていること．
+#  (2) 本ソフトウェアを，ライブラリ形式など，他のソフトウェア開発に使
+#      用できる形で再配布する場合には，再配布に伴うドキュメント（利用
+#      者マニュアルなど）に，上記の著作権表示，この利用条件および下記
+#      の無保証規定を掲載すること．
+#  (3) 本ソフトウェアを，機器に組み込むなど，他のソフトウェア開発に使
+#      用できない形で再配布する場合には，次のいずれかの条件を満たすこ
+#      と．
+#    (a) 再配布に伴うドキュメント（利用者マニュアルなど）に，上記の著
+#        作権表示，この利用条件および下記の無保証規定を掲載すること．
+#    (b) 再配布の形態を，別に定める方法によって，TOPPERSプロジェクトに
+#        報告すること．
+#  (4) 本ソフトウェアの利用により直接的または間接的に生じるいかなる損
+#      害からも，上記著作権者およびTOPPERSプロジェクトを免責すること．
+#      また，本ソフトウェアのユーザまたはエンドユーザからのいかなる理
+#      由に基づく請求からも，上記著作権者およびTOPPERSプロジェクトを
+#      免責すること．
+# 
+#  本ソフトウェアは，無保証で提供されているものである．上記著作権者お
+#  よびTOPPERSプロジェクトは，本ソフトウェアに関して，特定の使用目的
+#  に対する適合性も含めて，いかなる保証も行わない．また，本ソフトウェ
+#  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
+#  の責任を負わない．
+# 
+#  @(#) $Id$
+# 
+# =====================================================================
+
+# =====================================================================
+# echonet_cfg.hの生成
+# =====================================================================
+
+$echonetCfgH = GenFile.new("echonet_cfg.h")
+$echonetCfgH.add(<<EOS)
+/* echonet_cfg.h */
+#ifndef TOPPERS_ECHONET_CFG_H
+#define TOPPERS_ECHONET_CFG_H
+
+#include "echonet_app_config.h"
+EOS
+
+# ノードリストの作成
+$ENOD_LIST = []
+$LOCAL_NODE = []
+$REMOTE_NODE = []
+
+$cfgData[:ECN_CRE_EOBJ].sort.each do |key, params|
+	# ノードプロファイルオブジェクトの場合
+	if (params[:eobjatr] & $EOBJ_LOCAL_NODE) != 0
+		$LOCAL_NODE << key
+	# 機器オブジェクトの場合
+	elsif (params[:eobjatr] & ($EOBJ_SYNC_REMOTE_NODE | $EOBJ_ASYNC_REMOTE_NODE)) != 0
+		$REMOTE_NODE << key
+	end
+end
+
+# ローカルのノードプロファイルは１つだけ
+if $LOCAL_NODE.length != 1
+	error_exit("Local node must be only one.")
+end
+
+$ENOD_LIST.concat($LOCAL_NODE)
+$ENOD_LIST.concat($REMOTE_NODE)
+
+$echonetCfgH.add2("#define TNUM_ENODID	#{$ENOD_LIST.length}")
+
+$echonetCfgH.add2("#define TNUM_EOBJID	#{$cfgData[:ECN_CRE_EOBJ].length}")
+$cfgData[:ECN_CRE_EOBJ].each do |key, params|
+	$echonetCfgH.add("#define #{params[:eobjid]}	#{key}")
+end
+$echonetCfgH.add
+
+$cfgData[:ECN_CRE_EOBJ].each do |key, params|
+	eprp_list = []
+	prp_map_cnt = 3
+	# ノードプロファイルの場合
+	if (params[:eobjatr] & ($EOBJ_LOCAL_NODE | $EOBJ_SYNC_REMOTE_NODE | $EOBJ_ASYNC_REMOTE_NODE)) != 0
+		prp_map_cnt = prp_map_cnt + 5
+	end
+
+	$cfgData[:ECN_DEF_EPRP].each do |key2, params2|
+		if params2[:eobjid] == params[:eobjid].str
+			eprp_list << params2[:eprpcd].val
+		end
+
+		if (params2[:eprpcd] == 0x9D) || (params2[:eprpcd] == 0x9E) || (params2[:eprpcd] == 0x9F)
+			prp_map_cnt = prp_map_cnt - 1
+		end
+
+		# ノードプロファイルの場合
+		if (params[:eobjatr] & ($EOBJ_LOCAL_NODE | $EOBJ_SYNC_REMOTE_NODE | $EOBJ_ASYNC_REMOTE_NODE)) != 0
+			if (params2[:eprpcd] >= 0xD3) && (params2[:eprpcd] <= 0xD7)
+				prp_map_cnt = prp_map_cnt - 1
+			end
+		end
+	end
+
+	$echonetCfgH.add("#define TNUM_#{params[:eobjid]}_EPRPNO	#{eprp_list.length + prp_map_cnt}")
+end
+$echonetCfgH.add
+
+$ENOD_LIST.each do |enodid|
+	eobj_count = 0
+	eobjid = $cfgData[:ECN_CRE_EOBJ][enodid][:eobjid].str
+
+	$cfgData[:ECN_CRE_EOBJ].each do |key2, params2|
+		if params2[:enodid] == eobjid
+			eobj_count = eobj_count + 1
+		end
+	end
+
+	$echonetCfgH.add("#define TNUM_#{$cfgData[:ECN_CRE_EOBJ][enodid][:eobjid]}_EOBJNO	#{eobj_count}")
+end
+$echonetCfgH.add
+
+$echonetCfgH.add(<<EOS)
+#ifndef TNUM_ENODADR
+#define TNUM_ENODADR 100
+#endif
+
+#endif /* TOPPERS_ECHONET_CFG_H */
+EOS
+
+# =====================================================================
+# echonet_cfg.cの生成
+# =====================================================================
+
+$echonetCfgC = GenFile.new("echonet_cfg.c")
+$echonetCfgC.add(<<EOS)
+/* echonet_cfg.c */
+#include <kernel.h>
+#include <sil.h>
+#include "echonet.h"
+EOS
+
+# 
+#  インクルードディレクティブ（#include）
+# 
+$echonetCfgC.add(<<EOS)
+/*
+ *  Include Directives (#include)
+ */
+EOS
+$includeFiles.each do |file|
+  $echonetCfgC.add("#include #{file}")
+end
+$echonetCfgC.add(<<EOS)
+#include "echonet_cfg.h"
+#include "kernel_cfg.h"
+
+EOS
+
+# 
+#  オブジェクトのID番号を保持する変数
+# 
+if $USE_EXTERNAL_ID
+	$echonetCfgC.add("/*")
+	$echonetCfgC.add(" *  Variables for Object ID")
+	$echonetCfgC.add(" */")
+	$echonetCfgC.add
+	$cfgData[:ECN_CRE_EOBJ].each do |key, params|
+		$echonetCfgC.add("const ID #{params[:eobjid]}_id = #{params[:eobjid].val};")
+	end
+end
+
+# 
+#  ECHONET Liteプロパティ
+# 
+$echonetCfgC.add(<<EOS)
+/*
+ *  ECHONET Lite Property Functions
+ */
+EOS
+
+IncludeTrb("echonet_chk.trb")
+
+# ECHONET Liteプロパティ初期化ブロックの生成
+if $cfgData[:ECN_CRE_EOBJ].length > 0 && $cfgData[:ECN_DEF_EPRP].length > 0
+	$ENOD_LIST.each do |enodid|
+		$INST_LIST = []
+		$CLASS_LIST = []
+		eobjid = $cfgData[:ECN_CRE_EOBJ][enodid][:eobjid].str
+
+		$cfgData[:ECN_CRE_EOBJ].each do |key, params|
+			if params[:enodid] == eobjid
+				$INST_LIST << key
+
+				m = -1
+				$CLASS_LIST.each do |id|
+					if (params[:eojx1] == $cfgData[:ECN_CRE_EOBJ][id][:eojx1]) && (params[:eojx2] == $cfgData[:ECN_CRE_EOBJ][id][:eojx2])
+						m = id
+					end
+				end
+				if m == -1
+					$CLASS_LIST << key
+				end
+			end
+		end
+
+		$echonetCfgC.add("/*")
+		$echonetCfgC.add(" * インスタンス数")
+		$echonetCfgC.add(" */")
+		inst_list_len = $INST_LIST.length
+		$echonetCfgC.add("const uint8_t _echonet_#{$cfgData[:ECN_CRE_EOBJ][enodid][:eobjid]}_inst_count[] = {")
+			$echonetCfgC.add("	#{sprintf("0x%1$x, 0x%2$x, 0x%3$x", (inst_list_len & 0xFF0000) >> 16, (inst_list_len & 0xFF00) >> 8, inst_list_len & 0xFF)}")
+		$echonetCfgC.add2("};")
+
+		$echonetCfgC.add("/*")
+		$echonetCfgC.add(" * クラス数")
+		$echonetCfgC.add(" */")
+		# ノードプロファイルも含める（ + 1）
+		class_list_len = $CLASS_LIST.length + 1
+		$echonetCfgC.add("const uint8_t _echonet_#{$cfgData[:ECN_CRE_EOBJ][enodid][:eobjid]}_class_count[] = {")
+			$echonetCfgC.add("	#{sprintf("0x%1$x, 0x%2$x", (class_list_len & 0xFF00) >> 8, class_list_len & 0xFF)}")
+		$echonetCfgC.add2("};")
+
+		$echonetCfgC.add("/*")
+		$echonetCfgC.add(" * インスタンスリスト")
+		$echonetCfgC.add(" */")
+		pos = 0
+		if inst_list_len > 84
+			error_illegal("E_PAR", $cfgData[:ECN_DEF_EPRP][eprpno], "eprpno", sprintf("instance list count overflow, %1% %2% > 84", enodid, inst_list_len))
+		end
+		$echonetCfgC.add("const uint8_t _echonet_#{$cfgData[:ECN_CRE_EOBJ][enodid][:eobjid]}_inst_list[] = {")
+		if inst_list_len > 0xFE
+			$echonetCfgC.append("	0xFF, ")
+		else
+			$echonetCfgC.append(sprintf("	0x%1$x, ", inst_list_len))
+		end
+		$INST_LIST.each_with_index do |id, index|
+			$echonetCfgC.append(", ") if index > 0
+			$echonetCfgC.append(sprintf("0x%1$x, 0x%2$x, 0x%3$x", $cfgData[:ECN_CRE_EOBJ][id][:eojx1].val, $cfgData[:ECN_CRE_EOBJ][id][:eojx2].val, $cfgData[:ECN_CRE_EOBJ][id][:eojx3].val))
+		end
+		$echonetCfgC.add
+		$echonetCfgC.add2("};")
+
+		$echonetCfgC.add("/*")
+		$echonetCfgC.add(" * クラスリスト")
+		$echonetCfgC.add(" */")
+		pos = 0
+		class_list_len = $CLASS_LIST.length
+		if class_list_len > 84
+			error_illegal("E_PAR", $cfgData[:ECN_DEF_EPRP][eprpno], "eprpno", sprintf("class list count overflow, %1% %2% > 84", enodid, class_list_len))
+		end
+		$echonetCfgC.add("const uint8_t _echonet_#{$cfgData[:ECN_CRE_EOBJ][enodid][:eobjid]}_class_list[] = {")
+		if class_list_len > 0xFE
+			$echonetCfgC.append("	0xFF, ")
+		else
+			$echonetCfgC.append("	#{sprintf("0x%1$x, ", class_list_len)}")
+		end
+		$CLASS_LIST.each_with_index do |id, index|
+			$echonetCfgC.append(", ") if index > 0
+			$echonetCfgC.append(sprintf("0x%1$x, 0x%2$x", $cfgData[:ECN_CRE_EOBJ][id][:eojx1].val, $cfgData[:ECN_CRE_EOBJ][id][:eojx2].val))
+		end
+		$echonetCfgC.add
+		$echonetCfgC.add2("};")
+	end
+
+	$cfgData[:ECN_CRE_EOBJ].each do |key, params|
+		eprp_list = []
+		anno_list = []
+		set_list = []
+		get_list = [ 0x9D, 0x9E, 0x9F ]
+		anno_map = []
+		set_map = []
+		get_map = []
+		for i in 0..15 do
+			anno_map[i] = 0x00
+			set_map[i] = 0x00
+			get_map[i] = 0x00
+		end
+		# 0x9D、0x9E、0x9FはONにしておく
+		for i in 13..15 do
+			anno_map[i] = anno_map[i] | 0x02
+			get_map[i] = get_map[i] | 0x02
+		end
+		# ノードプロファイルの場合
+		if (params[:eobjatr] & ($EOBJ_LOCAL_NODE | $EOBJ_SYNC_REMOTE_NODE | $EOBJ_ASYNC_REMOTE_NODE)) != 0
+			anno_map[5] = anno_map[5] | 0x20
+			anno_list << 0xD5
+			for i in [ 3, 4, 6, 7] do
+				get_map[i] = get_map[i] | 0x20
+			end
+			get_list.concat([ 0xD3, 0xD4, 0xD6, 0xD7 ])
+		end
+
+		$cfgData[:ECN_DEF_EPRP].each do |key2, params2|
+			if params2[:eobjid] == params[:eobjid].str
+				# (0x80 <= eprpcd && eprpcd <= 0xFF)でない場合（E_PAR）
+				if !(0x80 <= params2[:eprpcd] && params2[:eprpcd] <= 0xFF)
+					error_illegal_sym("E_PAR", params2, :eprpcd, :eprpno)
+				end
+
+				# eprpatrが（［EPC_RULE_SET] | [EPC_RULE_GET] | [EPC_RULE_ANNO] | [EPC_ANNOUNCE］| [EPC_VARIABLE]）でない場合（E_RSATR）
+				if (params2[:eprpatr] & ~($EPC_RULE_SET | $EPC_RULE_GET | $EPC_RULE_ANNO | $EPC_ANNOUNCE | $EPC_VARIABLE)) != 0
+					error_illegal_sym("E_RSATR", params2, :eprpatr, :eprpno)
+				end
+
+				# (0 <= eprpsz && eprpsz <= 255)でない場合（E_PAR）
+				if !(0 <= params2[:eprpsz] && params2[:eprpsz] <= 255)
+					error_illegal_sym("E_PAR", params2, :eprpsz, :eprpno)
+				end
+
+				# プロパティマップに設定
+				pos = params2[:eprpcd] & 0xF
+				bit = (params2[:eprpcd] >> 4) - 8
+				if (params2[:eprpatr] & $EPC_ANNOUNCE) != 0
+					anno_list << params2[:eprpcd].val
+					anno_map[pos] |= (1 << bit)
+				end
+				if (params2[:eprpatr] & $EPC_RULE_SET) != 0
+					set_list << params2[:eprpcd].val
+					set_map[pos] |= (1 << bit)
+				end
+				if (params2[:eprpatr] & $EPC_RULE_GET) != 0
+					get_list << params2[:eprpcd].val
+					get_map[pos] |= (1 << bit)
+				end
+
+				eprp_list << key2
+			end
+		end
+
+		# 必須アナウンスプロパティがあるかチェック
+		must_anno_map = getPropertyInfo(params[:eojx1], params[:eojx2], $EPC_ANNOUNCE)
+		i = 0
+		while i < must_anno_map.length do
+			if !anno_list.include?(must_anno_map[i])
+				error_exit(sprintf("Required announce property (0x%1$x) of %2% is not defined.", must_anno_map[i].val, key))
+			end
+			i = i + 1
+		end
+
+		# 必須SETプロパティがあるかチェック
+		must_set_map = getPropertyInfo(params[:eojx1], params[:eojx2], $EPC_RULE_SET)
+		i = 0
+		while i < must_set_map.length
+			if !set_list.include?(must_set_map[i])
+				error_exit(sprintf("Required set property (0x%1$x) of %2% is not defined.", must_set_map[i].val, key))
+			end
+			i = i + 1
+		end
+
+		# 必須GETプロパティがあるかチェック
+		must_get_map = getPropertyInfo(params[:eojx1], params[:eojx2], $EPC_RULE_GET)
+		i = 0
+		while i < must_get_map.length
+			if !get_list.include?(must_get_map[i])
+				error_exit(sprintf("Required get property (0x%0x) of %s is not defined.", must_get_map[i], params[:eobjno]))
+			end
+			i = i + 1
+		end
+
+		$echonetCfgC.add("/*")
+		$echonetCfgC.add(" * アナウンスプロパティマップ")
+		$echonetCfgC.add(" */")
+		anno_list = anno_list.sort
+		anno_len = anno_list.length
+		$echonetCfgC.add("const uint8_t _echonet_#{params[:eobjid]}_anno_prpmap[] = {")
+		$echonetCfgC.append("	#{sprintf("0x%1$x" , +anno_len)}, ")
+		if anno_len < 16
+			anno_list.each_with_index do |eprpcd, index|
+				$echonetCfgC.append(", ") if index > 0
+				$echonetCfgC.append(sprintf("0x%1$x" , eprpcd))
+			end
+			$echonetCfgC.add
+			anno_len = anno_len + 1
+		else
+			anno_map.each_with_index do |i, index|
+				$echonetCfgC.append(", ") if index > 0
+				$echonetCfgC.append(sprintf("0x%1$x" , anno_map[i].val))
+			end
+			$echonetCfgC.add
+			anno_len = 17
+		end
+		$echonetCfgC.add2("};")
+
+		$echonetCfgC.add("/*")
+		$echonetCfgC.add(" * SETプロパティマップ")
+		$echonetCfgC.add(" */")
+		set_list = set_list.sort
+		set_len = set_list.length
+		$echonetCfgC.add("const uint8_t _echonet_#{params[:eobjid]}_set_prpmap[] = {")
+		$echonetCfgC.append("	#{sprintf("0x%1$x", set_len)}, ")
+		if set_len < 16
+			set_list.each_with_index do |eprpcd, index|
+				$echonetCfgC.append(", ") if index > 0
+				$echonetCfgC.append(sprintf("0x%1$x", eprpcd))
+			end
+			$echonetCfgC.add
+			set_len = set_len + 1
+		else
+			set_map.each do |i|
+				$echonetCfgC.append(", ") if index > 0
+				$echonetCfgC.append(sprintf("0x%1$x", set_map[i].val))
+			end
+			$echonetCfgC.add
+			set_len = 17
+		end
+		$echonetCfgC.add2("};")
+
+		$echonetCfgC.add("/*")
+		$echonetCfgC.add(" * GETプロパティマップ")
+		$echonetCfgC.add(" */")
+		get_list = get_list.sort
+		get_len = get_list.length
+		$echonetCfgC.add("const uint8_t _echonet_#{params[:eobjid]}_get_prpmap[] = {")
+		$echonetCfgC.append("	#{sprintf("0x%1$x", get_len)}, ")
+		if get_len < 16
+			get_list.each_with_index do |eprpcd, index|
+				$echonetCfgC.append(", ") if index > 0
+				$echonetCfgC.append(sprintf("0x%1$x", eprpcd))
+			end
+			$echonetCfgC.add
+			get_len = get_len + 1
+		else
+			for i in [ 0..15 ] do
+				$echonetCfgC.append(", ") if index > 0
+				$echonetCfgC.append(sprintf("0x%1$x", get_map[i].val))
+			end
+			$echonetCfgC.add
+			get_len = 17
+		end
+		$echonetCfgC.add2("};")
+
+		$echonetCfgC.add("/*")
+		$echonetCfgC.add(" * プロパティ定義")
+		$echonetCfgC.add(" */")
+		$echonetCfgC.add("const EPRPINIB _echonet_#{params[:eobjid]}_eprpinib_table[TNUM_#{params[:eobjid]}_EPRPNO] = {")
+		eprp_list.each do |eprpno|
+			# ECHONET Liteプロパティ初期化ブロック
+			$echonetCfgC.add("	{ (#{$cfgData[:ECN_DEF_EPRP][eprpno][:eprpcd]}), (#{$cfgData[:ECN_DEF_EPRP][eprpno][:eprpatr]}), (#{$cfgData[:ECN_DEF_EPRP][eprpno][:eprpsz]}), (#{$cfgData[:ECN_DEF_EPRP][eprpno][:exinf]}), (#{$cfgData[:ECN_DEF_EPRP][eprpno][:eprpset]}), (#{$cfgData[:ECN_DEF_EPRP][eprpno][:eprpget]}) },")
+		end
+		# 状態アナウンスプロパティマップ
+		$echonetCfgC.add("	{ (0x9D), (EPC_RULE_GET), #{sprintf("0x%1$x", anno_len)}, (intptr_t)_echonet_#{params[:eobjid]}_anno_prpmap, ((EPRP_SETTER *)NULL), ((EPRP_GETTER *)ecn_data_prop_get) },")
+		# Setプロパティマップ
+		$echonetCfgC.add("	{ (0x9E), (EPC_RULE_GET), #{sprintf("0x%1$x", set_len)}, (intptr_t)_echonet_#{params[:eobjid]}_set_prpmap, ((EPRP_SETTER *)NULL), ((EPRP_GETTER *)ecn_data_prop_get) },")
+		# Getプロパティマップ
+		$echonetCfgC.append("	{ (0x9F), (EPC_RULE_GET), #{sprintf("0x%1$x", get_len)}, (intptr_t)_echonet_#{params[:eobjid]}_get_prpmap, ((EPRP_SETTER *)NULL), ((EPRP_GETTER *)ecn_data_prop_get) }")
+		# ノードプロファイルの場合
+		if (params[:eobjatr] & ($EOBJ_LOCAL_NODE | $EOBJ_SYNC_REMOTE_NODE | $EOBJ_ASYNC_REMOTE_NODE)) != 0
+			$echonetCfgC.add(",")
+			# インスタンス数
+			$echonetCfgC.add("	{ (0xD3), (EPC_RULE_GET), (3), (intptr_t)_echonet_#{params[:eobjid]}_inst_count, ((EPRP_SETTER *)NULL), ((EPRP_GETTER *)ecn_data_prop_get) },")
+			# クラス数
+			$echonetCfgC.add("	{ (0xD4), (EPC_RULE_GET), (2), (intptr_t)_echonet_#{params[:eobjid]}_class_count, ((EPRP_SETTER *)NULL), ((EPRP_GETTER *)ecn_data_prop_get) },")
+			# インスタンスリスト通知
+			$echonetCfgC.add("	{ (0xD5), (EPC_RULE_ANNO), sizeof(_echonet_#{params[:eobjid]}_inst_list), (intptr_t)_echonet_#{params[:eobjid]}_inst_list, ((EPRP_SETTER *)NULL), ((EPRP_GETTER *)ecn_data_prop_get) },")
+			# インスタンスリストS
+			$echonetCfgC.add("	{ (0xD6), (EPC_RULE_GET), sizeof(_echonet_#{params[:eobjid]}_inst_list), (intptr_t)_echonet_#{params[:eobjid]}_inst_list, ((EPRP_SETTER *)NULL), ((EPRP_GETTER *)ecn_data_prop_get) },")
+			# クラスリストS
+			$echonetCfgC.add("	{ (0xD7), (EPC_RULE_GET), sizeof(_echonet_#{params[:eobjid]}_class_list), (intptr_t)_echonet_#{params[:eobjid]}_class_list, ((EPRP_SETTER *)NULL), ((EPRP_GETTER *)ecn_data_prop_get) }")
+		else
+			$echonetCfgC.add
+		end
+		$echonetCfgC.add2("};")
+	end
+	$echonetCfgC.add
+else
+	$echonetCfgC.add("TOPPERS_EMPTY_LABEL(const EPRPINIB, _echonet_eprpinib_table);")
+end
+
+# 
+#  ECHONET Liteオブジェクト
+# 
+$echonetCfgC.add("/*")
+$echonetCfgC.add(" *  ECHONET Lite Object Functions")
+$echonetCfgC.add(" */")
+$echonetCfgC.add
+
+# ECHONET LiteオブジェクトID番号の最大値
+$echonetCfgC.add("const ID _echonet_tmax_eobjid = (TMIN_EOBJID + TNUM_EOBJID - 1);")
+$echonetCfgC.add
+
+# ECHONET Liteオブジェクト初期化ブロックの生成
+if $cfgData[:ECN_CRE_EOBJ].length > 0
+	$echonetCfgC.add("const EOBJINIB _echonet_eobjinib_table[TNUM_EOBJID] = {")
+	$cfgData[:ECN_CRE_EOBJ].each_with_index do |(key, params), index|
+		$echonetCfgC.add(",") if index > 0
+		# eobjatrが（［EOBJ_LOCAL_NODE] | [EOBJ_SYNC_REMOTE_NODE] | [EOBJ_ASYNC_REMOTE_NODE] | [EOBJ_DEVICE］）でない場合（E_RSATR）
+		if (params[:eobjatr] & ~($EOBJ_LOCAL_NODE | $EOBJ_SYNC_REMOTE_NODE | $EOBJ_ASYNC_REMOTE_NODE | $EOBJ_DEVICE)) != 0
+			error_illegal_sym("E_RSATR", params, :eobjatr, :eobjid)
+		end
+
+		# ノードプロファイルオブジェクトの場合
+		if (params[:eobjatr] & ($EOBJ_LOCAL_NODE | $EOBJ_SYNC_REMOTE_NODE | $EOBJ_ASYNC_REMOTE_NODE)) != 0
+			# (enodid == EOBJ_NULL)でない場合（E_PAR）
+			if params[:enodid] != "EOBJ_NULL"
+				error_illegal_sym("E_PAR", params, :enodid, :eobjid)
+			end
+
+			# (eojx1 == EOJ_X1_PROFILE)でない場合（E_PAR）
+			if params[:eojx1] != $EOJ_X1_PROFILE
+				error_illegal_sym("E_PAR", params, :eojx1, :eobjid)
+			end
+
+			# (eojx2 == EOJ_X2_NODE_PROFILE)でない場合（E_PAR）
+			if params[:eojx2] != $EOJ_X2_NODE_PROFILE
+				error_illegal_sym("E_PAR", params, :eojx2, :eobjid)
+			end
+
+			# (1 <= eojx3 && eojx3 <= 2)でない場合（E_PAR）
+			if !(1 <= params[:eojx3] && params[:eojx3] <= 2)
+				error_illegal_sym("E_PAR", params, :eojx3, :eobjid)
+			end
+		# 機器オブジェクトの場合
+		else
+			# (enodid != EOBJ_NULL)でない場合（E_PAR）
+			if params[:enodid] == "EOBJ_NULL"
+				error_illegal_sym("E_PAR", params, :enodid, :eobjid)
+			end
+
+			# (0 <= eojx1 && eojx1 <= 255)でない場合（E_PAR）
+			if !(0 <= params[:eojx1] && params[:eojx1] <= 255)
+				error_illegal_sym("E_PAR", params, :eojx1, :eobjid)
+			end
+
+			# (0 <= eojx2 && eojx2 <= 255)でない場合（E_PAR）
+			if !(0 <= params[:eojx2] && params[:eojx2] <= 255)
+				error_illegal_sym("E_PAR", params, :eojx2, :eobjid)
+			end
+
+			# (0 <= eojx3 && eojx3 <= 255)でない場合（E_PAR）
+			if !(0 <= params[:eojx3] && params[:eojx3] <= 255)
+				error_illegal_sym("E_PAR", params, :eojx3, :eobjid)
+			end
+		end
+
+		# ECHONET Liteオブジェクト初期化ブロック
+		$echonetCfgC.append("	{ (#{params[:eobjatr]}), (#{params[:enodid]}), (#{params[:exinf]}), (#{params[:eojx1]}), (#{params[:eojx2]}), (#{params[:eojx3]}), _echonet_#{params[:eobjid]}_eprpinib_table, TNUM_#{params[:eobjid]}_EPRPNO }")
+	end
+	$echonetCfgC.add
+	$echonetCfgC.add2("};")
+else
+	$echonetCfgC.add("TOPPERS_EMPTY_LABEL(const EOBJINIB, _echonet_eobjinib_table);")
+end
+$echonetCfgC.add
+
+# ECHONET Liteノード管理ブロックの数
+$echonetCfgC.add2("const int _echonet_tnum_enodid = TNUM_ENODID;")
+
+# 
+#  ECHONET Liteノード管理ブロック
+# 
+$echonetCfgC.add("/*")
+$echonetCfgC.add(" *  ECHONET Lite Node Functions")
+$echonetCfgC.add(" */")
+$echonetCfgC.add
+# ECHONET LiteノードとIPアドレスの対応情報ブロックの生成
+$ENOD_LIST.each do |enodid|
+	eobjid = $cfgData[:ECN_CRE_EOBJ][enodid][:eobjid].str
+	eobj_list = []
+	$cfgData[:ECN_CRE_EOBJ].each do |key, params|
+		if params[:enodid] == eobjid
+			eobj_list << params[:eobjid]
+		end
+	end
+	$echonetCfgC.add("/*")
+	$echonetCfgC.add(" * ノードに所属する機器オブジェクトの一覧")
+	$echonetCfgC.add(" */")
+	$echonetCfgC.add("const EOBJINIB *_echonet_#{$cfgData[:ECN_CRE_EOBJ][enodid][:eobjid]}_eobjinib_table[TNUM_#{$cfgData[:ECN_CRE_EOBJ][enodid][:eobjid]}_EOBJNO] = {")
+	eobj_list.each_with_index do |eobjid, index|
+		$echonetCfgC.add(",") if index > 0
+		$echonetCfgC.append("	{ &_echonet_eobjinib_table[#{eobjid} - 1] }")
+	end
+	$echonetCfgC.add
+	$echonetCfgC.add("};")
+end
+$echonetCfgC.add
+
+if $ENOD_LIST.length > 0
+	$echonetCfgC.add("/*")
+	$echonetCfgC.add(" * ECHONET Liteノード管理ブロック")
+	$echonetCfgC.add(" */")
+	$echonetCfgC.add("EOBJCB _echonet_eobjcb_table[TNUM_ENODID] = {")
+	$ENOD_LIST.each_with_index do |enodid, index|
+		$echonetCfgC.add(",") if index > 0
+		$echonetCfgC.append("	{ &_echonet_eobjinib_table[#{$cfgData[:ECN_CRE_EOBJ][enodid][:eobjid].str} - 1], _echonet_#{$cfgData[:ECN_CRE_EOBJ][enodid][:eobjid]}_eobjinib_table, TNUM_#{$cfgData[:ECN_CRE_EOBJ][enodid][:eobjid]}_EOBJNO }")
+	end
+	$echonetCfgC.add
+	$echonetCfgC.add("};")
+else
+	$echonetCfgC.add("TOPPERS_EMPTY_LABEL(EOBJCB, _echonet_eobjcb_table);")
+end
+$echonetCfgC.add
+
+# ECHONET LiteノードとIPアドレスの対応情報の数
+$echonetCfgC.add("const int _echonet_tnum_enodadr = TNUM_ENODADR;")
+$echonetCfgC.add
+
+# 
+#  ECHONET LiteノードとIPアドレスの対応情報
+# 
+$echonetCfgC.add("/*")
+$echonetCfgC.add(" *  ECHONET Lite Node Functions")
+$echonetCfgC.add(" */")
+$echonetCfgC.add
+
+# ECHONET LiteノードとIPアドレスの対応情報ブロックの生成
+if $cfgData[:ECN_CRE_EOBJ].length > 0
+	$echonetCfgC.add("ENODADRB _echonet_enodadrb_table[TNUM_ENODADR] = {")
+	$ENOD_LIST.each_with_index do |enodid, index|
+		$echonetCfgC.add(",") if index > 0
+		if enodid == 1
+			$echonetCfgC.add("	/* ENOD_MULTICAST_ID	*/ { true, ECHONET_MULTICAST_ADDR },")
+			$echonetCfgC.add("	/* ENOD_LOCAL_ID		*/ { true, },")
+			$echonetCfgC.append("	/* ENOD_API_ID			*/ { true, }")
+		else
+			$echonetCfgC.append("	/* ENOD_REMOTE_ID + #{enodid - 4}	*/ { true, }")
+		end
+	end
+	$echonetCfgC.add
+	$echonetCfgC.add("};")
+else
+	$echonetCfgC.add("TOPPERS_EMPTY_LABEL(ENODADRB, _echonet_enodadrb_table);")
+end
+$echonetCfgC.add
+
+#
+# ECHONET Lite カーネルオブジェクトID
+#
+$echonetCfgC.add(<<EOS)
+const ID _echonet_ecn_svc_taskid = ECHONET_SVC_TASK;
+const ID _echonet_ecn_udp_taskid = ECHONET_UDP_TASK;
+const ID _echonet_ecn_api_dataqueueid = ECHONET_API_DATAQUEUE;
+const ID _echonet_ecn_svc_dataqueueid = ECHONET_SVC_DATAQUEUE;
+const ID _echonet_ecn_udp_dataqueueid = ECHONET_UDP_DATAQUEUE;
+#ifndef ECHONET_USE_MALLOC
+const ID _echonet_ecn_mempoolid = ECHONET_MEMPOOL;
+#endif
+EOS
+
+$echonetCfgC.add
+$echonetCfgC.add("#include \"tinet_cfg.h\"")
+$echonetCfgC.add
+
+#
+# ECHONET Lite TINETオブジェクトID
+#
+$echonetCfgC.add2("const ID _echonet_ecn_udp_cepid = ECHONET_UDP_CEPID;")

@@ -1,0 +1,13 @@
+#! /bin/sh
+if test -r $2
+  then
+  if cmp -s $1 $2
+  then
+    echo $2 is unchanged
+    rm -f $1
+  else
+    mv -f $1 $2
+  fi
+else
+  mv -f $1 $2
+fi

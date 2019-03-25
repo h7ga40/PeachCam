@@ -1,0 +1,2 @@
+
+secondary-outputs: $(SECONDARY_FLASH) $(SECONDARY_SIZE)

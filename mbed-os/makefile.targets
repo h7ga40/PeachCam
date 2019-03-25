@@ -1,0 +1,18 @@
+
+REMOVE_OBJ = ./src/RTOS.o ./features/storage/filesystem/fat/FATFileSystem.o ./platform/mbed_retarget.o
+MALLOC_LIB = "${TCINSTALL}arm-none-eabi/lib/thumb/v7-ar/fpv3/hard/libc.a"
+MALLOC_OBJS = lib_a-reent.o lib_a-impure.o lib_a-malloc.o lib_a-mallocr.o lib_a-calloc.o lib_a-callocr.o lib_a-realloc.o lib_a-reallocr.o lib_a-sbrkr.o lib_a-freer.o
+
+.PHONY: mbed
+
+mbed: libmbed.a
+
+libmbed.a: $(OBJS) $(USER_OBJS) $(MALLOC_OBJS)
+	@echo 'Building target: $@'
+	@echo 'Invoking: Cross ARM GNU Archiver'
+	arm-none-eabi-ar -r "libmbed.a" $(filter-out $(REMOVE_OBJ), $(OBJS)) $(filter-out $(REMOVE_OBJ), $(USER_OBJS)) $(MALLOC_OBJS) $(LIBS)
+	@echo 'Finished building target: $@'
+	@echo ' '
+
+$(MALLOC_OBJS):
+	arm-none-eabi-ar x $(MALLOC_LIB) "$@"

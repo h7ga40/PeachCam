@@ -1,0 +1,26 @@
+PACKAGE ecnl
+
+MANIFEST
+echonet.c
+echonet.h
+echonet.tf
+echonet_api.def
+echonet_asp.cfg
+echonet_chk.tf
+echonet_class.h
+echonet_dbg.c
+echonet_dbg.cfg
+echonet_dbg.h
+echonet_sym.def
+echonet_fbs.c
+echonet_fbs.h
+echonet_lcl_task.h
+echonet_rename.h
+echonet_task.c
+echonet_task.h
+echonet_udp.cfg
+echonet_udp6_task.c
+echonet_udp6_task.h
+echonet_udp_task.c
+echonet_udp_task.h
+../doc/ecnl_manual.pdf
