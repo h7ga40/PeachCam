@@ -554,7 +554,8 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 				ret = udp_rcv_dat(fp->psock->cepid, &rep, buf, len,
 					(fp->psock->flags & O_NONBLOCK) ? TMO_POL : SOCKET_TIMEOUT);
 				if (ret < 0) {
-					syslog(LOG_ERROR, "udp_rcv_buf => %d", ret);
+					if ((fp->psock->flags & O_NONBLOCK) == 0)
+						syslog(LOG_ERROR, "udp_rcv_buf => %d", ret);
 					return (ret == E_TMOUT) ? -ETIME : -ECOMM;
 				}
 				rsz = ret;

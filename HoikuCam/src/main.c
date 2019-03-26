@@ -66,7 +66,7 @@
 #include "ff.h"
 #include "core/ntshell.h"
 #include "core/ntlibc.h"
-#include "util/ntstdio.h"
+#include <stdio.h>
 #include "usrcmd.h"
 #include "util/ntopt.h"
 #include "socket_stub.h"
@@ -184,7 +184,7 @@ static void main_initialize()
 	serial_opn_por(SIO_PORTID);
 	serial_ctl_por(SIO_PORTID, IOCTL_FCSND | IOCTL_FCRCV);
 
-	ntshell_task_init(uart_read, uart_write, &main_obj);
+	ntshell_task_init(SIO_PORTID);
 
 	main_obj.timer = TMO_FEVR;
 	main_obj.state = main_state_start;

@@ -83,14 +83,12 @@ static int usrcmd_ntopt_callback(long *args, void *extobj);
 int ntshell_exit_code;
 volatile int ntshell_state;
 jmp_buf process_exit;
-NTSHELL_SERIAL_READ ntshell_serial_read = 0;
-NTSHELL_SERIAL_WRITE ntshell_serial_write = 0;
-void *ntshell_serial_extobj;
+ID ntstdio_portid;
 
 unsigned char ntstdio_xi(struct ntstdio_t *handle)
 {
 	unsigned char buf[1];
-	ntshell_serial_read((char *)buf, 1, ntshell_serial_extobj);
+	serial_rea_dat(ntstdio_portid, buf, 1);
 	return buf[0];
 }
 
@@ -98,15 +96,12 @@ void ntstdio_xo(struct ntstdio_t *handle, unsigned char c)
 {
 	char buf[1];
 	buf[0] = c;
-	ntshell_serial_write(buf, 1, ntshell_serial_extobj);
+	serial_wri_dat(ntstdio_portid, buf, 1);
 }
 
-void ntshell_task_init(NTSHELL_SERIAL_READ func_read,
-	NTSHELL_SERIAL_WRITE func_write, void *extobj)
+void ntshell_task_init(ID portid)
 {
-	ntshell_serial_read = func_read;
-	ntshell_serial_write = func_write;
-	ntshell_serial_extobj = extobj;
+	ntstdio_portid = portid;
 
 	ntstdio_init(&ntstdio, NTSTDIO_OPTION_LINE_ECHO | NTSTDIO_OPTION_CANON | NTSTDIO_OPTION_LF_CRLF | NTSTDIO_OPTION_LF_CR, ntstdio_xi, ntstdio_xo);
 }
@@ -170,10 +165,10 @@ int usrcmd_help(int argc, char **argv)
 {
 	const cmd_table_t *p = cmd_table_info.table;
 	for (int i = 0; i < cmd_table_info.count; i++) {
-		ntstdio_puts(&ntstdio, p->cmd);
-		ntstdio_puts(&ntstdio, "\t:");
-		ntstdio_puts(&ntstdio, p->desc);
-		ntstdio_puts(&ntstdio, "\n");
+		puts(p->cmd);
+		puts("\t:");
+		puts(p->desc);
+		puts("\n");
 		p++;
 	}
 	return 0;

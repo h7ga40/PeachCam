@@ -79,7 +79,7 @@ typedef struct sdfs_s{
 	* @param cs   DigitalOut pin used as SD Card chip select
 	* @param name The name used to access the virtual filesystem
 	*/
-sdfs_init(sdfs_t *obj, PinName mosi, PinName miso, PinName sclk, PinName cs, const char* name);
+void sdfs_init(sdfs_t *obj, PinName mosi, PinName miso, PinName sclk, PinName cs, const char* name);
 
 int sdfs_initialize(sdfs_t *obj);
 int sdfs_status(sdfs_t *obj);

@@ -58,11 +58,9 @@
 #include <netapp/dhcp4_cli.h>
 #include <netapp/resolver.h>
 #include "core/ntlibc.h"
-#include "util/ntstdio.h"
+#include <stdio.h>
 #include "ntp_cli.h"
 #include "kernel_cfg.h"
-
-extern ntstdio_t ntstdio;
 
 #if defined(SUPPORT_INET6)
 #define DEFAULT_API_PROTO	API_PROTO_IPV6
@@ -279,7 +277,7 @@ int usrcmd_ping(int argc, char **argv)
 #endif	/* of #if defined(SUPPORT_INET6) && defined(SUPPORT_INET4) */
 
 	if ((line = lookup_ipaddr(&addr, line, apip)) == NULL) {
-		ntstdio_printf(&ntstdio, "[PING] unknown host.\n");
+		printf("[PING] unknown host.\n");
 		return 0;
 	}
 
@@ -298,20 +296,20 @@ int usrcmd_ping(int argc, char **argv)
 #if defined(SUPPORT_INET6)
 #if defined(SUPPORT_INET4)
 	if (apip == API_PROTO_IPV6) {
-		ntstdio_printf(&ntstdio, "[PING6] size: %d, tmo: %d, host: %s\n", size, tmo, ipv62str(NULL, &addr));
+		printf("[PING6] size: %d, tmo: %d, host: %s\n", size, tmo, ipv62str(NULL, &addr));
 		ping6(&addr, (uint_t)tmo, (uint_t)size);
 	}
 	else {
 		addr4 = ntohl(addr.s6_addr32[3]);
-		ntstdio_printf(&ntstdio, "[PING4] size: %d, tmo: %d, host: %s\n", size, tmo, ip2str(NULL, &addr4));
+		printf("[PING4] size: %d, tmo: %d, host: %s\n", size, tmo, ip2str(NULL, &addr4));
 		ping4(&addr4, (uint_t)tmo, (uint_t)size);
 	}
 #else /* of #if defined(SUPPORT_INET4) */
-	ntstdio_printf(&ntstdio, "[PING6] size: %d, tmo: %d, host: %s\n", size, tmo, ipv62str(NULL, &addr));
+	printf("[PING6] size: %d, tmo: %d, host: %s\n", size, tmo, ipv62str(NULL, &addr));
 	ping6(&addr, (uint_t)tmo, (uint_t)size);
 #endif	/* of #if defined(SUPPORT_INET4) */
 #else	/* of #if defined(SUPPORT_INET6) */
-	ntstdio_printf(&ntstdio, "[PING4] size: %d, tmo: %d, host: %s\n", size, tmo, ip2str(NULL, &addr));
+	printf("[PING4] size: %d, tmo: %d, host: %s\n", size, tmo, ip2str(NULL, &addr));
 	ping4(&addr, (uint_t)tmo, (uint_t)size);
 #endif	/* of #if defined(SUPPORT_INET6) */
 
@@ -330,15 +328,15 @@ static void dhcp4c_info()
 	if ((ret = dhcp4c_get_info(&svaddr, &expire, &renew, &rebind, &bind_start)) == E_OK) {
 		pos = str_ipv4addr(temp, sizeof(temp), &svaddr, 0);
 		temp[pos] = '\0';
-		ntstdio_printf(&ntstdio, "DHCPv4 server: %s,\n", temp);
-		ntstdio_printf(&ntstdio, "  Renew:       %u:%02u:%02u,\n",
+		printf("DHCPv4 server: %s,\n", temp);
+		printf("  Renew:       %u:%02u:%02u,\n",
 			renew / 3600, (renew / 60) % 60, renew % 60);
-		ntstdio_printf(&ntstdio, "  Rebind:      %u:%02u:%02u, Expire:   %u:%02u:%02u.\n",
+		printf("  Rebind:      %u:%02u:%02u, Expire:   %u:%02u:%02u.\n",
 			rebind / 3600, (rebind / 60) % 60, rebind % 60,
 			expire / 3600, (expire / 60) % 60, expire % 60);
 	}
 	else if (ret == E_OBJ)
-		ntstdio_printf(&ntstdio, "DHCPv4 server: not available.\n");
+		printf("DHCPv4 server: not available.\n");
 }
 
 int usrcmd_dhcp4c(int argc, char **argv)
@@ -350,11 +348,11 @@ int usrcmd_dhcp4c(int argc, char **argv)
 
 	if (ntlibc_strcmp(argv[1], "rel") == 0) {
 		ret = dhcp4c_rel_info();
-		ntstdio_printf(&ntstdio, "dhcp4c_rel_info %d\n", ret);
+		printf("dhcp4c_rel_info %d\n", ret);
 	}
 	else if (ntlibc_strcmp(argv[1], "renew") == 0) {
 		ret = dhcp4c_renew_info();
-		ntstdio_printf(&ntstdio, "dhcp4c_renew_info %d\n", ret);
+		printf("dhcp4c_renew_info %d\n", ret);
 	}
 	else {
 		dhcp4c_info();
@@ -382,10 +380,10 @@ s_show_dns_domain_name(uint8_t *hdr, uint_t offset)
 		}
 		else {
 			for (c = 1; c <= *ptr; c++)
-				ntstdio_printf(&ntstdio, "%c", *(ptr + c));
+				printf("%c", *(ptr + c));
 			ptr += *ptr + 1;
 			if (*ptr)
-				ntstdio_printf(&ntstdio, ".");
+				printf(".");
 		}
 	}
 	return ptr - hdr;
@@ -405,18 +403,18 @@ show_dns_soa(uint8_t *msg, ER_UINT length, uint_t offset)
 	if ((error = dns_analyze_soa(&soa, offset, msg, length)) < 0)
 		return error;
 
-	ntstdio_printf(&ntstdio, "    mname:   ");
+	printf("    mname:   ");
 	rn_offset = s_show_dns_domain_name(msg, offset);
-	ntstdio_putc(&ntstdio, '\n');
-	ntstdio_printf(&ntstdio, "    rname:   ");
+	putchar('\n');
+	printf("    rname:   ");
 	s_show_dns_domain_name(msg, rn_offset);
-	ntstdio_putc(&ntstdio, '\n');
+	putchar('\n');
 
-	ntstdio_printf(&ntstdio, "    serial:  %d\n", soa.serial);
-	ntstdio_printf(&ntstdio, "    refresh: %d\n", soa.refresh);
-	ntstdio_printf(&ntstdio, "    retry:   %d\n", soa.retry);
-	ntstdio_printf(&ntstdio, "    expirel: %d\n", soa.expire);
-	ntstdio_printf(&ntstdio, "    minimum: %d\n", soa.minimum);
+	printf("    serial:  %d\n", soa.serial);
+	printf("    refresh: %d\n", soa.refresh);
+	printf("    retry:   %d\n", soa.retry);
+	printf("    expirel: %d\n", soa.expire);
+	printf("    minimum: %d\n", soa.minimum);
 
 	return E_OK;
 }
@@ -432,15 +430,15 @@ show_dns_qdsection(uint8_t *msg, ER_UINT length, T_RSLV_DNS_MSG *rslv)
 	ER_UINT		offset, error;
 	int		scount;
 
-	ntstdio_printf(&ntstdio, "question   section: %d\n", rslv->dns_hdr.qdcount);
+	printf("question   section: %d\n", rslv->dns_hdr.qdcount);
 	offset = rslv->qd_offset;
 	for (scount = 1; scount <= rslv->dns_hdr.qdcount; scount++) {
 		if ((error = dns_analyze_qd(&qd, offset, msg, length)) < 0)
 			return error;
 
-		ntstdio_printf(&ntstdio, "%2d: ", scount);
+		printf("%2d: ", scount);
 		s_show_dns_domain_name(msg, offset);
-		ntstdio_printf(&ntstdio, "\n    type: %-4s, class: %2s\n", dns_strtype(qd.type), dns_strclass(qd.class));
+		printf("\n    type: %-4s, class: %2s\n", dns_strtype(qd.type), dns_strclass(qd.class));
 		offset = error;
 	}
 
@@ -462,14 +460,14 @@ show_dns_section(uint8_t *msg, ER_UINT length, uint_t scount, uint_t offset, cha
 	char temp[30];
 	int pos;
 
-	ntstdio_printf(&ntstdio, "%10s section: %d\n", title, scount);
+	printf("%10s section: %d\n", title, scount);
 	for (count = 1; count <= scount; count++) {
 		if ((error = dns_analyze_rr(&rr, offset, msg, length)) < 0)
 			return error;
 
-		ntstdio_printf(&ntstdio, "%2d: ", count);
+		printf("%2d: ", count);
 		s_show_dns_domain_name(msg, offset);
-		ntstdio_printf(&ntstdio, "\n    type: %-4s, class: %2s, TTL: %2d, len: %3d, offset: 0x%02x\n",
+		printf("\n    type: %-4s, class: %2s, TTL: %2d, len: %3d, offset: 0x%02x\n",
 			dns_strtype(rr.type), dns_strclass(rr.class), rr.ttl, rr.rdlength, rr.rdata_offset);
 
 		switch (rr.type) {
@@ -478,43 +476,43 @@ show_dns_section(uint8_t *msg, ER_UINT length, uint_t scount, uint_t offset, cha
 			in4_addr = ntohl(in4_addr);
 			pos = str_ipv4addr(temp, sizeof(temp), &in4_addr, 0);
 			temp[pos] = '\0';
-			ntstdio_printf(&ntstdio, "    IPv4 addr: %s\n", temp);
+			printf("    IPv4 addr: %s\n", temp);
 			break;
 		case DNS_TYPE_NS:
-			ntstdio_printf(&ntstdio, "    host: ");
+			printf("    host: ");
 			s_show_dns_domain_name(msg, rr.rdata_offset);
-			ntstdio_putc(&ntstdio, '\n');
+			putchar('\n');
 			break;
 		case DNS_TYPE_CNAME:
-			ntstdio_printf(&ntstdio, "    host: ");
+			printf("    host: ");
 			s_show_dns_domain_name(msg, rr.rdata_offset);
-			ntstdio_putc(&ntstdio, '\n');
+			putchar('\n');
 			break;
 		case DNS_TYPE_SOA:
 			show_dns_soa(msg, length, rr.rdata_offset);
 			break;
 		case DNS_TYPE_PTR:
-			ntstdio_printf(&ntstdio, "     PTR: ");
+			printf("     PTR: ");
 			s_show_dns_domain_name(msg, rr.rdata_offset);
-			ntstdio_putc(&ntstdio, '\n');
+			putchar('\n');
 			break;
 		case DNS_TYPE_AAAA:
 			memcpy((void*)&in6_addr, (void*)(msg + rr.rdata_offset), sizeof(in6_addr));
 			pos = str_ipv6addr(temp, sizeof(temp), &in6_addr, 0);
 			temp[pos] = '\0';
-			ntstdio_printf(&ntstdio, "    IPv6 addr: %s\n", temp);
+			printf("    IPv6 addr: %s\n", temp);
 			break;
 		default:
-			ntstdio_printf(&ntstdio, "    data: ");
+			printf("    data: ");
 			col = 32;
 			for (dcount = 0; dcount < rr.rdlength; dcount++) {
-				ntstdio_printf(&ntstdio, "%02x", *(msg + rr.rdata_offset + dcount));
+				printf("%02x", *(msg + rr.rdata_offset + dcount));
 				if (--col == 0) {
-					ntstdio_printf(&ntstdio, "\n          ");
+					printf("\n          ");
 					col = 32;
 				}
 			}
-			ntstdio_putc(&ntstdio, '\n');
+			putchar('\n');
 			break;
 		}
 	}
@@ -538,35 +536,35 @@ static void dns_info()
 
 #if defined(SUPPORT_INET6)
 
-	ntstdio_printf(&ntstdio, "domain name:     %s\n", dns_in6_get_dname());
+	printf("domain name:     %s\n", dns_in6_get_dname());
 
 #else	/* of #if defined(SUPPORT_INET6) */
 
-	ntstdio_printf(&ntstdio, "domain name:     %s\n", dns_in4_get_dname());
+	printf("domain name:     %s\n", dns_in4_get_dname());
 
 #endif	/* of #if defined(SUPPORT_INET6) */
 
 #if defined(SUPPORT_INET6)
 	dns_in6_get_addr(&in6_addr);
-	ntstdio_printf(&ntstdio, "IPv6 DNS server: ");
+	printf("IPv6 DNS server: ");
 	if (IN6_IS_ADDR_UNSPECIFIED(&in6_addr))
-		ntstdio_printf(&ntstdio, "not available.\n");
+		printf("not available.\n");
 	else {
 		pos = str_ipv6addr(temp, sizeof(temp), &in6_addr, 0);
 		temp[pos] = '\0';
-		ntstdio_printf(&ntstdio, "%s.\n", temp);
+		printf("%s.\n", temp);
 	}
 #endif	/* of #if defined(SUPPORT_INET6) */
 
 #if defined(SUPPORT_INET4)
 	dns_in4_get_addr(&in4_addr);
-	ntstdio_printf(&ntstdio, "IPv4 DNS server: ");
+	printf("IPv4 DNS server: ");
 	if (in4_addr == IPV4_ADDRANY)
-		ntstdio_printf(&ntstdio, "not available.\n");
+		printf("not available.\n");
 	else {
 		pos = str_ipv4addr(temp, sizeof(temp), &in4_addr, 0);
 		temp[pos] = '\0';
-		ntstdio_printf(&ntstdio, "%s.\n", temp);
+		printf("%s.\n", temp);
 	}
 #endif	/* of #if defined(SUPPORT_INET4) */
 }
@@ -603,7 +601,7 @@ int usrcmd_dnsc(int argc, char **argv)
 	/* コマンドのオプションを設定する。*/
 	line = skip_blanks(resolv_options(&flags, line, DEFAULT_API_PROTO));
 	if ((flags & (DNS_LUP_FLAGS_PROTO_IPV6 | DNS_LUP_FLAGS_PROTO_IPV4)) == 0) {
-		ntstdio_printf(&ntstdio, "DNS server not available.\n");
+		printf("DNS server not available.\n");
 		return 0;
 	}
 
@@ -619,49 +617,49 @@ int usrcmd_dnsc(int argc, char **argv)
 		flags = (flags & ~DNS_LUP_FLAGS_QTYPE_MASK) | DNS_LUP_FLAGS_QTYPE_PTR;
 
 	if ((error = tget_mpf(MPF_RSLV_SRBUF, (void*)&msg, TMO_FEVR)) != E_OK) {
-		ntstdio_printf(&ntstdio, "get buffer error: %s.\n", itron_strerror(error));
+		printf("get buffer error: %s.\n", itron_strerror(error));
 		return 0;
 	}
 
 	if ((length = dns_lookup_host(flags | DNS_LUP_FLAGS_MSG, line, msg, DNS_UDP_MSG_LENGTH, &rslv)) < 0) {
-		//ntstdio_printf(&ntstdio, "error: %s.\n", itron_strerror(length));
+		//printf("error: %s.\n", itron_strerror(length));
 		goto err_ret;
 	}
 
 	dly_tsk(1 * 1000);
-	ntstdio_printf(&ntstdio, "DNS header: flags: ");
+	printf("DNS header: flags: ");
 	if (rslv.dns_hdr.code & (DNS_QR_RESPONSE | DNS_AUTHORITATIVE |
 		DNS_TRUN_CATION | DNS_RECURSION_DESIRED | DNS_RECURSION_AVAILABLE)) {
-		ntstdio_printf(&ntstdio, (rslv.dns_hdr.code & DNS_QR_RESPONSE) ? "QR," : "");
-		ntstdio_printf(&ntstdio, (rslv.dns_hdr.code & DNS_AUTHORITATIVE) ? "AA," : "");
-		ntstdio_printf(&ntstdio, (rslv.dns_hdr.code & DNS_TRUN_CATION) ? "TC," : "");
-		ntstdio_printf(&ntstdio, (rslv.dns_hdr.code & DNS_RECURSION_DESIRED) ? "RD," : "");
-		ntstdio_printf(&ntstdio, (rslv.dns_hdr.code & DNS_RECURSION_AVAILABLE) ? "RA," : "");
-		ntstdio_printf(&ntstdio, " ");
+		printf((rslv.dns_hdr.code & DNS_QR_RESPONSE) ? "QR," : "");
+		printf((rslv.dns_hdr.code & DNS_AUTHORITATIVE) ? "AA," : "");
+		printf((rslv.dns_hdr.code & DNS_TRUN_CATION) ? "TC," : "");
+		printf((rslv.dns_hdr.code & DNS_RECURSION_DESIRED) ? "RD," : "");
+		printf((rslv.dns_hdr.code & DNS_RECURSION_AVAILABLE) ? "RA," : "");
+		printf(" ");
 	}
-	ntstdio_printf(&ntstdio, "opcode: ");
-	ntstdio_printf(&ntstdio, (rslv.dns_hdr.code & DNS_OPCODE_REVERSE) ? "RV" : "FW");
-	ntstdio_printf(&ntstdio, (rslv.dns_hdr.code & DNS_OPCODE_STATUS) ? ",ST" : "");
-	ntstdio_printf(&ntstdio, ", rcode: %s.\n",
+	printf("opcode: ");
+	printf((rslv.dns_hdr.code & DNS_OPCODE_REVERSE) ? "RV" : "FW");
+	printf((rslv.dns_hdr.code & DNS_OPCODE_STATUS) ? ",ST" : "");
+	printf(", rcode: %s.\n",
 		(rslv.dns_hdr.code & DNS_RCODE_MASK) > DNS_RCODE_REFUSED
 		? "6" : rcode_str[rslv.dns_hdr.code & DNS_RCODE_MASK]);
 
 	if ((offset = show_dns_qdsection(msg, length, &rslv)) < 0) {
-		ntstdio_printf(&ntstdio, "msg error: %s.\n", itron_strerror(offset));
+		printf("msg error: %s.\n", itron_strerror(offset));
 	}
 	if ((offset = show_dns_section(msg, length, rslv.dns_hdr.ancount, rslv.an_offset, "answer")) < 0) {
-		ntstdio_printf(&ntstdio, "msg error: %s.\n", itron_strerror(offset));
+		printf("msg error: %s.\n", itron_strerror(offset));
 	}
 	if ((offset = show_dns_section(msg, length, rslv.dns_hdr.nscount, rslv.ns_offset, "authority")) < 0) {
-		ntstdio_printf(&ntstdio, "msg error: %s.\n", itron_strerror(offset));
+		printf("msg error: %s.\n", itron_strerror(offset));
 	}
 	if ((offset = show_dns_section(msg, length, rslv.dns_hdr.arcount, rslv.ar_offset, "additional")) < 0) {
-		ntstdio_printf(&ntstdio, "msg error: %s.\n", itron_strerror(offset));
+		printf("msg error: %s.\n", itron_strerror(offset));
 	}
 
 err_ret:
 	if ((error = rel_mpf(MPF_RSLV_SRBUF, msg)) != E_OK)
-		ntstdio_printf(&ntstdio, "release buffer error: %s.\n", itron_strerror(error));
+		printf("release buffer error: %s.\n", itron_strerror(error));
 	return 0;
 }
 

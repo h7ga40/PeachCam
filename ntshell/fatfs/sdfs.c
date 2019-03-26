@@ -117,11 +117,10 @@
 #include "diskio.h"
 //#include "mbed_debug.h"
 #include "mbed_wait_api.h"
-#include "util/ntstdio.h"
+#include <stdio.h>
 
-extern ntstdio_t ntstdio;
-#define debug(...) ntstdio_printf(&ntstdio, __VA_ARGS__)
-#define debug_if(cond, ...) if(cond){ ntstdio_printf(&ntstdio, __VA_ARGS__); }
+#define debug(...) printf(__VA_ARGS__)
+#define debug_if(cond, ...) if(cond){ printf(__VA_ARGS__); }
 
 static int sdfs_initialise_card_v1(sdfs_t *obj);
 static int sdfs_initialise_card_v2(sdfs_t *obj);
@@ -136,7 +135,7 @@ static int sdfs__read(sdfs_t *obj, uint8_t *buffer, uint32_t length);
 
 #define SD_DBG             0
 
-sdfs_init(sdfs_t *obj, PinName mosi, PinName miso, PinName sclk, PinName cs, const char* name)
+void sdfs_init(sdfs_t *obj, PinName mosi, PinName miso, PinName sclk, PinName cs, const char* name)
 {
 	obj->name = name;
 	spi_init(&obj->_spi, mosi, miso, sclk, NC);

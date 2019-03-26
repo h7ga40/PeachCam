@@ -19,7 +19,7 @@
 #include "shellif.h"
 #include "ff.h"			/* Declarations of FatFs API */
 #include "diskio.h"		/* Declarations of disk I/O functions */
-#include "util/ntstdio.h"
+#include <stdio.h>
 
 /*--------------------------------------------------------------------------
 
@@ -3909,7 +3909,7 @@ FRESULT f_rename (
 					dir = djn.dir;
 					if (dir[DIR_Attr] & AM_DIR) {	/* The new object is a directory */
 						temp_new_path = (TCHAR *)ff_memalloc((FF_MAX_LFN + 1) * sizeof(WCHAR));
-						ntstdio_snprintf(temp_new_path, FF_MAX_LFN, "%s/%s", path_new, basename((char *)path_old));
+						snprintf(temp_new_path, FF_MAX_LFN, "%s/%s", path_new, basename((char *)path_old));
 						res = follow_path(&djn, temp_new_path);
 					}
 				}

@@ -46,9 +46,8 @@
 #include "usrcmd.h"
 #include "core/ntshell.h"
 #include "core/ntlibc.h"
-#include "util/ntstdio.h"
+#include <stdio.h>
 
-extern ntstdio_t ntstdio;
 extern int ntshell_exit;
 
 extern int mbtowc(wchar_t *__restrict wc, const char *__restrict src, size_t n);
@@ -58,19 +57,19 @@ char *optarg;
 int optind=1, opterr=1, optopt, optpos, optreset=0;
 extern int optind, opterr;
 
-static void ntstdio_write(ntstdio_t *handle, const char *str, int l)
+static void usrcmd_write(const char *str, int l)
 {
 	for (; *str && l >= 0; l--) {
-		ntstdio_putc(handle, *str++);
+		putchar(*str++);
 	}
 }
 
 static void __getopt_msg(const char *a, const char *b, const char *c, size_t l)
 {
-	ntstdio_puts(&ntstdio, a);
-	ntstdio_write(&ntstdio, b, strlen(b));
-	ntstdio_write(&ntstdio, c, l);
-	ntstdio_putc(&ntstdio, '\n');
+	puts(a);
+	usrcmd_write(b, strlen(b));
+	usrcmd_write(c, l);
+	putchar('\n');
 }
 
 static int musl_getopt(int argc, char * const argv[], const char *optstring)
@@ -177,7 +176,7 @@ void put_rc(const char *func, FRESULT rc)
 	for (i = 0; i != rc && *p; i++) {
 		while (*p++);
 	}
-	ntstdio_printf(&ntstdio, "%s() =>%u FR_%s\n", func, (UINT)rc, p);
+	printf("%s() =>%u FR_%s\n", func, (UINT)rc, p);
 }
 
 void put_drc(const char *func, DRESULT rc)
@@ -189,7 +188,7 @@ void put_drc(const char *func, DRESULT rc)
 	for (i = 0; i != rc && *p; i++) {
 		while (*p++);
 	}
-	ntstdio_printf(&ntstdio, "%s() =>%u %s\n", func, (UINT)rc, p);
+	printf("%s() =>%u %s\n", func, (UINT)rc, p);
 }
 
 char *basename(char *s)
@@ -239,7 +238,7 @@ int usrcmd_cd(int argc, char **argv)
 	}
 
 	ntlibc_strlcat(path, "\n", sizeof(path));
-	ntstdio_printf(&ntstdio, path);
+	printf(path);
 
 	return 0;
 }
@@ -262,7 +261,7 @@ void print_one_list(FILINFO *fno, BYTE list_option)
 	}
 
 	if (list_option & LS_LONG) {
-		ntstdio_printf(&ntstdio, "%c%c%c%c%c %04d/%02d/%02d %02d:%02d:%02d ",
+		printf("%c%c%c%c%c %04d/%02d/%02d %02d:%02d:%02d ",
 			(fno->fattrib & AM_DIR) ? 'd' : '-',
 			(fno->fattrib & AM_RDO) ? 'r' : '-',
 			(fno->fattrib & AM_HID) ? 'h' : '-',
@@ -276,18 +275,18 @@ void print_one_list(FILINFO *fno, BYTE list_option)
 			( fno->ftime & 0x001F));
 
 		if (fno->fattrib & AM_DIR) {                    /* It is a directory */
-			ntstdio_printf(&ntstdio, "%10S ", " ");
+			printf("%10s ", " ");
 		}
 		else {
-			ntstdio_printf(&ntstdio, "%10d ", fno->fsize);
+			printf("%10lu ", fno->fsize);
 		}
 	}
 
 	if (fno->fattrib & AM_DIR) {                    /* It is a directory */
-		ntstdio_printf(&ntstdio, "\x1B[32m%s\x1B[0m\n", fn);
+		printf("\x1B[32m%s\x1B[0m\n", fn);
 	}
 	else {
-		ntstdio_printf(&ntstdio, "%s\n", fn);
+		printf("%s\n", fn);
 	}
 }
 
@@ -306,7 +305,7 @@ void print_ls(char *path_p, char *pattern_p, BYTE list_option)
 	char *path_backup = NULL;
 	path_backup = ff_memalloc(LFN_BUF_SIZE);
 	if (path_backup == NULL) {
-		ntstdio_printf(&ntstdio, "ff_memalloc err.\n");
+		printf("ff_memalloc err.\n");
 		return;
 	}
 
@@ -314,7 +313,7 @@ void print_ls(char *path_p, char *pattern_p, BYTE list_option)
 	char *lfn = NULL;
 	lfn = ff_memalloc(LFN_BUF_SIZE);
 	if (lfn == NULL) {
-		ntstdio_printf(&ntstdio, "ff_memalloc err.\n");
+		printf("ff_memalloc err.\n");
 		ff_memfree(path_backup);
 		return;
 	}
@@ -350,11 +349,11 @@ void print_ls(char *path_p, char *pattern_p, BYTE list_option)
 				put_rc("f_chdir", res);
 			}
 
-			ntstdio_printf(&ntstdio, "\n%s/%s:\n", path_p, fn);
+			printf("\n%s/%s:\n", path_p, fn);
 
 			print_ls(fn, NULL, list_option);
 
-			ntstdio_printf(&ntstdio, "\n");
+			printf("\n");
 
 			if ((res = f_chdrive(path_backup)) != FR_OK) {
 				put_rc("f_chdrive", res);
@@ -449,7 +448,7 @@ int usrcmd_cp(int argc, char **argv)
 	/* LFN buffer alloc */
 	lfn = ff_memalloc(LFN_BUF_SIZE);
 	if (lfn == NULL) {
-		ntstdio_printf(&ntstdio, "alloc err.\n");
+		printf("alloc err.\n");
 		goto cp_end;
 	}
 	fno.lfname = lfn;
@@ -459,7 +458,7 @@ int usrcmd_cp(int argc, char **argv)
 	/* copy buffer alloc */
 	local_buff = ff_memalloc(64);
 	if (local_buff == NULL) {
-		ntstdio_printf(&ntstdio, "alloc err.\n");
+		printf("alloc err.\n");
 		goto cp_end;
 	}
 
@@ -469,9 +468,9 @@ int usrcmd_cp(int argc, char **argv)
 	res = f_stat(src_str_p, &fno);
 	if (res != FR_OK) {
 		if (res == FR_NO_FILE)
-			ntstdio_printf(&ntstdio, "src no file.\n", res);
+			printf("src no file.\n");
 		else
-			ntstdio_printf(&ntstdio, "src stat err(%d).\n", res);
+			printf("src stat err(%d).\n", res);
 		goto cp_end;
 	}
 	if (fno.fattrib & AM_DIR) {	/* src is dir */
@@ -480,7 +479,7 @@ int usrcmd_cp(int argc, char **argv)
 	else {						/* src is file */
 		res = f_open(&src_fp, src_str_p, (FA_OPEN_EXISTING | FA_READ));
 		if (res != FR_OK) {
-			ntstdio_printf(&ntstdio, "src open err(%d).\n", res);
+			printf("src open err(%d).\n", res);
 			goto cp_end;
 		}
 	}
@@ -495,25 +494,25 @@ int usrcmd_cp(int argc, char **argv)
 				src_basename_p = basename(src_str_p);
 				dst_mod_str_p = ff_memalloc(LFN_BUF_SIZE);
 				if (dst_mod_str_p == NULL) {
-					ntstdio_printf(&ntstdio, "alloc err.\n");
+					printf("alloc err.\n");
 					goto cp_end;
 				}
-				ntstdio_snprintf(dst_mod_str_p, LFN_BUF_SIZE, "%s/%s\0", dst_str_p, src_basename_p);
+				snprintf(dst_mod_str_p, LFN_BUF_SIZE, "%s/%s\0", dst_str_p, src_basename_p);
 				dst_str_p = dst_mod_str_p;
 			}
 			else {
-				ntstdio_printf(&ntstdio, "dst file exists.\n");
+				printf("dst file exists.\n");
 				goto cp_end_1;
 			}
 		}
 		else {
-			ntstdio_printf(&ntstdio, "src stat err(%d).\n", res);
+			printf("src stat err(%d).\n", res);
 			goto cp_end_1;
 		}
 	}
 	res = f_open(&dst_fp, dst_str_p, (FA_CREATE_NEW | FA_WRITE));
 	if (res != FR_OK) {
-		ntstdio_printf(&ntstdio, "dst open err(%d).\n", res);
+		printf("dst open err(%d).\n", res);
 		goto cp_end_1;
 	}
 
@@ -524,18 +523,18 @@ int usrcmd_cp(int argc, char **argv)
 		/* read from src */
 		res = f_read(&src_fp, local_buff, sizeof(local_buff), &read_size);
 		if (res != FR_OK) {
-			ntstdio_printf(&ntstdio, "src read err(%d).\n", res);
+			printf("src read err(%d).\n", res);
 			goto cp_end_2;
 		}
 
 		/* write to dst */
 		res = f_write(&dst_fp, local_buff, read_size, &write_size);
 		if (res != FR_OK) {
-			ntstdio_printf(&ntstdio, "dst write err(%d).\n", res);
+			printf("dst write err(%d).\n", res);
 			goto cp_end_2;
 		}
 		if (read_size != write_size) {
-			ntstdio_printf(&ntstdio, "dst write err(disk full).\n", res);
+			printf("dst write err(disk full).\n");
 			goto cp_end_2;
 		}
 	} while (read_size == sizeof(local_buff));
@@ -624,12 +623,12 @@ int usrcmd_hexdump(int argc, char **argv)
 	while ((op = musl_getopt(argc, argv, "hduos0123456789xX")) != -1) {
 		switch (op) {
 		case 'h': /* help */
-			ntstdio_printf(&ntstdio, " hexdump [OPTION] file\n");
-			ntstdio_printf(&ntstdio, "  -h : help\n");
-			ntstdio_printf(&ntstdio, "  -d : print all byte with convert and color [in character area] (default)\n");
-			ntstdio_printf(&ntstdio, "  -u : try print UTF-8 code [in character area]\n");
-			ntstdio_printf(&ntstdio, "  -oOFFSET : print start offset address from top\n");
-			ntstdio_printf(&ntstdio, "  -sSIZE   : print size\n");
+			printf(" hexdump [OPTION] file\n");
+			printf("  -h : help\n");
+			printf("  -d : print all byte with convert and color [in character area] (default)\n");
+			printf("  -u : try print UTF-8 code [in character area]\n");
+			printf("  -oOFFSET : print start offset address from top\n");
+			printf("  -sSIZE   : print size\n");
 			break;
 		case 'd': /* print one byte character [in character area] (default) */
 			option_flag |= HEXDUMP_OPT_DEFAULT;
@@ -660,7 +659,7 @@ int usrcmd_hexdump(int argc, char **argv)
 
 	/* position adjusting */
 	if (op_offset >= fsrc.fsize) {
-		ntstdio_printf(&ntstdio, "error : input offset is bigger than file size(0x%X).\n", fsrc.fsize);
+		printf("error : input offset is bigger than file size(0x%lX).\n", fsrc.fsize);
 		return 0;
 	}
 	op_end = op_offset + op_size;
@@ -673,7 +672,7 @@ int usrcmd_hexdump(int argc, char **argv)
 		line[0] = '\0';
 		char *pos = line;
 		int rst = sizeof(line);
-		int len = ntstdio_snprintf(pos, rst, "%08X: ", i);
+		int len = snprintf(pos, rst, "%08X: ", i);
 		pos += len;
 		rst -= len;
 
@@ -692,9 +691,9 @@ int usrcmd_hexdump(int argc, char **argv)
 		for (int j = 0; j < br; j++) {
 			char c = data[j];
 			if (j != 7)
-				len = ntstdio_snprintf(pos, rst, "%02X ", c);
+				len = snprintf(pos, rst, "%02X ", c);
 			else
-				len = ntstdio_snprintf(pos, rst, "%02X-", c);
+				len = snprintf(pos, rst, "%02X-", c);
 			pos += len;
 			rst -= len;
 
@@ -722,9 +721,9 @@ int usrcmd_hexdump(int argc, char **argv)
 							if (j + k >= 16)
 								break;
 							if (j + k != 7)
-								len = ntstdio_snprintf(pos, rst, "%02X ", data[j + k]);
+								len = snprintf(pos, rst, "%02X ", data[j + k]);
 							else
-								len = ntstdio_snprintf(pos, rst, "%02X-", data[j + k]);
+								len = snprintf(pos, rst, "%02X-", data[j + k]);
 							pos += len;
 							rst -= len;
 						}
@@ -742,7 +741,7 @@ int usrcmd_hexdump(int argc, char **argv)
 			if (utf8_odd_bytes > 0 && j < 15) {
 				apos += len;
 				arst -= len;
-				len = ntstdio_snprintf(apos, arst, "\x1B[%dm%c\x1B[0m", CCOLOR_RESET, ' ');
+				len = snprintf(apos, arst, "\x1B[%dm%c\x1B[0m", CCOLOR_RESET, ' ');
 				utf8_odd_bytes--;
 			}
 			else if (utf8_done_flg == 0) {
@@ -762,7 +761,7 @@ int usrcmd_hexdump(int argc, char **argv)
 					ccolor = CCOLOR_CYAN;
 					c = '?';
 				}
-				len = ntstdio_snprintf(apos, arst, "\x1B[%dm%c\x1B[0m", ccolor, c);
+				len = snprintf(apos, arst, "\x1B[%dm%c\x1B[0m", ccolor, c);
 			}
 
 			apos += len;
@@ -771,18 +770,18 @@ int usrcmd_hexdump(int argc, char **argv)
 
 		for (int j = br; j < 16; j++) {
 			if (j != 7)
-				len = ntstdio_snprintf(pos, rst, "   ");
+				len = snprintf(pos, rst, "   ");
 			else
-				len = ntstdio_snprintf(pos, rst, "  -");
+				len = snprintf(pos, rst, "  -");
 			pos += len;
 			rst -= len;
 		}
 
-		len = ntstdio_snprintf(pos, rst, ": %s\n", ascii);
+		len = snprintf(pos, rst, ": %s\n", ascii);
 		pos += len;
 		rst -= len;
 
-		ntstdio_puts(&ntstdio, line);
+		puts(line);
 	}
 
 	f_close(&fsrc);
@@ -797,13 +796,13 @@ int usrcmd_date(int argc, char **argv)
 
 	ret = shell_clock_gettime(CLOCK_REALTIME, &tp);
 	if (ret != 0) {
-		ntstdio_printf(&ntstdio, "clock_gettime error %d", ret);
+		printf("clock_gettime error %d", ret);
 		return 0;
 	}
 
 	memset(buf, 0, sizeof(buf));
 	if (ctime_r(&tp.tv_sec, buf) == NULL) {
-		ntstdio_printf(&ntstdio, "ctime_r error");
+		printf("ctime_r error");
 		return 0;
 	}
 
@@ -811,28 +810,28 @@ int usrcmd_date(int argc, char **argv)
 	ret = ntlibc_strlen(buf);
 	buf[ret - 1] = '\0';
 
-	ntstdio_printf(&ntstdio, "%s .%09u\n", buf, tp.tv_nsec);
+	printf("%s .%09ld\n", buf, tp.tv_nsec);
 	return 0;
 }
 
 int usrcmd_info(int argc, char **argv)
 {
 	if (argc != 2) {
-		ntstdio_printf(&ntstdio, "info sys\n");
-		ntstdio_printf(&ntstdio, "info ver\n");
+		printf("info sys\n");
+		printf("info ver\n");
 		return 0;
 	}
 	if (strcmp(argv[1], "sys") == 0) {
-		ntstdio_printf(&ntstdio, TARGET_NAME" Monitor\n");
+		printf(TARGET_NAME" Monitor\n");
 		return 0;
 	}
 	if (strcmp(argv[1], "ver") == 0) {
 		int mj, mn, bd;
 		ntshell_version(&mj, &mn, &bd);
-		ntstdio_printf(&ntstdio, "Version %d.%d.%d\n", mj, mn, bd);
+		printf("Version %d.%d.%d\n", mj, mn, bd);
 		return 0;
 	}
-	ntstdio_printf(&ntstdio, "Unknown sub command found\n");
+	printf("Unknown sub command found\n");
 	return -1;
 }
 

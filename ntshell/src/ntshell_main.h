@@ -76,8 +76,7 @@ extern cmd_table_info_t cmd_table_info;
 extern PRI main_task_priority;
 
 /* ntshellタスク初期化 */
-void ntshell_task_init(NTSHELL_SERIAL_READ func_read,
-	NTSHELL_SERIAL_WRITE func_write, void *extobj);
+void ntshell_task_init(ID portid);
 
 /* ntshellタスク */
 void ntshell_task(intptr_t exinf);

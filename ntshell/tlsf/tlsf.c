@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "util/ntstdio.h"
+#include <stdio.h>
 
 #include "tlsf.h"
 
@@ -15,8 +15,6 @@
 #else
 #define tlsf_decl static
 #endif
-
-extern ntstdio_t ntstdio;
 
 /*
 ** Architecture-specific bit manipulation routines.
@@ -888,7 +886,7 @@ int tlsf_check(tlsf_t tlsf)
 static void default_walker(void* ptr, size_t size, int used, void* user)
 {
 	(void)user;
-	ntstdio_printf(&ntstdio, "\t%p %s size: %x (%p)\n", ptr, used ? "used" : "free", (unsigned int)size, block_from_ptr(ptr));
+	printf("\t%p %s size: %x (%p)\n", ptr, used ? "used" : "free", (unsigned int)size, block_from_ptr(ptr));
 }
 
 void tlsf_walk_pool(pool_t pool, tlsf_walker walker, void* user)
@@ -977,7 +975,7 @@ pool_t tlsf_add_pool(tlsf_t tlsf, void* mem, size_t bytes)
 
 	if (((ptrdiff_t)mem % ALIGN_SIZE) != 0)
 	{
-		ntstdio_printf(&ntstdio, "tlsf_add_pool: Memory must be aligned by %u bytes.\n",
+		printf("tlsf_add_pool: Memory must be aligned by %u bytes.\n",
 			(unsigned int)ALIGN_SIZE);
 		return 0;
 	}
@@ -985,11 +983,11 @@ pool_t tlsf_add_pool(tlsf_t tlsf, void* mem, size_t bytes)
 	if (pool_bytes < block_size_min || pool_bytes > block_size_max)
 	{
 #if defined (TLSF_64BIT)
-		ntstdio_printf(&ntstdio, "tlsf_add_pool: Memory size must be between 0x%x and 0x%x00 bytes.\n", 
+		printf("tlsf_add_pool: Memory size must be between 0x%x and 0x%x00 bytes.\n", 
 			(unsigned int)(pool_overhead + block_size_min),
 			(unsigned int)((pool_overhead + block_size_max) / 256));
 #else
-		ntstdio_printf(&ntstdio, "tlsf_add_pool: Memory size must be between %u and %u bytes.\n", 
+		printf("tlsf_add_pool: Memory size must be between %u and %u bytes.\n", 
 			(unsigned int)(pool_overhead + block_size_min),
 			(unsigned int)(pool_overhead + block_size_max));
 #endif
@@ -1057,7 +1055,7 @@ int test_ffs_fls()
 
 	if (rv)
 	{
-		ntstdio_printf(&ntstdio, "test_ffs_fls: %x ffs/fls tests failed.\n", rv);
+		printf("test_ffs_fls: %x ffs/fls tests failed.\n", rv);
 	}
 	return rv;
 }
@@ -1074,7 +1072,7 @@ tlsf_t tlsf_create(void* mem)
 
 	if (((tlsfptr_t)mem % ALIGN_SIZE) != 0)
 	{
-		ntstdio_printf(&ntstdio, "tlsf_create: Memory must be aligned to %u bytes.\n",
+		printf("tlsf_create: Memory must be aligned to %u bytes.\n",
 			(unsigned int)ALIGN_SIZE);
 		return 0;
 	}

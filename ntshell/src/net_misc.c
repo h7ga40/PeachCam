@@ -59,9 +59,7 @@
 #include "ntp_cli.h"
 #include "kernel_cfg.h"
 #include "tinet_cfg.h"
-#include "util/ntstdio.h"
-
-extern ntstdio_t ntstdio;
+#include <stdio.h>
 
 T_DHCP4_CLI_CONTEXT *dhcp4_cli_initialize(ID tskid, ID cepid);
 int dhcp4_cli_get_timer(T_DHCP4_CLI_CONTEXT *ct);
@@ -96,7 +94,7 @@ net_misc_task (intptr_t exinf)
 	int timer;
 
 	get_tid(&nc->tskid);
-	ntstdio_printf(&ntstdio, "[NET MISC:%d,%d] started.", nc->tskid, (ID)exinf);
+	printf("[NET MISC:%d,%d] started.", nc->tskid, (ID)exinf);
 
 	/* 初期化 */
 	ct = dhcp4_cli_initialize(nc->tskid, UDP4_DHCP_CLI_CEPID);
@@ -104,7 +102,7 @@ net_misc_task (intptr_t exinf)
 
 	ret = get_tim(&time);
 	if (ret != E_OK) {
-		ntstdio_printf(&ntstdio, "[NET MISC,%d] get_tim error: %7lu,%s",
+		printf("[NET MISC,%d] get_tim error: %7lu,%s",
 			nc->cepid, time / SYSTIM_HZ, itron_strerror(ret));
 		return;
 	}
@@ -118,14 +116,14 @@ net_misc_task (intptr_t exinf)
 		/* 待ち */
 		error = tslp_tsk(timer);
 		if ((error != E_OK) && (error != E_TMOUT)) {
-			ntstdio_printf(&ntstdio, "[NET MISC,%d] tslp_tsk error: %s %d",
+			printf("[NET MISC,%d] tslp_tsk error: %s %d",
 				nc->cepid, itron_strerror(error), timer);
 			break;
 		}
 
 		ret = get_tim(&time);
 		if (ret != E_OK) {
-			ntstdio_printf(&ntstdio, "[NET MISC,%d] get_tim error: %s",
+			printf("[NET MISC,%d] get_tim error: %s",
 				nc->cepid, itron_strerror(ret));
 			break;
 		}
