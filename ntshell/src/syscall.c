@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  *
- *  @(#) $Id: syscall.c 1829 2019-02-28 07:06:50Z coas-nagasima $
+ *  @(#) $Id: syscall.c 1855 2019-03-30 14:31:07Z coas-nagasima $
  */
 #include "bits/syscall.h"
 #include "shellif.h"
@@ -481,6 +481,56 @@ long SYS_socketpair(long a, long b, long c, long d) {
 long SYS_flock(long a, long b) {
 	//int flock(int fd, int op)
 	return no_implement("flock\n");
+}
+
+long SYS_fchdir()
+{
+	return no_implement("fchdir\n");
+}
+
+long SYS_getegid32()
+{
+	return no_implement("getegid32\n");
+}
+
+long SYS_geteuid32()
+{
+	return no_implement("geteuid32\n");
+}
+
+long SYS_getgid32()
+{
+	return no_implement("getgid32\n");
+}
+
+long SYS_pipe2()
+{
+	return no_implement("pipe2\n");
+}
+
+long SYS_setgid32()
+{
+	return no_implement("setgid32\n");
+}
+
+long SYS_setpgid()
+{
+	return no_implement("setpgid\n");
+}
+
+long SYS_setsid()
+{
+	return no_implement("setsid\n");
+}
+
+long SYS_setuid32()
+{
+	return no_implement("setuid32\n");
+}
+
+long SYS_tgkill()
+{
+	return no_implement("tgkill\n");
 }
 
 long SYS_nanosleep(long a, long b) {

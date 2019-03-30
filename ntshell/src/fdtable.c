@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: fdtable.c 1781 2019-02-01 00:02:42Z coas-nagasima $
+ *  @(#) $Id: fdtable.c 1856 2019-03-30 14:31:58Z coas-nagasima $
  */
 #include "shellif.h"
 #include <stdint.h>
@@ -67,42 +67,167 @@
 #include "socket_stub.h"
 #include "kernel_cfg.h"
 #include <string.h>
+#include "util/ntstdio.h"
 
-#define IO_TYPE_FREE	0
-#define IO_TYPE_SIO		1
-#define IO_TYPE_FILE	2
-#define IO_TYPE_DIR		3
-#define IO_TYPE_TCP		4
-#define IO_TYPE_UDP	5
+#ifdef _DEBUG
+static const char THIS_FILE[] = __FILE__;
+#endif
 
-static struct _IO_FILE fd_table[8 * sizeof(FLGPTN)] = {
-	{ 0, IO_TYPE_SIO, 0, stdio_close, stdin_read, stdio_write, sio_seek, sio_ioctl },
-	{ 1, IO_TYPE_SIO, 0, stdio_close, stdio_read, stdout_write, sio_seek, sio_ioctl },
-	{ 2, IO_TYPE_SIO, 0, stdio_close, stdio_read, stderr_write, sio_seek, sio_ioctl },
+static int stdio_close(struct SHELL_FILE *fp);
+static size_t stdio_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
+static size_t stdio_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
+static size_t stdin_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
+static size_t stdout_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
+static size_t stderr_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
+
+static int sio_close(struct SHELL_FILE *fp);
+static size_t sio_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
+static size_t sio_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
+static off_t sio_seek(struct SHELL_FILE *fp, off_t ofs, int org);
+static int sio_ioctl(struct SHELL_FILE *fp, int req, void *arg);
+static bool_t sio_readable(struct SHELL_FILE *fp);
+
+IO_TYPE IO_TYPE_STDIN = { stdio_close, stdin_read, stdio_write, sio_seek, sio_ioctl, sio_readable };
+IO_TYPE IO_TYPE_STDOUT = { stdio_close, stdio_read, stdout_write, sio_seek, sio_ioctl, sio_readable };
+IO_TYPE IO_TYPE_STDERR = { stdio_close, stdio_read, stderr_write, sio_seek, sio_ioctl, sio_readable };
+IO_TYPE IO_TYPE_SIO = { sio_close, sio_read, sio_write, sio_seek, sio_ioctl, sio_readable };
+ntstdio_t ntstdio;
+
+static struct SHELL_FILE fd_table[8 * sizeof(FLGPTN)] = {
+	{ 0, &IO_TYPE_STDIN, 0, .ntstdio = &ntstdio },
+	{ 1, &IO_TYPE_STDOUT, 0, .ntstdio = &ntstdio },
+	{ 2, &IO_TYPE_STDERR, 0,.ntstdio = &ntstdio },
 };
 #define fd_table_count (sizeof(fd_table) / sizeof(fd_table[0]))
 
-static int new_fd(int type, int id)
+extern ntstdio_t ntstdio;
+
+unsigned char ntstdio_xi(struct ntstdio_t *handle)
+{
+	unsigned char buf[1];
+	serial_rea_dat((ID)handle->exinf, (char *)buf, 1);
+	return buf[0];
+}
+
+void ntstdio_xo(struct ntstdio_t *handle, unsigned char c)
+{
+	unsigned char buf[1];
+	buf[0] = c;
+	serial_wri_dat((ID)handle->exinf, (char *)buf, 1);
+}
+
+void sys_init(intptr_t exinf)
+{
+	ntstdio_init(&ntstdio, NTSTDIO_OPTION_LINE_ECHO | NTSTDIO_OPTION_CANON | NTSTDIO_OPTION_LF_CRLF | NTSTDIO_OPTION_LF_CR, ntstdio_xi, ntstdio_xo);
+	ntstdio.exinf = (void *)SIO_PORTID;
+}
+
+int stdio_close(struct SHELL_FILE *fp)
+{
+	return -EPERM;
+}
+
+size_t stdio_read(struct SHELL_FILE *fp, unsigned char *data, size_t len)
+{
+	return -EPERM;
+}
+
+size_t stdio_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
+{
+	return -EPERM;
+}
+
+size_t stdin_read(struct SHELL_FILE *fp, unsigned char *data, size_t len)
+{
+	int i = 0;
+	while (i < len) {
+		int c = ntstdio_getc(fp->ntstdio);
+		data[i++] = c;
+		if ((c == EOF) || (c == '\n'))
+			break;
+	}
+	return i;
+}
+
+size_t stdout_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
+{
+	for (int i = 0; i < len; i++) {
+		ntstdio_putc(fp->ntstdio, data[i]);
+	}
+	return len;
+}
+
+size_t stderr_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
+{
+	for (int i = 0; i < len; i++) {
+		ntstdio_putc(fp->ntstdio, data[i]);
+	}
+	return len;
+}
+
+int sio_close(struct SHELL_FILE *fp)
+{
+	return -EPERM;
+}
+
+size_t sio_read(struct SHELL_FILE *fp, unsigned char *data, size_t len)
+{
+	return -EPERM;
+}
+
+size_t sio_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
+{
+	return -EPERM;
+}
+
+off_t sio_seek(struct SHELL_FILE *fp, off_t ofs, int org)
+{
+	return -EPERM;
+}
+
+int sio_ioctl(struct SHELL_FILE *fp, int request, void *arg)
+{
+	switch (request) {
+	case TIOCGWINSZ:
+		return 0;
+	case TCGETS:
+		return sio_tcgetattr(fp->fd, (struct termios *)arg);
+	case TCSETS + TCSANOW:
+	case TCSETS + TCSADRAIN:
+	case TCSETS + TCSAFLUSH:
+		return sio_tcsetattr(fp->fd, request - TCSETS, (const struct termios *)arg);
+	}
+
+	return -EINVAL;
+}
+
+bool_t sio_readable(struct SHELL_FILE *fp)
+{
+	return fp->readevt_w != fp->readevt_r;
+}
+
+struct SHELL_FILE *new_fp(IO_TYPE *type, int id, int writable)
 {
 	for (int fd = 3; fd < fd_table_count; fd++) {
-		struct _IO_FILE *fp = &fd_table[fd];
-		if (fp->type != IO_TYPE_FREE)
+		struct SHELL_FILE *fp = &fd_table[fd];
+		if (fp->type != NULL)
 			continue;
 
-		memset(fp, 0, sizeof(struct _IO_FILE));
+		memset(fp, 0, sizeof(struct SHELL_FILE));
 		fp->fd = fd;
 		fp->type = type;
 		fp->handle = id;
-		return fd;
+		fp->writable = writable;
+		return fp;
 	}
 
-	return -ENOMEM;
+	return NULL;
 }
 
-static struct _IO_FILE *id_to_fd(int type, int id)
+struct SHELL_FILE *id_to_fd(IO_TYPE *type, int id)
 {
 	for (int fd = 3; fd < fd_table_count; fd++) {
-		struct _IO_FILE *fp = &fd_table[fd];
+		struct SHELL_FILE *fp = &fd_table[fd];
 		if ((fp->type == type) && (fp->handle == id))
 			return fp;
 	}
@@ -110,16 +235,16 @@ static struct _IO_FILE *id_to_fd(int type, int id)
 	return NULL;
 }
 
-static int delete_fd(int type, int id)
+int delete_fd(IO_TYPE *type, int id)
 {
-	struct _IO_FILE *fp = id_to_fd(type, id);
+	struct SHELL_FILE *fp = id_to_fd(type, id);
 	if (fp == NULL)
 		return -EBADF;
 
 	return delete_fp(fp);
 }
 
-int delete_fp(struct _IO_FILE *fp)
+int delete_fp(struct SHELL_FILE *fp)
 {
 	free(fp->pfile);
 	fp->pfile = NULL;
@@ -127,172 +252,26 @@ int delete_fp(struct _IO_FILE *fp)
 	fp->pdir = NULL;
 	free(fp->psock);
 	fp->psock = NULL;
-	memset(fp, 0, sizeof(struct _IO_FILE));
+	memset(fp, 0, sizeof(struct SHELL_FILE));
 
 	return 0;
 }
 
-struct _IO_FILE *fd_to_fp(int fd)
+struct SHELL_FILE *fd_to_fp(int fd)
 {
 	if ((fd < 0) || (fd >= fd_table_count))
 		return NULL;
 	return &fd_table[fd];
 }
 
-struct _IO_FILE *new_sio_fd(int sioid)
-{
-	int fd = new_fd(IO_TYPE_SIO, sioid);
-	if ((fd < 0) || (fd >= fd_table_count))
-		return NULL;
-
-	struct _IO_FILE *fp = &fd_table[fd];
-	fp->close = sio_close;
-	fp->read = sio_read;
-	fp->write = sio_write;
-	fp->seek = sio_seek;
-	fp->ioctl = sio_ioctl;
-	fp->writable = 1;
-
-	return fp;
-}
-
-int delete_sio_fd(int sioid)
-{
-	return delete_fd(IO_TYPE_SIO, sioid);
-}
-
-struct _IO_FILE *sioid_to_fd(int sioid)
-{
-	return id_to_fd(IO_TYPE_SIO, sioid);
-}
-
-struct _IO_FILE *new_file_fd(int fileid)
-{
-	int fd = new_fd(IO_TYPE_FILE, fileid);
-	if ((fd < 0) || (fd >= fd_table_count))
-		return NULL;
-
-	struct _IO_FILE *fp = &fd_table[fd];
-	fp->close = file_close;
-	fp->read = file_read;
-	fp->write = file_write;
-	fp->seek = file_seek;
-	fp->ioctl = file_ioctl;
-	fp->writable = 1;
-	fp->pfile = malloc(sizeof(FIL));
-	memset(fp->pfile, 0, sizeof(FIL));
-
-	return fp;
-}
-
-int delete_file_fd(int fileid)
-{
-	return delete_fd(IO_TYPE_FILE, fileid);
-}
-
-struct _IO_FILE *fileid_to_fd(int fileid)
-{
-	return id_to_fd(IO_TYPE_FILE, fileid);
-}
-
-struct _IO_FILE *new_dir_fd(int fileid)
-{
-	int fd = new_fd(IO_TYPE_DIR, fileid);
-	if ((fd < 0) || (fd >= fd_table_count))
-		return NULL;
-
-	struct _IO_FILE *fp = &fd_table[fd];
-	fp->close = dir_close;
-	fp->read = dir_read;
-	fp->write = dir_write;
-	fp->seek = dir_seek;
-	fp->ioctl = dir_ioctl;
-	fp->writable = 0;
-	fp->pdir = malloc(sizeof(struct _IO_DIR));
-	memset(fp->pdir, 0, sizeof(struct _IO_DIR));
-
-	return fp;
-}
-
-int delete_dir_fd(int dirid)
-{
-	return delete_fd(IO_TYPE_DIR, dirid);
-}
-
-struct _IO_FILE *dirid_to_fd(int dirid)
-{
-	return id_to_fd(IO_TYPE_DIR, dirid);
-}
-
-#ifndef NTSHELL_NO_SOCKET
-struct _IO_FILE *new_tcp_fd(int tcpid)
-{
-	int fd = new_fd(IO_TYPE_TCP, tcpid);
-	if ((fd < 0) || (fd >= fd_table_count))
-		return NULL;
-
-	struct _IO_FILE *fp = &fd_table[fd];
-	fp->close = tcp_fd_close;
-	fp->read = tcp_fd_read;
-	fp->write = tcp_fd_write;
-	fp->seek = tcp_fd_seek;
-	fp->ioctl = tcp_fd_ioctl;
-	fp->writable = 0;
-	fp->psock = malloc(sizeof(socket_t));
-	memset(fp->psock, 0, sizeof(socket_t));
-
-	return fp;
-}
-
-int delete_tcp_fd(int tcpid)
-{
-	return delete_fd(IO_TYPE_TCP, tcpid);
-}
-
-struct _IO_FILE *tcpid_to_fd(int tcpid)
-{
-	return id_to_fd(IO_TYPE_TCP, tcpid);
-}
-
-struct _IO_FILE *new_udp_fd(int udpid)
-{
-	int fd = new_fd(IO_TYPE_UDP, udpid);
-	if ((fd < 0) || (fd >= fd_table_count))
-		return NULL;
-
-	struct _IO_FILE *fp = &fd_table[fd];
-	fp->close = udp_fd_close;
-	fp->read = udp_fd_read;
-	fp->write = udp_fd_write;
-	fp->seek = udp_fd_seek;
-	fp->ioctl = udp_fd_ioctl;
-	fp->writable = 1;
-	fp->psock = malloc(sizeof(socket_t));
-	memset(fp->psock, 0, sizeof(socket_t));
-
-	return fp;
-}
-
-int delete_udp_fd(int udpid)
-{
-	return delete_fd(IO_TYPE_UDP, udpid);
-}
-
-struct _IO_FILE *udpid_to_fd(int udpid)
-{
-	return id_to_fd(IO_TYPE_UDP, udpid);
-}
-
-#endif
-
-void memor(void *dst, void *src, size_t len)
+void memand(void *dst, void *src, size_t len)
 {
 	uint8_t *d = (uint8_t *)dst;
 	uint8_t *s = (uint8_t *)src;
 	uint8_t *e = &s[len];
 
 	while (s < e) {
-		*d++ |= *s++;
+		*d++ &= *s++;
 	}
 }
 
@@ -335,22 +314,22 @@ int shell_select(int n, fd_set *__restrict rfds, fd_set *__restrict wfds, fd_set
 	evts.count = 0;
 
 	ret = shell_get_evts(&evts, tmout);
-	if (rfds != NULL)
-		memset(rfds, 0, sizeof(fd_set));
-	if (wfds != NULL)
-		memset(wfds, 0, sizeof(fd_set));
-	if (efds != NULL)
-		memset(efds, 0, sizeof(fd_set));
 	if (ret == E_OK) {
 		if (rfds != NULL)
-			memor(rfds, &evts.readfds, sizeof(fd_set));
+			memand(rfds, &evts.readfds, sizeof(fd_set));
 		if (wfds != NULL)
-			memor(wfds, &evts.writefds, sizeof(fd_set));
+			memand(wfds, &evts.writefds, sizeof(fd_set));
 		if (efds != NULL)
-			memor(efds, &evts.errorfds, sizeof(fd_set));
+			memand(efds, &evts.errorfds, sizeof(fd_set));
 		return evts.count;
 	}
 	if (ret == E_TMOUT) {
+		if (rfds != NULL)
+			memset(rfds, 0, sizeof(fd_set));
+		if (wfds != NULL)
+			memset(wfds, 0, sizeof(fd_set));
+		if (efds != NULL)
+			memset(efds, 0, sizeof(fd_set));
 		return 0;
 	}
 
@@ -418,11 +397,11 @@ int shell_poll(struct pollfd *fds, nfds_t nfds, int timeout)
 void stdio_update_evts()
 {
 	int fd = STDIN_FILENO;
-	struct _IO_FILE *fp = &fd_table[fd];
+	struct SHELL_FILE *fp = &fd_table[fd];
 	T_SERIAL_RPOR rpor;
 	FLGPTN flgptn = 0;
 
-	ER ret = serial_ref_por(SIO_PORTID, &rpor);
+	ER ret = serial_ref_por((ID)fp->ntstdio->exinf, &rpor);
 	if (ret != E_OK)
 		return;
 
@@ -446,11 +425,11 @@ void stdio_update_evts()
 void stdio_flgptn(FLGPTN *flgptn)
 {
 	int fd = STDIN_FILENO;
-	struct _IO_FILE *fp = &fd_table[fd];
+	struct SHELL_FILE *fp = &fd_table[fd];
 	T_SERIAL_RPOR rpor;
 	*flgptn = 0;
 
-	ER ret = serial_ref_por(SIO_PORTID, &rpor);
+	ER ret = serial_ref_por((ID)fp->ntstdio->exinf, &rpor);
 	if (ret != E_OK)
 		return;
 
@@ -466,171 +445,6 @@ void stdio_flgptn(FLGPTN *flgptn)
 	}
 }
 
-#ifndef NTSHELL_NO_SOCKET
-
-ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk)
-{
-	struct _IO_FILE *fp = tcpid_to_fd(cepid);
-	FLGPTN flgptn = 0;
-	ER ret;
-	int len;
-
-	if (fp == NULL)
-		return E_PAR;
-
-	int fd = fp->fd;
-	FD_SET(fd, (fd_set *)&flgptn);
-
-	switch (fncd) {
-	case TFN_TCP_RCV_BUF:
-		len = *(int *)p_parblk;
-		if (len <= 0)
-			return E_OK;
-
-		ret = wai_sem(SEM_FILEDESC);
-		if (ret < 0) {
-			syslog(LOG_ERROR, "wai_sem => %d", ret);
-		}
-		fp->psock->len += len;
-		ret = sig_sem(SEM_FILEDESC);
-		if (ret < 0) {
-			syslog(LOG_ERROR, "sig_sem => %d", ret);
-		}
-
-		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
-
-		set_flg(FLG_SELECT_WAIT, flgptn);
-		return E_OK;
-
-	case TFN_TCP_RCV_DAT:
-		len = *(int *)p_parblk;
-		if (len <= 0)
-			return E_OK;
-
-		ret = wai_sem(SEM_FILEDESC);
-		if (ret < 0) {
-			syslog(LOG_ERROR, "wai_sem => %d", ret);
-		}
-		fp->psock->len += len;
-		ret = sig_sem(SEM_FILEDESC);
-		if (ret < 0) {
-			syslog(LOG_ERROR, "sig_sem => %d", ret);
-		}
-
-		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
-
-		set_flg(FLG_SELECT_WAIT, flgptn);
-		return E_OK;
-
-	case TFN_TCP_SND_DAT:
-		if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
-
-		set_flg(FLG_SELECT_WAIT, flgptn);
-		return E_OK;
-
-	case TFN_TCP_CAN_CEP:
-		if (fp->errorevt_w == fp->errorevt_r) fp->errorevt_w++;
-
-		set_flg(FLG_SELECT_WAIT, flgptn);
-		return E_OK;
-
-	case TFN_TCP_DEL_REP:
-		delete_tcp_rep(cepid);
-		return E_OK;
-
-	case TFN_TCP_DEL_CEP:
-		delete_tcp_fd(cepid);
-		return E_OK;
-
-	default:
-		return E_OK;
-	}
-}
-
-ER socket_udp_callback(ID cepid, FN fncd, void *p_parblk)
-{
-	struct _IO_FILE *fp = udpid_to_fd(cepid);
-	FLGPTN flgptn = 0;
-	int len;
-
-	if (fp == NULL)
-		return E_PAR;
-
-	int fd = fp->fd;
-	FD_SET(fd, (fd_set *)&flgptn);
-
-	switch (fncd) {
-	case TEV_UDP_RCV_DAT:
-	{
-		T_UDP_RCV_DAT_PARA *udppara = (T_UDP_RCV_DAT_PARA *)p_parblk;
-		len = udppara->len;
-		if (len <= 0)
-			return E_OK;
-
-		ER ret = wai_sem(SEM_FILEDESC);
-		if (ret < 0) {
-			syslog(LOG_ERROR, "wai_sem => %d", ret);
-		}
-		fp->psock->len = len;
-		if (fp->psock->input != NULL) {
-			ret = rel_net_buf(fp->psock->input);
-			if (ret < 0) {
-				syslog(LOG_ERROR, "rel_net_buf => %d", ret);
-			}
-		}
-		fp->psock->input = udppara->input;
-		fp->psock->buf = GET_UDP_SDU(udppara->input, udppara->off);
-		memset(&fp->psock->raddr4, 0, sizeof(fp->psock->raddr4));
-		fp->psock->raddr4.sin_family = AF_INET;
-		fp->psock->raddr4.sin_port = htons(udppara->rep4.portno);
-		fp->psock->raddr4.sin_addr.s_addr = htonl(udppara->rep4.ipaddr);
-		udppara->input->flags |= NB_FLG_NOREL_IFOUT;
-		ret = sig_sem(SEM_FILEDESC);
-		if (ret < 0) {
-			syslog(LOG_ERROR, "sig_sem => %d", ret);
-		}
-
-		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
-
-		set_flg(FLG_SELECT_WAIT, flgptn);
-		return E_OK;
-	}
-	case TFN_UDP_CRE_CEP:
-		return E_OK;
-
-	case TFN_UDP_RCV_DAT:
-		len = *(int *)p_parblk;
-		if (len <= 0)
-			return E_OK;
-
-		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
-
-		set_flg(FLG_SELECT_WAIT, flgptn);
-		return E_OK;
-
-	case TFN_UDP_SND_DAT:
-		if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
-
-		set_flg(FLG_SELECT_WAIT, flgptn);
-		return E_OK;
-
-	case TFN_UDP_CAN_CEP:
-		if (fp->errorevt_w == fp->errorevt_r) fp->errorevt_w++;
-
-		set_flg(FLG_SELECT_WAIT, flgptn);
-		return E_OK;
-
-	case TFN_UDP_DEL_CEP:
-		delete_udp_fd(cepid);
-		return E_OK;
-
-	default:
-		return E_OK;
-	}
-}
-
-#endif
-
 ER shell_get_evts(struct fd_events *evts, TMO tmout)
 {
 	int count = 0;
@@ -641,7 +455,7 @@ ER shell_get_evts(struct fd_events *evts, TMO tmout)
 	for (;;) {
 		ER ret;
 		FLGPTN waitptn, flgptn, readfds = 0, writefds = 0;
-		struct _IO_FILE *fp = NULL;
+		struct SHELL_FILE *fp = NULL;
 
 		stdio_update_evts();
 
@@ -655,38 +469,10 @@ ER shell_get_evts(struct fd_events *evts, TMO tmout)
 
 #ifndef NTSHELL_NO_SOCKET
 			if (FD_ISSET(fd, &evts->readfds)) {
-				if ((fp->type == IO_TYPE_TCP) && (fp->psock->cepid != 0)) {
-					if (fp->psock->len == 0) {
-						ret = tcp_rcv_buf(fp->psock->cepid, &fp->psock->input, TMO_NBLK);
-						if ((ret != E_WBLK) && (ret != E_OBJ) && (ret < 0)) {
-							syslog(LOG_ERROR, "tcp_rcv_buf => %d", ret);
-							//return ret;
-						}
-						if (ret > 0) {
-							ret = wai_sem(SEM_FILEDESC);
-							if (ret < 0) {
-								syslog(LOG_ERROR, "wai_sem => %d", ret);
-							}
-							fp->psock->len += ret;
-							ret = sig_sem(SEM_FILEDESC);
-							if (ret < 0) {
-								syslog(LOG_ERROR, "sig_sem => %d", ret);
-							}
-						}
-					}
-					else ret = 1;
-					if (ret > 0) {
-						FD_SET(fd, (fd_set *)&readfds);
-						count++;
-						if (fp->readevt_w == fp->readevt_r) fp->readevt_r--;
-					}
-				}
-				else if ((fp->type == IO_TYPE_UDP) && (fp->psock->cepid != 0)) {
-					if (fp->psock->input != NULL) {
-						FD_SET(fd, (fd_set *)&readfds);
-						count++;
-						if (fp->readevt_w == fp->readevt_r) fp->readevt_r--;
-					}
+				if (fp->type->readable(fp)) {
+					FD_SET(fd, (fd_set *)&readfds);
+					count++;
+					if (fp->readevt_w == fp->readevt_r) fp->readevt_r--;
 				}
 				else {
 					FD_SET(fd, (fd_set *)&waitptn);
@@ -785,13 +571,13 @@ ER shell_get_evts(struct fd_events *evts, TMO tmout)
 
 void clean_fd()
 {
-	struct _IO_FILE *fp = NULL;
+	struct SHELL_FILE *fp = NULL;
 	for (int fd = 3; fd < fd_table_count; fd++) {
 		fp = &fd_table[fd];
 		if ((fp->type == 0) || (fp->fd == 0))
 			continue;
 
-		fp->close(fp);
+		fp->type->close(fp);
 
 		delete_fp(fp);
 	}
@@ -799,11 +585,11 @@ void clean_fd()
 
 int shell_ioctl(int fd, int request, void *arg)
 {
-	struct _IO_FILE *fp = fd_to_fp(fd);
+	struct SHELL_FILE *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
 
-	return fp->ioctl(fp, request, arg);
+	return fp->type->ioctl(fp, request, arg);
 }
 
 #ifdef NTSHELL_NO_SOCKET

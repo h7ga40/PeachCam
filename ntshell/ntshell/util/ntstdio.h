@@ -77,6 +77,7 @@ typedef struct ntstdio_t {
 	int len;
 	int pos;
 	unsigned int option;
+	void *exinf;
 } ntstdio_t;
 
 void ntstdio_init(ntstdio_t *handle, unsigned int option, NTSTDIO_XI xi, NTSTDIO_XO xo);

@@ -52,13 +52,12 @@
 #include "http-strings.h"
 #include "base64.h"
 #include "sha1.h"
-#include "util/ntstdio.h"
+#include <stdio.h>
 #include "core/ntlibc.h"
 
 #define TRUE 1
 #define FALSE 0
 
-extern ntstdio_t ntstdio;
 SYSTIM httpd_time;
 struct httpd_state *uploding;
 extern char command[256];
@@ -103,7 +102,7 @@ strnlen(const char *s, size_t maxlen)
 
 void strcpy_s(char *dst, int size, const char *src)
 {
-	int slen = ntlibc_strlen(src);
+	int slen = strlen(src);
 	if (slen >= size)
 		slen = size - 1;
 	memcpy(dst, src, slen);
@@ -112,8 +111,8 @@ void strcpy_s(char *dst, int size, const char *src)
 
 void strcat_s(char *dst, int size, const char *src)
 {
-	int dlen = ntlibc_strlen(dst);
-	int slen = ntlibc_strlen(src);
+	int dlen = strlen(dst);
+	int slen = strlen(src);
 	if (dlen + slen >= size)
 		slen = size - 1 - dlen;
 	memcpy(&dst[dlen], src, slen);
@@ -196,8 +195,8 @@ int websvr_request_url(http_parser *p, const char *buf, size_t len)
 	/* ""か"/"なら"index.html"に変更 */
 	if ((s->message.request_url[0] == '\0') || ((s->message.request_url[0] == '/') && (s->message.request_url[1] == '\0'))) {
 		s->filename = &s->message.filename[sizeof(s->message.filename) - 2];
-		strcpy_s(s->filename, sizeof(s->message.request_url) + 2, "0:");
-		strcat_s(s->filename, sizeof(s->message.request_url) + 2, http_index_html);
+		strlcpy(s->filename, "0:", sizeof(s->message.request_url) + 2);
+		strlcat(s->filename, http_index_html, sizeof(s->message.request_url) + 2);
 		s->file.redirect = 1;
 	}
 	/* "/~/"ならSDカードから読み込み */
@@ -326,15 +325,15 @@ int websvr_headers_complete(http_parser *p)
 			uploding = s;
 			// アップロード先はSDカード
 			s->filename[0] = '1';
-			ntstdio_printf(&ntstdio, "create:    %s.%d %s\n", s->addr, ((T_IPV4EP *)s->dst)->portno, s->filename);
+			printf("create:    %s.%d %s\n", s->addr, ((T_IPV4EP *)s->dst)->portno, s->filename);
 			if (!httpd_fs_create(s->filename, &s->file)) {
 				goto error;
 			}
 
 			s->in.state = IN_STATE_UPLOAD;
 		}
-		else if (ntlibc_strcmp(s->filename, uploding->filename) == 0) {
-			ntstdio_printf(&ntstdio, "collision: %s.%d %s\n", s->addr, ((T_IPV4EP *)s->dst)->portno, s->filename);
+		else if (strcmp(s->filename, uploding->filename) == 0) {
+			printf("collision: %s.%d %s\n", s->addr, ((T_IPV4EP *)s->dst)->portno, s->filename);
 			goto error;
 		}
 		else {
@@ -379,12 +378,12 @@ int websvr_body(http_parser *p, const char *buf, size_t len)
 	s->message.body_is_final = http_body_is_final(p);
 
 	if (s->message.body_is_final) {
-		ntstdio_printf(&ntstdio, "close:     %s.%d %s\n", s->addr, ((T_IPV4EP *)s->dst)->portno, s->filename);
+		printf("close:     %s.%d %s\n", s->addr, ((T_IPV4EP *)s->dst)->portno, s->filename);
 		httpd_fs_close(&s->file);
 		memset(&s->file, 0, sizeof(s->file));
 
-		strcpy_s(command, sizeof(command), "mruby -b ");
-		strcat_s(command, sizeof(command), s->filename);
+		strlcpy(command, "mruby -b ", sizeof(command));
+		strlcat(command, s->filename, sizeof(command));
 		s->reset = 1;
 
 		s->filename = NULL;
@@ -512,7 +511,7 @@ void send_file(struct httpd_state *s)
 		}
 	}
 
-	ntstdio_printf(&ntstdio, "close:     %s.%d %s\n", s->addr, ((T_IPV4EP *)s->dst)->portno, s->filename);
+	printf("close:     %s.%d %s\n", s->addr, ((T_IPV4EP *)s->dst)->portno, s->filename);
 	httpd_fs_close(&s->file);
 	s->file.len = 0;
 	s->file.pos = 0;
@@ -563,7 +562,7 @@ void send_headers(struct httpd_state *s, const char *statushdr)
 	int len;
 	char *ptr;
 
-	len = ntlibc_strlen(statushdr);
+	len = strlen(statushdr);
 	tcp_snd_dat(s->cepid, (void *)statushdr, len, TMO_FEVR);
 
 	if ((s->filename[0] == '0') && (s->file.len > 0)) {
@@ -578,11 +577,11 @@ void send_headers(struct httpd_state *s, const char *statushdr)
 			len = 2;
 			tcp_snd_dat(s->cepid, "/~", len, TMO_FEVR);
 		}
-		len = ntlibc_strlen(s->filename);
+		len = strlen(s->filename);
 		tcp_snd_dat(s->cepid, s->filename, len, TMO_FEVR);
 		if (s->query != NULL) {
 			tcp_snd_dat(s->cepid, "?", 1, TMO_FEVR);
-			len = ntlibc_strlen(s->query);
+			len = strlen(s->query);
 			tcp_snd_dat(s->cepid, s->query, len, TMO_FEVR);
 		}
 		len = 2;
@@ -659,8 +658,8 @@ void send_headers(struct httpd_state *s, const char *statushdr)
 	if (s->file.len > 0) {
 		len = sizeof(http_content_length) - 1;
 		tcp_snd_dat(s->cepid, (void *)http_content_length, len, TMO_FEVR);
-		ntstdio_snprintf(s->temp, sizeof(s->temp), "%d\r\n", s->file.len);
-		tcp_snd_dat(s->cepid, (void *)s->temp, ntlibc_strlen(s->temp), TMO_FEVR);
+		snprintf(s->temp, sizeof(s->temp), "%d\r\n", s->file.len);
+		tcp_snd_dat(s->cepid, (void *)s->temp, strlen(s->temp), TMO_FEVR);
 	}
 
 	if (s->message.should_keep_alive && s->reset == 0) {
@@ -691,7 +690,7 @@ void handle_output(struct httpd_state *s)
 		s->out.wait = true;
 		break;
 	case OUT_STATE_OPEN_GET_FILE:
-		ntstdio_printf(&ntstdio, "open:      %s.%d %s\n", s->addr, ((T_IPV4EP *)s->dst)->portno, s->filename);
+		printf("open:      %s.%d %s\n", s->addr, ((T_IPV4EP *)s->dst)->portno, s->filename);
 		if (!httpd_fs_open(s->filename, sizeof(s->message.request_url), &s->file)) {
 			s->filename = NULL;
 			s->response_body = http_content_404;
@@ -736,33 +735,33 @@ void send_ws_headers(struct httpd_state *s, const char *statushdr)
 {
 	int len;
 
-	len = ntlibc_strlen(statushdr);
+	len = strlen(statushdr);
 	tcp_snd_dat(s->cepid, (void *)statushdr, len, TMO_FEVR);
 
 	len = sizeof(http_upgrade) - 1;
 	tcp_snd_dat(s->cepid, (void *)http_upgrade, len, TMO_FEVR);
-	len = ntlibc_strlen(s->message.upgrade);
+	len = strlen(s->message.upgrade);
 	tcp_snd_dat(s->cepid, s->message.upgrade, len, TMO_FEVR);
 	len = sizeof(http_crnl) - 1;
 	tcp_snd_dat(s->cepid, (void *)http_crnl, len, TMO_FEVR);
 
 	len = sizeof(http_connection) - 1;
 	tcp_snd_dat(s->cepid, (void *)http_connection, len, TMO_FEVR);
-	len = ntlibc_strlen(s->message.connection);
+	len = strlen(s->message.connection);
 	tcp_snd_dat(s->cepid, s->message.connection, len, TMO_FEVR);
 	len = sizeof(http_crnl) - 1;
 	tcp_snd_dat(s->cepid, (void *)http_crnl, len, TMO_FEVR);
 
 	len = sizeof(http_sec_websocket_accept) - 1;
 	tcp_snd_dat(s->cepid, (void *)http_sec_websocket_accept, len, TMO_FEVR);
-	len = ntlibc_strlen(s->message.response_key);
+	len = strlen(s->message.response_key);
 	tcp_snd_dat(s->cepid, s->message.response_key, len, TMO_FEVR);
 	len = sizeof(http_crnl) - 1;
 	tcp_snd_dat(s->cepid, (void *)http_crnl, len, TMO_FEVR);
 
 	len = sizeof(http_sec_websocket_protocol) - 1;
 	tcp_snd_dat(s->cepid, (void *)http_sec_websocket_protocol, len, TMO_FEVR);
-	len = ntlibc_strlen(s->message.sec_websocket_protocol);
+	len = strlen(s->message.sec_websocket_protocol);
 	tcp_snd_dat(s->cepid, s->message.sec_websocket_protocol, len, TMO_FEVR);
 	len = sizeof(http_crnl) - 1;
 	tcp_snd_dat(s->cepid, (void *)http_crnl, len, TMO_FEVR);
@@ -913,9 +912,9 @@ callback_nblk_tcp(ID cepid, FN fncd, void *p_parblk)
 	struct httpd_state *s = get_httpd(cepid);
 
 	if (s == NULL)
-		ntstdio_printf(&ntstdio, "callback_nblk_tcp(%d, %d)\n", fncd, cepid);
+		printf("callback_nblk_tcp(%d, %d)\n", fncd, cepid);
 	else
-		ntstdio_printf(&ntstdio, "callback_nblk_tcp(%d, %s.%d)\n", fncd, s->addr, ((T_IPV4EP *)s->dst)->portno);
+		printf("callback_nblk_tcp(%d, %s.%d)\n", fncd, s->addr, ((T_IPV4EP *)s->dst)->portno);
 
 	return E_PAR;
 }
@@ -945,7 +944,7 @@ void httpd_task(intptr_t exinf)
 				break;
 			}
 			IP2STR(s->addr, &((T_IPV4EP *)s->dst)->ipaddr);
-			ntstdio_printf(&ntstdio, "connected: %s.%d\n", s->addr, ((T_IPV4EP *)s->dst)->portno);
+			printf("connected: %s.%d\n", s->addr, ((T_IPV4EP *)s->dst)->portno);
 			memset(&s->in, 0, sizeof(s->in));
 			memset(&s->out, 0, sizeof(s->out));
 			s->in.timer = httpd_time;
@@ -960,7 +959,7 @@ void httpd_task(intptr_t exinf)
 			handle_ws_output(s);
 			break;
 		case STATE_CLOSING:
-			ntstdio_printf(&ntstdio, "close:     %s.%d\n", s->addr, ((T_IPV4EP *)s->dst)->portno);
+			printf("close:     %s.%d\n", s->addr, ((T_IPV4EP *)s->dst)->portno);
 			tcp_sht_cep(s->cepid);
 			tcp_cls_cep(s->cepid, TMO_FEVR);
 

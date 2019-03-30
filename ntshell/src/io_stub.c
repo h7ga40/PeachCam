@@ -1,8 +1,8 @@
 /*
  *  TOPPERS ECHONET Lite Communication Middleware
- * 
+ *
  *  Copyright (C) 2017 Cores Co., Ltd. Japan
- * 
+ *
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
  *  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
  *  変・再配布（以下，利用と呼ぶ）することを無償で許諾する．
@@ -25,14 +25,14 @@
  *      また，本ソフトウェアのユーザまたはエンドユーザからのいかなる理
  *      由に基づく請求からも，上記著作権者およびTOPPERSプロジェクトを
  *      免責すること．
- * 
+ *
  *  本ソフトウェアは，無保証で提供されているものである．上記著作権者お
  *  よびTOPPERSプロジェクトは，本ソフトウェアに関して，特定の使用目的
  *  に対する適合性も含めて，いかなる保証も行わない．また，本ソフトウェ
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
- * 
- *  @(#) $Id: io_stub.c 1829 2019-02-28 07:06:50Z coas-nagasima $
+ *
+ *  @(#) $Id: io_stub.c 1856 2019-03-30 14:31:58Z coas-nagasima $
  */
 #include "shellif.h"
 #include <stdint.h>
@@ -42,12 +42,14 @@
 #include <t_stdlib.h>
 #include <sil.h>
 #include <string.h>
+#include "syssvc/serial.h"
 #include "syssvc/syslog.h"
 #include "socket_stub.h"
 #include "util/ntstdio.h"
 #include "usrcmd.h"
 #include "core/ntlibc.h"
 #include "kernel_cfg.h"
+#include "target_syssvc.h"
 
 int fresult2errno(FRESULT res)
 {
@@ -76,15 +78,35 @@ int fresult2errno(FRESULT res)
 	}
 }
 
+static int file_close(struct SHELL_FILE *fp);
+static size_t file_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
+static size_t file_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
+static off_t file_seek(struct SHELL_FILE *fp, off_t ofs, int org);
+static int file_ioctl(struct SHELL_FILE *fp, int req, void *arg);
+static bool_t file_readable(struct SHELL_FILE *fp);
+
+static int dir_close(struct SHELL_FILE *fp);
+static size_t dir_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
+static size_t dir_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
+static off_t dir_seek(struct SHELL_FILE *fp, off_t ofs, int org);
+static int dir_ioctl(struct SHELL_FILE *fp, int req, void *arg);
+static bool_t dir_readable(struct SHELL_FILE *fp);
+
+IO_TYPE IO_TYPE_FILE = { file_close, file_read, file_write, file_seek, file_ioctl, file_readable };
+IO_TYPE IO_TYPE_DIR = { dir_close, dir_read, dir_write, dir_seek, dir_ioctl, dir_readable };
+
 int shell_open(const char * path, int flags, void *arg)
 {
 	FRESULT res;
-	struct _IO_FILE *fp;
+	struct SHELL_FILE *fp;
 
 	if (flags & O_DIRECTORY) {
-		fp = new_dir_fd(0);
+		fp = new_fp(&IO_TYPE_DIR, 0, 0);
 		if (fp == NULL)
 			return -ENOMEM;
+
+		fp->pdir = malloc(sizeof(struct SHELL_DIR));
+		memset(fp->pdir, 0, sizeof(struct SHELL_DIR));
 
 		FATFS_DIR *dir = &fp->pdir->dir;
 		FRESULT res;
@@ -94,9 +116,12 @@ int shell_open(const char * path, int flags, void *arg)
 		return 0;
 	}
 
-	fp = new_file_fd(0);
+	fp = new_fp(&IO_TYPE_FILE, 0, 1);
 	if (fp == NULL)
 		return -ENOMEM;
+
+	fp->pfile = malloc(sizeof(FIL));
+	memset(fp->pfile, 0, sizeof(FIL));
 
 	BYTE fmd = 0;
 	switch (flags & O_ACCMODE) {
@@ -140,7 +165,7 @@ int shell_open(const char * path, int flags, void *arg)
 	return fresult2errno(res);
 }
 
-int file_close(struct _IO_FILE *fp)
+int file_close(struct SHELL_FILE *fp)
 {
 	FRESULT res;
 
@@ -151,7 +176,7 @@ int file_close(struct _IO_FILE *fp)
 	return -EINVAL;
 }
 
-size_t file_read(struct _IO_FILE *fp, unsigned char *data, size_t len)
+size_t file_read(struct SHELL_FILE *fp, unsigned char *data, size_t len)
 {
 	unsigned int ret = 0;
 	FRESULT res;
@@ -162,7 +187,7 @@ size_t file_read(struct _IO_FILE *fp, unsigned char *data, size_t len)
 	return ret;
 }
 
-size_t file_write(struct _IO_FILE *fp, const unsigned char *data, size_t len)
+size_t file_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
 {
 	unsigned int ret = 0;
 	FRESULT res;
@@ -173,7 +198,7 @@ size_t file_write(struct _IO_FILE *fp, const unsigned char *data, size_t len)
 	return ret;
 }
 
-off_t file_seek(struct _IO_FILE *fp, off_t ptr, int dir)
+off_t file_seek(struct SHELL_FILE *fp, off_t ptr, int dir)
 {
 	switch (dir) {
 	case SEEK_SET:
@@ -196,7 +221,7 @@ off_t file_seek(struct _IO_FILE *fp, off_t ptr, int dir)
 	return fp->pfile->fptr;
 }
 
-int file_ioctl(struct _IO_FILE *fp, int req, void *arg)
+int file_ioctl(struct SHELL_FILE *fp, int req, void *arg)
 {
 	DRESULT res;
 
@@ -206,13 +231,18 @@ int file_ioctl(struct _IO_FILE *fp, int req, void *arg)
 	return 0;
 }
 
+bool_t file_readable(struct SHELL_FILE *fp)
+{
+	return fp->readevt_w != fp->readevt_r;
+}
+
 int shell_close(int fd)
 {
-	struct _IO_FILE *fp = fd_to_fp(fd);
+	struct SHELL_FILE *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
 
-	int ret = fp->close(fp);
+	int ret = fp->type->close(fp);
 
 	delete_fp(fp);
 
@@ -221,23 +251,23 @@ int shell_close(int fd)
 
 ssize_t shell_read(int fd, void *data, size_t len)
 {
-	struct _IO_FILE *fp = fd_to_fp(fd);
+	struct SHELL_FILE *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
 
-	return fp->read(fp, (unsigned char *)data, len);
+	return fp->type->read(fp, (unsigned char *)data, len);
 }
 
 int shell_readv(int fd, const struct iovec *iov, int iovcnt)
 {
 	int result = 0;
-	struct _IO_FILE *fp = fd_to_fp(fd);
+	struct SHELL_FILE *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
 
 	const struct iovec *end = &iov[iovcnt];
 	for (; iov < end; iov++) {
-		result += fp->read(fp, (unsigned char *)iov->iov_base, iov->iov_len);
+		result += fp->type->read(fp, (unsigned char *)iov->iov_base, iov->iov_len);
 	}
 
 	return result;
@@ -245,23 +275,23 @@ int shell_readv(int fd, const struct iovec *iov, int iovcnt)
 
 ssize_t shell_write(int fd, const void *data, size_t len)
 {
-	struct _IO_FILE *fp = fd_to_fp(fd);
+	struct SHELL_FILE *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
 
-	return fp->write(fp, (unsigned char *)data, len);
+	return fp->type->write(fp, (unsigned char *)data, len);
 }
 
 int shell_writev(int fd, const struct iovec *iov, int iovcnt)
 {
 	int result = 0;
-	struct _IO_FILE *fp = fd_to_fp(fd);
+	struct SHELL_FILE *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
 
 	const struct iovec *end = &iov[iovcnt];
 	for (; iov < end; iov++) {
-		result += fp->write(fp, (unsigned char *)iov->iov_base, iov->iov_len);
+		result += fp->type->write(fp, (unsigned char *)iov->iov_base, iov->iov_len);
 	}
 
 	return result;
@@ -269,11 +299,11 @@ int shell_writev(int fd, const struct iovec *iov, int iovcnt)
 
 int shell_llseek(int fd, off_t ptr, off_t *result, int dir)
 {
-	struct _IO_FILE *fp = fd_to_fp(fd);
+	struct SHELL_FILE *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
 
-	off_t ret = fp->seek(fp, ptr, dir);
+	off_t ret = fp->type->seek(fp, ptr, dir);
 	if (ret < 0)
 		return ret;
 
@@ -283,7 +313,7 @@ int shell_llseek(int fd, off_t ptr, off_t *result, int dir)
 
 int shell_fstat(int fd, struct stat * st)
 {
-	struct _IO_FILE *fp = fd_to_fp(fd);
+	struct SHELL_FILE *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
 
@@ -295,7 +325,7 @@ int shell_fstat(int fd, struct stat * st)
 
 int shell_fsync(int fd)
 {
-	struct _IO_FILE *fp = fd_to_fp(fd);
+	struct SHELL_FILE *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
 	return -EIO;
@@ -303,7 +333,7 @@ int shell_fsync(int fd)
 
 int shell_ftruncate(int fd, off_t length)
 {
-	struct _IO_FILE *fp = fd_to_fp(fd);
+	struct SHELL_FILE *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
 
@@ -319,74 +349,82 @@ int shell_fcntl(int fd, int cmd, void *arg)
 	return shell_ioctl(fd, cmd, arg);
 }
 
+extern IO_TYPE IO_TYPE_SIO;
+
 int sio_tcgetattr(int fd, struct termios *termios)
 {
-	extern ntstdio_t ntstdio;
+	struct SHELL_FILE *fp = fd_to_fp(fd);
+	if ((fp == NULL) || (fp->type != &IO_TYPE_SIO))
+		return -EBADF;
 
-	if (fd == STDIN_FILENO) {
-		memset(termios, 0, sizeof(*termios));
+	ntstdio_t *ntstdio = fp->ntstdio;
 
-		if (ntstdio.option & NTSTDIO_OPTION_LINE_ECHO) {
-			termios->c_lflag |= ECHO;
-		}
-		else {
-			termios->c_lflag &= ~ECHO;
-		}
-		if (ntstdio.option & NTSTDIO_OPTION_CANON) {
-			termios->c_lflag |= ICANON;
-		}
-		else {
-			termios->c_lflag &= ~ICANON;
-		}
-		if (ntstdio.option & NTSTDIO_OPTION_LF_CR) {
-			termios->c_iflag |= INLCR;
-		}
-		else {
-			termios->c_iflag &= ~INLCR;
-		}
-		if (ntstdio.option & NTSTDIO_OPTION_LF_CRLF) {
-			termios->c_oflag |= ONLCR;
-		}
-		else {
-			termios->c_oflag &= ~ONLCR;
-		}
-		return 0;
+	memset(termios, 0, sizeof(*termios));
+
+	if (ntstdio->option & NTSTDIO_OPTION_LINE_ECHO) {
+		termios->c_lflag |= ECHO;
 	}
-	shell_abort();
+	else {
+		termios->c_lflag &= ~ECHO;
+	}
+	if (ntstdio->option & NTSTDIO_OPTION_CANON) {
+		termios->c_lflag |= ICANON;
+	}
+	else {
+		termios->c_lflag &= ~ICANON;
+	}
+	if (ntstdio->option & NTSTDIO_OPTION_LF_CR) {
+		termios->c_iflag |= INLCR;
+	}
+	else {
+		termios->c_iflag &= ~INLCR;
+	}
+	if (ntstdio->option & NTSTDIO_OPTION_LF_CRLF) {
+		termios->c_oflag |= ONLCR;
+	}
+	else {
+		termios->c_oflag &= ~ONLCR;
+	}
+
 	return 0;
 }
 
 int sio_tcsetattr(int fd, int optional_actions, const struct termios *termios)
 {
-	extern ntstdio_t ntstdio;
+	struct SHELL_FILE *fp = fd_to_fp(fd);
+	if ((fp == NULL) || (fp->type != &IO_TYPE_SIO))
+		return -EBADF;
 
-	if ((fd == STDIN_FILENO) && (optional_actions == TCSANOW)) {
+	ntstdio_t *ntstdio = fp->ntstdio;
+
+	if (optional_actions == TCSANOW) {
 		if (termios->c_lflag & ECHO) {
-			ntstdio.option |= NTSTDIO_OPTION_LINE_ECHO;
+			ntstdio->option |= NTSTDIO_OPTION_LINE_ECHO;
 		}
 		else {
-			ntstdio.option &= ~NTSTDIO_OPTION_LINE_ECHO;
+			ntstdio->option &= ~NTSTDIO_OPTION_LINE_ECHO;
 		}
 		if (termios->c_lflag & ICANON) {
-			ntstdio.option |= NTSTDIO_OPTION_CANON;
+			ntstdio->option |= NTSTDIO_OPTION_CANON;
 		}
 		else {
-			ntstdio.option &= ~NTSTDIO_OPTION_CANON;
+			ntstdio->option &= ~NTSTDIO_OPTION_CANON;
 		}
 		if (termios->c_iflag & INLCR) {
-			ntstdio.option |= NTSTDIO_OPTION_LF_CR;
-		}
-		else{
-			ntstdio.option &= ~NTSTDIO_OPTION_LF_CR;
-		}
-		if (termios->c_oflag & ONLCR) {
-			ntstdio.option |= NTSTDIO_OPTION_LF_CRLF;
+			ntstdio->option |= NTSTDIO_OPTION_LF_CR;
 		}
 		else {
-			ntstdio.option &= ~NTSTDIO_OPTION_LF_CRLF;
+			ntstdio->option &= ~NTSTDIO_OPTION_LF_CR;
+		}
+		if (termios->c_oflag & ONLCR) {
+			ntstdio->option |= NTSTDIO_OPTION_LF_CRLF;
+		}
+		else {
+			ntstdio->option &= ~NTSTDIO_OPTION_LF_CRLF;
 		}
 		return 0;
 	}
+
 	shell_abort();
 	return 0;
 }
@@ -425,7 +463,7 @@ int shell_stat(const char *__restrict path, struct stat *__restrict st)
 	st->st_size = fi.fsize;
 	st->st_mtim.tv_nsec = 0;
 	st->st_mtim.tv_sec = fi.fdate + fi.ftime;
-	st->st_mode  = (S_IRUSR | S_IRGRP | S_IROTH);
+	st->st_mode = (S_IRUSR | S_IRGRP | S_IROTH);
 	st->st_mode |= (fi.fattrib & AM_RDO) ? 0 : (S_IWUSR | S_IWGRP | S_IWOTH);
 	st->st_mode |= (fi.fattrib & (AM_DIR | AM_VOL)) ? S_IFDIR : S_IFREG;
 
@@ -484,8 +522,8 @@ int shell_mkdir(const char *path, mode_t mode)
 	BYTE attr = 0;
 	BYTE mask = AM_RDO | AM_SYS; // AM_ARC, AM_HID
 
-	if(mode & S_IREAD) {
-		if((mode & S_IWRITE) == 0) {
+	if (mode & S_IREAD) {
+		if ((mode & S_IWRITE) == 0) {
 			attr |= AM_RDO;
 		}
 	}
@@ -493,7 +531,7 @@ int shell_mkdir(const char *path, mode_t mode)
 		attr |= AM_SYS;
 	}
 
-	if((res = f_chmod(path, attr, mask)) != FR_OK) {
+	if ((res = f_chmod(path, attr, mask)) != FR_OK) {
 		return fresult2errno(res);
 	}
 
@@ -506,8 +544,8 @@ int shell_chmod(const char *path, mode_t mode)
 	BYTE attr = 0;
 	BYTE mask = AM_RDO | AM_SYS; // AM_ARC, AM_HID
 
-	if(mode & S_IREAD) {
-		if((mode & S_IWRITE) == 0) {
+	if (mode & S_IREAD) {
+		if ((mode & S_IWRITE) == 0) {
 			attr |= AM_RDO;
 		}
 	}
@@ -515,7 +553,7 @@ int shell_chmod(const char *path, mode_t mode)
 		attr |= AM_SYS;
 	}
 
-	if((res = f_chmod(path, attr, mask)) != FR_OK) {
+	if ((res = f_chmod(path, attr, mask)) != FR_OK) {
 		return fresult2errno(res);
 	}
 
@@ -525,7 +563,7 @@ int shell_chmod(const char *path, mode_t mode)
 char *shell_getcwd(char *buf, size_t size)
 {
 	FRESULT ret;
-	if((ret = f_getcwd(buf, size)) != FR_OK) {
+	if ((ret = f_getcwd(buf, size)) != FR_OK) {
 		return NULL;
 	}
 
@@ -548,7 +586,7 @@ int shell_chroot(const char *path)
 	return -EPERM;
 }
 
-int dir_close(struct _IO_FILE *fp)
+int dir_close(struct SHELL_FILE *fp)
 {
 	FRESULT res;
 	if ((res = f_closedir(&fp->pdir->dir)) != FR_OK) {
@@ -563,7 +601,7 @@ int shell_getdents(int fd, struct dirent *de, size_t len)
 	if (len < sizeof(struct dirent))
 		return -EINVAL;
 
-	struct _IO_FILE *fp = fd_to_fp(fd);
+	struct SHELL_FILE *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
 
@@ -588,17 +626,17 @@ int shell_getdents(int fd, struct dirent *de, size_t len)
 	return 0;
 }
 
-size_t dir_read(struct _IO_FILE *fp, unsigned char *data, size_t len)
+size_t dir_read(struct SHELL_FILE *fp, unsigned char *data, size_t len)
 {
 	return -EPERM;
 }
 
-size_t dir_write(struct _IO_FILE *fp, const unsigned char *data, size_t len)
+size_t dir_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
 {
 	return -EPERM;
 }
 
-off_t dir_seek(struct _IO_FILE *fp, off_t ptr, int dir)
+off_t dir_seek(struct SHELL_FILE *fp, off_t ptr, int dir)
 {
 	FRESULT res;
 
@@ -631,9 +669,14 @@ off_t dir_seek(struct _IO_FILE *fp, off_t ptr, int dir)
 	return ptr;
 }
 
-int dir_ioctl(struct _IO_FILE *fp, int req, void *arg)
+int dir_ioctl(struct SHELL_FILE *fp, int req, void *arg)
 {
 	return -EINVAL;
+}
+
+bool_t dir_readable(struct SHELL_FILE *fp)
+{
+	return fp->readevt_w != fp->readevt_r;
 }
 
 pid_t shell_getpid(void)
@@ -686,7 +729,7 @@ void *shell_mmap2(void *start, size_t length, int prot, int flags, int fd, off_t
 int shell_mprotect(void *addr, size_t len, int prot)
 {
 	//if ((addr >= (void *)&__HeapBase) && (addr + len < (void *)&__HeapLimit)) {
-		return 0;
-	//}
-	//return -1;
+	return 0;
+//}
+//return -1;
 }

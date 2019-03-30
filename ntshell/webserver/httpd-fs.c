@@ -44,11 +44,11 @@
 #include <kernel.h>
 #include "kernel_cfg.h"
 #include "syssvc/syslog.h"
-#include "util/ntstdio.h"
+#include <stdio.h>
 
 #ifndef _MSC_VER
 #ifndef strcat_s
-#define strcat_s(dst, dsz, src) ntlibc_strcat(dst, src)
+#define strcat_s(dst, dsz, src) strcat(dst, src)
 #endif
 #endif
 
@@ -74,13 +74,13 @@ FRESULT scan_files(char* path, int size)
 
 	res = f_opendir(&dir, path);
 	if (res == FR_OK) {
-		i = ntlibc_strlen(path);
+		i = strlen(path);
 		for (;;) {
 			res = f_readdir(&dir, &fno);
 			if (res != FR_OK || fno.fname[0] == 0) break;
 			fn = fno.fname;
 			if (fno.fattrib & AM_DIR) {
-				ntstdio_sprintf(&path[i], "0:/%s", fn);
+				sprintf(&path[i], "0:/www/%s", fn);
 				res = scan_files(path, size);
 				if (res != FR_OK) break;
 				path[i] = 0;
@@ -121,7 +121,7 @@ httpd_fs_open(char *name, int len, struct httpd_fs_file *file)
 		}
 
 		if (len != 0/*fno.fattrib & AM_DIR*/) {
-			strcat_s(name, len, http_index_html);
+			strlcat(name, http_index_html, len);
 			res = f_open(fd, name, FA_OPEN_EXISTING | FA_READ);
 			file->redirect = res == FR_OK;
 		}

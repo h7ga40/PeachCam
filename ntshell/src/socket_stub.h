@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: socket_stub.h 1806 2019-02-13 16:34:49Z coas-nagasima $
+ *  @(#) $Id: socket_stub.h 1856 2019-03-30 14:31:58Z coas-nagasima $
  */
 #ifndef SOCKET_STUB_H
 #define SOCKET_STUB_H
@@ -102,20 +102,17 @@ typedef struct socket_t {
 	int len;
 } socket_t;
 
-struct _IO_DIR {
+struct SHELL_DIR {
 	FATFS_DIR dir;
 	struct dirent dirent;
 };
 
-struct _IO_FILE {
+typedef const struct io_type_s IO_TYPE;
+
+struct SHELL_FILE {
 	int fd;
-	int type;
+	IO_TYPE *type;
 	int handle;
-	int (*close)(struct _IO_FILE *);
-	size_t (*read)(struct _IO_FILE *, unsigned char *, size_t);
-	size_t (*write)(struct _IO_FILE *, const unsigned char *, size_t);
-	off_t (*seek)(struct _IO_FILE *, off_t, int);
-	int (*ioctl)(struct _IO_FILE *, int, void *);
 	int readevt_r;
 	int readevt_w;
 	int writeevt_r;
@@ -125,9 +122,19 @@ struct _IO_FILE {
 	int errorevt_w;
 	union {
 		FIL *pfile;
-		struct _IO_DIR *pdir;
+		struct SHELL_DIR *pdir;
 		socket_t *psock;
+		struct ntstdio_t *ntstdio;
 	};
+};
+
+struct io_type_s {
+	int (*close)(struct SHELL_FILE *);
+	size_t (*read)(struct SHELL_FILE *, unsigned char *, size_t);
+	size_t (*write)(struct SHELL_FILE *, const unsigned char *, size_t);
+	off_t (*seek)(struct SHELL_FILE *, off_t, int);
+	int (*ioctl)(struct SHELL_FILE *, int, void *);
+	bool_t (*readable)(struct SHELL_FILE *);
 };
 
 #ifndef bool
@@ -140,66 +147,12 @@ struct _IO_FILE {
 #define false 0
 #endif
 
-extern int stdio_close(struct _IO_FILE *fp);
-extern size_t stdio_read(struct _IO_FILE *fp, unsigned char *data, size_t len);
-extern size_t stdio_write(struct _IO_FILE *fp, const unsigned char *data, size_t len);
-extern size_t stdin_read(struct _IO_FILE *fp, unsigned char *data, size_t len);
-extern size_t stdout_write(struct _IO_FILE *fp, const unsigned char *data, size_t len);
-extern size_t stderr_write(struct _IO_FILE *fp, const unsigned char *data, size_t len);
+struct SHELL_FILE *new_fp(IO_TYPE *type, int id, int writable);
+int delete_fd(IO_TYPE *type, int id);
+struct SHELL_FILE *fd_to_fp(int fd);
+struct SHELL_FILE *id_to_fd(IO_TYPE *type, int id);
 
-extern int sio_close(struct _IO_FILE *fp);
-extern size_t sio_read(struct _IO_FILE *fp, unsigned char *data, size_t len);
-extern size_t sio_write(struct _IO_FILE *fp, const unsigned char *data, size_t len);
-extern off_t sio_seek(struct _IO_FILE *fp, off_t ofs, int org);
-extern int sio_ioctl(struct _IO_FILE *fp, int req, void *arg);
-
-extern int file_close(struct _IO_FILE *fp);
-extern size_t file_read(struct _IO_FILE *fp, unsigned char *data, size_t len);
-extern size_t file_write(struct _IO_FILE *fp, const unsigned char *data, size_t len);
-extern off_t file_seek(struct _IO_FILE *fp, off_t ofs, int org);
-extern int file_ioctl(struct _IO_FILE *fp, int req, void *arg);
-
-extern int dir_close(struct _IO_FILE *fp);
-extern size_t dir_read(struct _IO_FILE *fp, unsigned char *data, size_t len);
-extern size_t dir_write(struct _IO_FILE *fp, const unsigned char *data, size_t len);
-extern off_t dir_seek(struct _IO_FILE *fp, off_t ofs, int org);
-extern int dir_ioctl(struct _IO_FILE *fp, int req, void *arg);
-
-extern int tcp_fd_close(struct _IO_FILE *fp);
-extern size_t tcp_fd_read(struct _IO_FILE *fp, unsigned char *data, size_t len);
-extern size_t tcp_fd_write(struct _IO_FILE *fp, const unsigned char *data, size_t len);
-extern off_t tcp_fd_seek(struct _IO_FILE *fp, off_t ofs, int org);
-extern int tcp_fd_ioctl(struct _IO_FILE *fp, int req, void *arg);
-
-extern int udp_fd_close(struct _IO_FILE *fp);
-extern size_t udp_fd_read(struct _IO_FILE *fp, unsigned char *data, size_t len);
-extern size_t udp_fd_write(struct _IO_FILE *fp, const unsigned char *data, size_t len);
-extern off_t udp_fd_seek(struct _IO_FILE *fp, off_t ofs, int org);
-extern int udp_fd_ioctl(struct _IO_FILE *fp, int req, void *arg);
-
-struct _IO_FILE *fd_to_fp(int fd);
-
-struct _IO_FILE *new_sio_fd(int sioid);
-int delete_sio_fd(int sioid);
-struct _IO_FILE *sioid_to_fd(int sioid);
-
-struct _IO_FILE *new_file_fd(int fileid);
-int delete_file_fd(int fileid);
-struct _IO_FILE *fileid_to_fd(int fileid);
-
-struct _IO_FILE *new_dir_fd(int dirid);
-int delete_dir_fd(int dirid);
-struct _IO_FILE *dirid_to_fd(int dirid);
-
-struct _IO_FILE *new_tcp_fd(int tcpid);
-int delete_tcp_fd(int tcpid);
-struct _IO_FILE *tcpid_to_fd(int tcpid);
-
-struct _IO_FILE *new_udp_fd(int udpid);
-int delete_udp_fd(int udpid);
-struct _IO_FILE *udpid_to_fd(int udpid);
-
-int delete_fp(struct _IO_FILE *fp);
+int delete_fp(struct SHELL_FILE *fp);
 int delete_tcp_rep(int repid);
 void clean_fd();
 

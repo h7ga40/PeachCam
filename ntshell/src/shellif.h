@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: shellif.h 1806 2019-02-13 16:34:49Z coas-nagasima $
+ *  @(#) $Id: shellif.h 1856 2019-03-30 14:31:58Z coas-nagasima $
  */
 #ifndef SHELLIF_H
 #define SHELLIF_H
@@ -302,7 +302,6 @@ int Kernel_StartExternal(int argc, char **argv);
 }
 #endif
 
-struct tm *gmtime_r(const time_t *t, struct tm *tm);
 void *malloc(size_t size);
 void *calloc(size_t size, size_t count);
 void *realloc(void *ptr, size_t size);

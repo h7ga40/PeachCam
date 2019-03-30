@@ -49,38 +49,19 @@
 static ER get_message(T_WS_FST_BLK **ppk_msg, int size)
 {
 	void * blk;
-	ER ret;
 
 	*ppk_msg = NULL;
 
 	if ((size <= 0) || (size > DEF_WS_FBS_BUF_MAXLEN))
 		return E_PAR;
 
-	ret = tget_mpf(ws_mempoolid, &blk, WEBSOCKET_MEMPOOL_GET_TMO);
+#ifndef NOUSE_MPF_NET_BUF
+	ER ret = tget_mpf(ws_mempoolid, &blk, WEBSOCKET_MEMPOOL_GET_TMO);
 	if (ret != E_OK)
 		return ret;
-
-	memset(blk, 0, WEBSOCKET_MEMPOOL_BLOCK_SIZE);
-	*ppk_msg = (T_WS_FST_BLK *)(blk);
-	(*ppk_msg)->hdr.length = (uint16_t)size;
-
-	return E_OK;
-}
-
-static ER iget_message(T_WS_FST_BLK **ppk_msg, int size)
-{
-	void * blk;
-	ER ret;
-
-	*ppk_msg = NULL;
-
-	if ((size <= 0) || (size > DEF_WS_FBS_BUF_MAXLEN))
-		return E_PAR;
-
-	ret = pget_mpf(ws_mempoolid, &blk);
-	if (ret != E_OK)
-		return ret;
-
+#else
+	blk = malloc(size);
+#endif
 	memset(blk, 0, WEBSOCKET_MEMPOOL_BLOCK_SIZE);
 	*ppk_msg = (T_WS_FST_BLK *)(blk);
 	(*ppk_msg)->hdr.length = (uint16_t)size;
@@ -121,10 +102,13 @@ static void *get_block(T_WS_FST_BLK *pk_msg, int pos, bool_t exp, int *size)
 		}
 		if (exp) {
 			if (mblk == NULL) {
-				ret = get_mpf(ws_mempoolid, &blk);
+#ifndef NOUSE_MPF_NET_BUF
+				ER ret = tget_mpf(ws_mempoolid, &blk, WEBSOCKET_MEMPOOL_GET_TMO);
 				if (ret != E_OK)
 					return NULL;
-
+#else
+				blk = malloc(size);
+#endif
 				mblk = (T_WS_SUB_BLK *)(blk);
 
 				pk_msg->lnk.p_sub[no] = mblk;
@@ -152,12 +136,22 @@ static ER release_message(T_WS_FST_BLK *pk_msg)
 		if (blk == NULL)
 			continue;
 
+#ifndef NOUSE_MPF_NET_BUF
 		ret = rel_mpf(ws_mempoolid, blk);
 		if (ret != E_OK)
 			return ret;
+#else
+		free(blk);
+#endif
 	}
 
+#ifndef NOUSE_MPF_NET_BUF
 	return rel_mpf(ws_mempoolid, pk_msg);
+#else
+	free(pk_msg);
+
+	return E_OK;
+#endif
 }
 
 static int read_message(T_WS_FST_BLK *pk_msg, int pos, void * dst, int size)
@@ -284,9 +278,13 @@ void *_ws_fbs_mbx_get(WS_FBS_SIZE_T fa_req_size)
 	if ((fa_req_size <= 0) || (fa_req_size > WEBSOCKET_MEMPOOL_BLOCK_SIZE))
 		return NULL;
 
+#ifndef NOUSE_MPF_NET_BUF
 	ret = get_mpf(ws_mempoolid, &result);
 	if (ret != E_OK)
 		return NULL;
+#else
+	result = malloc(fa_req_size);
+#endif
 
 	memset(result, 0, WEBSOCKET_MEMPOOL_BLOCK_SIZE);
 
@@ -296,7 +294,13 @@ void *_ws_fbs_mbx_get(WS_FBS_SIZE_T fa_req_size)
 /* メモリブロック解放 */
 ER _ws_fbs_mbx_rel(void *p)
 {
+#ifndef NOUSE_MPF_NET_BUF
 	return rel_mpf(ws_mempoolid, p);
+#else
+	free(p);
+
+	return E_OK;
+#endif
 }
 
 /* 領域確保 */

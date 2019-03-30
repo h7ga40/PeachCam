@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: socket_stub.c 1781 2019-02-01 00:02:42Z coas-nagasima $
+ *  @(#) $Id: socket_stub.c 1856 2019-03-30 14:31:58Z coas-nagasima $
  */
 #include "shellif.h"
 #include <kernel.h>
@@ -56,14 +56,38 @@
 #include <net/if_var.h>
 #include <netinet/udp_var.h>
 #include <net/net_buf.h>
-//#include <netinet/tcp_var.h>
+#include <netinet/udp.h>
+#include <netinet/udp_var.h>
+#include <netinet/tcp.h>
+#include <netinet/tcp_var.h>
 #include <netapp/resolver.h>
 extern const ID tmax_tcp_cepid;
 #include "ff.h"
 #include "socket_stub.h"
 #include "kernel_cfg.h"
 
+#ifdef _DEBUG
+static const char THIS_FILE[] = __FILE__;
+#endif
+
 #define SOCKET_TIMEOUT 2000000
+
+static int tcp_fd_close(struct SHELL_FILE *fp);
+static size_t tcp_fd_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
+static size_t tcp_fd_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
+static off_t tcp_fd_seek(struct SHELL_FILE *fp, off_t ofs, int org);
+static int tcp_fd_ioctl(struct SHELL_FILE *fp, int req, void *arg);
+static bool_t tcp_fd_readable(struct SHELL_FILE *fp);
+
+static int udp_fd_close(struct SHELL_FILE *fp);
+static size_t udp_fd_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
+static size_t udp_fd_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
+static off_t udp_fd_seek(struct SHELL_FILE *fp, off_t ofs, int org);
+static int udp_fd_ioctl(struct SHELL_FILE *fp, int req, void *arg);
+static bool_t udp_fd_readable(struct SHELL_FILE *fp);
+
+IO_TYPE IO_TYPE_TCP = { tcp_fd_close, tcp_fd_read, tcp_fd_write, tcp_fd_seek, tcp_fd_ioctl, tcp_fd_readable };
+IO_TYPE IO_TYPE_UDP = { udp_fd_close, udp_fd_read, udp_fd_write, udp_fd_seek, udp_fd_ioctl, udp_fd_readable };
 
 typedef struct id_table_t {
 	int used;
@@ -117,10 +141,10 @@ int delete_id(id_table_t *table, int count, ID id)
 
 int delete_tcp_rep(int repid)
 {
-	return delete_tcp_fd(tmax_tcp_cepid + repid);
+	return delete_fd(&IO_TYPE_TCP, tmax_tcp_cepid + repid);
 }
 
-typedef struct _IO_FILE SOCKET;
+typedef struct SHELL_FILE SOCKET;
 
 int shell_socket(int family, int type, int protocol)
 {
@@ -140,17 +164,23 @@ int shell_socket(int family, int type, int protocol)
 
 	switch (type) {
 	case SOCK_STREAM:
-		fp = new_tcp_fd(0);
+		fp = new_fp(&IO_TYPE_TCP, 0, 0);
+		if (fp == NULL)
+			return -ENOMEM;
+
+		fp->psock = malloc(sizeof(socket_t));
+		memset(fp->psock, 0, sizeof(socket_t));
 		break;
 	case SOCK_DGRAM:
-		fp = new_udp_fd(0);
+		fp = new_fp(&IO_TYPE_UDP, 0, 1);
+		if (fp == NULL)
+			return -ENOMEM;
+
+		fp->psock = malloc(sizeof(socket_t));
+		memset(fp->psock, 0, sizeof(socket_t));
 		break;
 	default:
 		return -ENOPROTOOPT;
-	}
-
-	if (fp == NULL) {
-		return -ENOMEM;
 	}
 
 	fp->psock->family = family;
@@ -326,10 +356,12 @@ int shell_accept(int fd, struct sockaddr *__restrict addr, socklen_t *__restrict
 	if (lfp->psock->type != SOCK_STREAM)
 		return -EINVAL;
 
-	SOCKET *fp = new_tcp_fd(0);
-	if (fp == NULL) {
+	SOCKET *fp = new_fp(&IO_TYPE_TCP, 0, 0);
+	if (fp == NULL)
 		return -ENOMEM;
-	}
+
+	fp->psock = malloc(sizeof(socket_t));
+	memset(fp->psock, 0, sizeof(socket_t));
 
 	memcpy(fp->psock, lfp->psock, offsetof(socket_t, buf_size));
 
@@ -859,7 +891,7 @@ int shell_getsockname(int fd, struct sockaddr *restrict addr, socklen_t *restric
 	return 0;
 }
 
-int tcp_fd_close(struct _IO_FILE *fp)
+int tcp_fd_close(struct SHELL_FILE *fp)
 {
 	ER ret, ret2;
 
@@ -875,7 +907,7 @@ int tcp_fd_close(struct _IO_FILE *fp)
 			ret2 = tcp_del_cep(cepid);
 			free(fp->psock->buf);
 			fp->psock->buf = NULL;
-			delete_tcp_fd(cepid);
+			delete_fd(&IO_TYPE_TCP, cepid);
 			delete_id(tcp_cepid_table, tcp_cepid_table_count, cepid);
 			if ((ret < 0) || (ret2 < 0)) {
 				return (ret == E_TMOUT) ? -ETIME : -EINVAL;
@@ -886,7 +918,7 @@ int tcp_fd_close(struct _IO_FILE *fp)
 			ret = tcp_del_rep(repid);
 			free(fp->psock->buf);
 			fp->psock->buf = NULL;
-			delete_tcp_fd(tmax_tcp_cepid + repid);
+			delete_fd(&IO_TYPE_TCP, tmax_tcp_cepid + repid);
 			delete_id(tcp_repid_table, tcp_repid_table_count, repid);
 			if (ret < 0) {
 				return -EINVAL;
@@ -907,27 +939,138 @@ int tcp_fd_close(struct _IO_FILE *fp)
 	return 0;
 }
 
-size_t tcp_fd_read(struct _IO_FILE *fp, unsigned char *dst, size_t dstsz)
+size_t tcp_fd_read(struct SHELL_FILE *fp, unsigned char *dst, size_t dstsz)
 {
 	return shell_recvfrom(fp->fd, dst, dstsz, 0, NULL, NULL);
 }
 
-size_t tcp_fd_write(struct _IO_FILE *fp, const unsigned char *src, size_t srcsz)
+size_t tcp_fd_write(struct SHELL_FILE *fp, const unsigned char *src, size_t srcsz)
 {
 	return shell_sendto(fp->fd, src, srcsz, 0, NULL, 0);
 }
 
-off_t tcp_fd_seek(struct _IO_FILE *fp, off_t ofs, int org)
+off_t tcp_fd_seek(struct SHELL_FILE *fp, off_t ofs, int org)
 {
 	return -EPERM;
 }
 
-int tcp_fd_ioctl(struct _IO_FILE *fp, int req, void *arg)
+int tcp_fd_ioctl(struct SHELL_FILE *fp, int req, void *arg)
 {
 	return -EINVAL;
 }
 
-int udp_fd_close(struct _IO_FILE *fp)
+bool_t tcp_fd_readable(struct SHELL_FILE *fp)
+{
+	ER ret;
+
+	if (fp->psock->cepid != 0) {
+		if (fp->psock->len == 0) {
+			ret = tcp_rcv_buf(fp->psock->cepid, &fp->psock->input, TMO_NBLK);
+			if ((ret != E_WBLK) && (ret != E_OBJ) && (ret < 0)) {
+				syslog(LOG_ERROR, "tcp_rcv_buf => %d", ret);
+				//return ret;
+			}
+			if (ret > 0) {
+				ret = wai_sem(SEM_FILEDESC);
+				if (ret < 0) {
+					syslog(LOG_ERROR, "wai_sem => %d", ret);
+				}
+				fp->psock->len += ret;
+				ret = sig_sem(SEM_FILEDESC);
+				if (ret < 0) {
+					syslog(LOG_ERROR, "sig_sem => %d", ret);
+				}
+			}
+		}
+		else ret = 1;
+		if (ret > 0) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk)
+{
+	struct SHELL_FILE *fp = id_to_fd(&IO_TYPE_TCP, cepid);
+	FLGPTN flgptn = 0;
+	ER ret;
+	int len;
+
+	if (fp == NULL)
+		return E_PAR;
+
+	int fd = fp->fd;
+	FD_SET(fd, (fd_set *)&flgptn);
+
+	switch (fncd) {
+	case TFN_TCP_RCV_BUF:
+		len = *(int *)p_parblk;
+		if (len <= 0)
+			return E_OK;
+
+		ret = wai_sem(SEM_FILEDESC);
+		if (ret < 0) {
+			syslog(LOG_ERROR, "wai_sem => %d", ret);
+		}
+		fp->psock->len += len;
+		ret = sig_sem(SEM_FILEDESC);
+		if (ret < 0) {
+			syslog(LOG_ERROR, "sig_sem => %d", ret);
+		}
+
+		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_TCP_RCV_DAT:
+		len = *(int *)p_parblk;
+		if (len <= 0)
+			return E_OK;
+
+		ret = wai_sem(SEM_FILEDESC);
+		if (ret < 0) {
+			syslog(LOG_ERROR, "wai_sem => %d", ret);
+		}
+		fp->psock->len += len;
+		ret = sig_sem(SEM_FILEDESC);
+		if (ret < 0) {
+			syslog(LOG_ERROR, "sig_sem => %d", ret);
+		}
+
+		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_TCP_SND_DAT:
+		if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_TCP_CAN_CEP:
+		if (fp->errorevt_w == fp->errorevt_r) fp->errorevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_TCP_DEL_REP:
+		delete_tcp_rep(cepid);
+		return E_OK;
+
+	case TFN_TCP_DEL_CEP:
+		delete_fd(&IO_TYPE_TCP, cepid);
+		return E_OK;
+
+	default:
+		return E_OK;
+	}
+}
+
+int udp_fd_close(struct SHELL_FILE *fp)
 {
 	ER ret;
 	ID cepid;
@@ -938,7 +1081,7 @@ int udp_fd_close(struct _IO_FILE *fp)
 		ret = udp_del_cep(cepid);
 		//free(fp->psock->buf);
 		//fp->psock->buf = NULL;
-		delete_udp_fd(cepid);
+		delete_fd(&IO_TYPE_UDP, cepid);
 		delete_id(udp_cepid_table, udp_cepid_table_count, cepid);
 		if (ret < 0) {
 			return -EINVAL;
@@ -953,24 +1096,117 @@ int udp_fd_close(struct _IO_FILE *fp)
 	return 0;
 }
 
-size_t udp_fd_read(struct _IO_FILE *fp, unsigned char *dst, size_t dstsz)
+size_t udp_fd_read(struct SHELL_FILE *fp, unsigned char *dst, size_t dstsz)
 {
 	return shell_recvfrom(fp->fd, dst, dstsz, 0, NULL, NULL);
 }
 
-size_t udp_fd_write(struct _IO_FILE *fp, const unsigned char *src, size_t srcsz)
+size_t udp_fd_write(struct SHELL_FILE *fp, const unsigned char *src, size_t srcsz)
 {
 	return shell_sendto(fp->fd, src, srcsz, 0, NULL, 0);
 }
 
-off_t udp_fd_seek(struct _IO_FILE *fp, off_t ofs, int org)
+off_t udp_fd_seek(struct SHELL_FILE *fp, off_t ofs, int org)
 {
 	return -EPERM;
 }
 
-int udp_fd_ioctl(struct _IO_FILE *fp, int req, void *arg)
+int udp_fd_ioctl(struct SHELL_FILE *fp, int req, void *arg)
 {
 	return -EINVAL;
+}
+
+bool_t udp_fd_readable(struct SHELL_FILE *fp)
+{
+	if (fp->psock->cepid != 0) {
+		if (fp->psock->input != NULL) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+ER socket_udp_callback(ID cepid, FN fncd, void *p_parblk)
+{
+	struct SHELL_FILE *fp = id_to_fd(&IO_TYPE_UDP, cepid);
+	FLGPTN flgptn = 0;
+	int len;
+
+	if (fp == NULL)
+		return E_PAR;
+
+	int fd = fp->fd;
+	FD_SET(fd, (fd_set *)&flgptn);
+
+	switch (fncd) {
+	case TEV_UDP_RCV_DAT:
+	{
+		T_UDP_RCV_DAT_PARA *udppara = (T_UDP_RCV_DAT_PARA *)p_parblk;
+		len = udppara->len;
+		if (len <= 0)
+			return E_OK;
+
+		ER ret = wai_sem(SEM_FILEDESC);
+		if (ret < 0) {
+			syslog(LOG_ERROR, "wai_sem => %d", ret);
+		}
+		fp->psock->len = len;
+		if (fp->psock->input != NULL) {
+			ret = rel_net_buf(fp->psock->input);
+			if (ret < 0) {
+				syslog(LOG_ERROR, "rel_net_buf => %d", ret);
+			}
+		}
+		fp->psock->input = udppara->input;
+		fp->psock->buf = GET_UDP_SDU(udppara->input, udppara->off);
+		memset(&fp->psock->raddr4, 0, sizeof(fp->psock->raddr4));
+		fp->psock->raddr4.sin_family = AF_INET;
+		fp->psock->raddr4.sin_port = htons(udppara->rep4.portno);
+		fp->psock->raddr4.sin_addr.s_addr = htonl(udppara->rep4.ipaddr);
+		udppara->input->flags |= NB_FLG_NOREL_IFOUT;
+		ret = sig_sem(SEM_FILEDESC);
+		if (ret < 0) {
+			syslog(LOG_ERROR, "sig_sem => %d", ret);
+		}
+
+		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+	}
+	case TFN_UDP_CRE_CEP:
+		return E_OK;
+
+	case TFN_UDP_RCV_DAT:
+		len = *(int *)p_parblk;
+		if (len <= 0)
+			return E_OK;
+
+		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_UDP_SND_DAT:
+		if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_UDP_CAN_CEP:
+		if (fp->errorevt_w == fp->errorevt_r) fp->errorevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_UDP_DEL_CEP:
+		delete_fd(&IO_TYPE_UDP, cepid);
+		return E_OK;
+
+	default:
+		return E_OK;
+	}
 }
 
 #ifndef TCP_CFG_EXTENTIONS

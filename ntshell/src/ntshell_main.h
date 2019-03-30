@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: ntshell_main.h 1829 2019-02-28 07:06:50Z coas-nagasima $
+ *  @(#) $Id: ntshell_main.h 1856 2019-03-30 14:31:58Z coas-nagasima $
  */
 
 #ifndef _NTSHELL_MAIN_H_
@@ -74,6 +74,9 @@ typedef struct
 extern cmd_table_info_t cmd_table_info;
 
 extern PRI main_task_priority;
+
+/* ntshellの初期化 */
+void sys_init(intptr_t exinf);
 
 /* ntshellタスク初期化 */
 void ntshell_task_init(ID portid);

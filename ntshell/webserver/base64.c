@@ -85,7 +85,7 @@ int base64_decode(unsigned char *dst, size_t dstsiz, const unsigned char *src) {
     } base64;
     unsigned char *pdst;
     int i, j = 0, k = 0;
-    size_t srcsiz = ntlibc_strlen((const char *)src);
+    size_t srcsiz = strlen((const char *)src);
 
     if ((srcsiz % 4) != 0) {
         return -1;

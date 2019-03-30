@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: ntshell_main.c 1816 2019-02-17 12:41:05Z coas-nagasima $
+ *  @(#) $Id: ntshell_main.c 1856 2019-03-30 14:31:58Z coas-nagasima $
  */
 
 /* 
@@ -60,7 +60,6 @@
 #include "socket_stub.h"
 
 char command[NTOPT_TEXT_MAXLEN];
-ntstdio_t ntstdio;
 
 extern uint8_t mac_addr[6];
 const struct utsname host_name = {
@@ -83,27 +82,9 @@ static int usrcmd_ntopt_callback(long *args, void *extobj);
 int ntshell_exit_code;
 volatile int ntshell_state;
 jmp_buf process_exit;
-ID ntstdio_portid;
-
-unsigned char ntstdio_xi(struct ntstdio_t *handle)
-{
-	unsigned char buf[1];
-	serial_rea_dat(ntstdio_portid, buf, 1);
-	return buf[0];
-}
-
-void ntstdio_xo(struct ntstdio_t *handle, unsigned char c)
-{
-	char buf[1];
-	buf[0] = c;
-	serial_wri_dat(ntstdio_portid, buf, 1);
-}
 
 void ntshell_task_init(ID portid)
 {
-	ntstdio_portid = portid;
-
-	ntstdio_init(&ntstdio, NTSTDIO_OPTION_LINE_ECHO | NTSTDIO_OPTION_CANON | NTSTDIO_OPTION_LF_CRLF | NTSTDIO_OPTION_LF_CR, ntstdio_xi, ntstdio_xo);
 }
 
 /*
@@ -165,10 +146,9 @@ int usrcmd_help(int argc, char **argv)
 {
 	const cmd_table_t *p = cmd_table_info.table;
 	for (int i = 0; i < cmd_table_info.count; i++) {
-		puts(p->cmd);
-		puts("\t:");
+		fwrite(p->cmd, strlen(p->cmd), 1, stdout);
+		fwrite("\t:", strlen("\t:"), 1, stdout);
 		puts(p->desc);
-		puts("\n");
 		p++;
 	}
 	return 0;
@@ -225,85 +205,6 @@ int cmd_execute(const char *text, void *extobj)
 {
 	ntlibc_strlcpy(command, text, sizeof(command));
 	return execute_command(1);
-}
-
-int stdio_close(struct _IO_FILE *fp)
-{
-	return -EPERM;
-}
-
-size_t stdio_read(struct _IO_FILE *fp, unsigned char *data, size_t len)
-{
-	return -EPERM;
-}
-
-size_t stdio_write(struct _IO_FILE *fp, const unsigned char *data, size_t len)
-{
-	return -EPERM;
-}
-
-size_t stdin_read(struct _IO_FILE *fp, unsigned char *data, size_t len)
-{
-	int i = 0;
-	while (i < len) {
-		int c = ntstdio_getc(&ntstdio);
-		data[i++] = c;
-		if ((c == EOF) || (c == '\n'))
-			break;
-	}
-	return i;
-}
-
-size_t stdout_write(struct _IO_FILE *fp, const unsigned char *data, size_t len)
-{
-	for (int i = 0; i < len; i++) {
-		ntstdio_putc(&ntstdio, data[i]);
-	}
-	return len;
-}
-
-size_t stderr_write(struct _IO_FILE *fp, const unsigned char *data, size_t len)
-{
-	for (int i = 0; i < len; i++) {
-		ntstdio_putc(&ntstdio, data[i]);
-	}
-	return len;
-}
-
-int sio_close(struct _IO_FILE *fp)
-{
-	return -EPERM;
-}
-
-size_t sio_read(struct _IO_FILE *fp, unsigned char *data, size_t len)
-{
-	return -EPERM;
-}
-
-size_t sio_write(struct _IO_FILE *fp, const unsigned char *data, size_t len)
-{
-	return -EPERM;
-}
-
-off_t sio_seek(struct _IO_FILE *fp, off_t ofs, int org)
-{
-	return -EPERM;
-}
-
-int sio_ioctl(struct _IO_FILE *fp, int request, void *arg)
-{
-	switch (request) {
-	case TIOCGWINSZ:
-		return 0;
-	case TCGETS:
-		return sio_tcgetattr(fp->fd, (struct termios *)arg);
-	case TCSETS + TCSANOW:
-	case TCSETS + TCSADRAIN:
-	case TCSETS + TCSAFLUSH:
-		return sio_tcsetattr(fp->fd, request - TCSETS, (const struct termios *)arg);
-	}
-
-	return -EINVAL;
 }
 
 int shell_clock_getres(clockid_t clk_id, struct timespec *res)
@@ -442,5 +343,21 @@ int shell_tkill(int tid, int sig)
 
 	no_implement("tkill");
 	return -1;
+}
+
+int shell_kill(int pid, int sig)
+{
+	DebugBreak();
+	return -1;
+}
+
+int shell_gettimeofday(struct timeval *tv, void *tzvp)
+{
+	SYSTIM time;
+	if (!tv) return 0;
+	get_tim(&time);
+	tv->tv_sec = time / 1000000;
+	tv->tv_usec = time - (tv->tv_sec * 1000000);
+	return 0;
 }
 
