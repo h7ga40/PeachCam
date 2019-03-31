@@ -85,6 +85,7 @@ jmp_buf process_exit;
 
 void ntshell_task_init(ID portid)
 {
+	serial_ctl_por(portid, IOCTL_CRLF | IOCTL_FCSND | IOCTL_FCRCV);
 }
 
 /*

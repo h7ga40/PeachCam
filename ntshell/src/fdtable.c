@@ -68,6 +68,7 @@
 #include "kernel_cfg.h"
 #include <string.h>
 #include "util/ntstdio.h"
+#include "hal/serial_api.h"
 
 #ifdef _DEBUG
 static const char THIS_FILE[] = __FILE__;
@@ -101,25 +102,22 @@ static struct SHELL_FILE fd_table[8 * sizeof(FLGPTN)] = {
 #define fd_table_count (sizeof(fd_table) / sizeof(fd_table[0]))
 
 extern ntstdio_t ntstdio;
+extern serial_t stdio_uart;
 
 unsigned char ntstdio_xi(struct ntstdio_t *handle)
 {
-	unsigned char buf[1];
-	serial_rea_dat((ID)handle->exinf, (char *)buf, 1);
-	return buf[0];
+	return serial_getc((serial_t *)handle->exinf);
 }
 
 void ntstdio_xo(struct ntstdio_t *handle, unsigned char c)
 {
-	unsigned char buf[1];
-	buf[0] = c;
-	serial_wri_dat((ID)handle->exinf, (char *)buf, 1);
+	serial_putc((serial_t *)handle->exinf, c);
 }
 
 void sys_init(intptr_t exinf)
 {
 	ntstdio_init(&ntstdio, NTSTDIO_OPTION_LINE_ECHO | NTSTDIO_OPTION_CANON | NTSTDIO_OPTION_LF_CRLF | NTSTDIO_OPTION_LF_CR, ntstdio_xi, ntstdio_xo);
-	ntstdio.exinf = (void *)SIO_PORTID;
+	ntstdio.exinf = (void *)&stdio_uart;
 }
 
 int stdio_close(struct SHELL_FILE *fp)
@@ -398,19 +396,14 @@ void stdio_update_evts()
 {
 	int fd = STDIN_FILENO;
 	struct SHELL_FILE *fp = &fd_table[fd];
-	T_SERIAL_RPOR rpor;
 	FLGPTN flgptn = 0;
 
-	ER ret = serial_ref_por((ID)fp->ntstdio->exinf, &rpor);
-	if (ret != E_OK)
-		return;
-
-	if (rpor.reacnt != 0) {
+	if (serial_readable((serial_t *)fp->ntstdio->exinf)) {
 		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
 
 		FD_SET(fd, (fd_set *)&flgptn);
 	}
-	if (rpor.wricnt != 0) {
+	if (serial_writable((serial_t *)fp->ntstdio->exinf)) {
 		if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
 
 		FD_SET(fd, (fd_set *)&flgptn);
@@ -426,19 +419,14 @@ void stdio_flgptn(FLGPTN *flgptn)
 {
 	int fd = STDIN_FILENO;
 	struct SHELL_FILE *fp = &fd_table[fd];
-	T_SERIAL_RPOR rpor;
 	*flgptn = 0;
 
-	ER ret = serial_ref_por((ID)fp->ntstdio->exinf, &rpor);
-	if (ret != E_OK)
-		return;
-
-	if (rpor.reacnt != 0) {
+	if (serial_readable((serial_t *)fp->ntstdio->exinf)) {
 		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
 
 		FD_SET(fd, (fd_set *)flgptn);
 	}
-	if (rpor.wricnt != 0) {
+	if (serial_writable((serial_t *)fp->ntstdio->exinf)) {
 		if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
 
 		FD_SET(fd, (fd_set *)flgptn);

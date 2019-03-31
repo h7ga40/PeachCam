@@ -38,10 +38,12 @@ void __libc_init_array()
 
 void *memset(void *dst, int c, size_t size)
 {
+	return NULL;
 }
 
 void *memcpy(void *dst, void * src, size_t size)
 {
+	return NULL;
 }
 
 int main()

@@ -181,9 +181,6 @@ static void main_initialize()
 
 	//wolfSSL_Debugging_ON();
 
-	serial_opn_por(SIO_PORTID);
-	serial_ctl_por(SIO_PORTID, IOCTL_FCSND | IOCTL_FCRCV);
-
 	ntshell_task_init(SIO_PORTID);
 
 	main_obj.timer = TMO_FEVR;

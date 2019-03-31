@@ -153,7 +153,6 @@ struct SHELL_FILE *fd_to_fp(int fd);
 struct SHELL_FILE *id_to_fd(IO_TYPE *type, int id);
 
 int delete_fp(struct SHELL_FILE *fp);
-int delete_tcp_rep(int repid);
 void clean_fd();
 
 ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk);

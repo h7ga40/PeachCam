@@ -44,10 +44,6 @@
 
 #include <kernel.h>
 #include <sil.h>
-#include "arm.h"
-#include "rza1.h"
-#include "scif.h"
-#include "core_pl310.h"
 #include "us_ticker_api.h"
 #include <sys/types.h>
 #include <errno.h>

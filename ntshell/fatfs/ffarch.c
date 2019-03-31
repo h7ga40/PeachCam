@@ -154,8 +154,6 @@ void ffarch_init()
 	else {
 		printf("ROM disk (0:) NG!\n");
 	}
-
-	serial_ctl_por(SIO_PORTID, IOCTL_FCSND | IOCTL_FCRCV);
 }
 
 void ffarch_initialize()

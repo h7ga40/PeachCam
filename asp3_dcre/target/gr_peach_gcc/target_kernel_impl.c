@@ -46,8 +46,6 @@
 #include <sil.h>
 #include "arm.h"
 #include "rza1.h"
-#include "scif.h"
-#include "core_pl310.h"
 
 /*
  * C++のグローバルコンストラクタ呼び出し

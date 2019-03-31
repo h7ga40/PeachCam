@@ -139,11 +139,6 @@ int delete_id(id_table_t *table, int count, ID id)
 	return -EINVAL;
 }
 
-int delete_tcp_rep(int repid)
-{
-	return delete_fd(&IO_TYPE_TCP, tmax_tcp_cepid + repid);
-}
-
 typedef struct SHELL_FILE SOCKET;
 
 int shell_socket(int family, int type, int protocol)
@@ -1058,7 +1053,7 @@ ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk)
 		return E_OK;
 
 	case TFN_TCP_DEL_REP:
-		delete_tcp_rep(cepid);
+		delete_fd(&IO_TYPE_TCP, tmax_tcp_cepid + cepid);
 		return E_OK;
 
 	case TFN_TCP_DEL_CEP:

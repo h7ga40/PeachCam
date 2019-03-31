@@ -31,4 +31,5 @@ size_t __stdio_write(FILE *f, const unsigned char *buf, size_t len)
 		iov[0].iov_base = (char *)iov[0].iov_base + cnt;
 		iov[0].iov_len -= cnt;
 	}
+	return -1;
 }
