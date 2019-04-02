@@ -681,7 +681,7 @@ int usrcmd_date(int argc, char **argv)
 	struct timespec tp;
 	char buf[30];
 
-	ret = shell_clock_gettime(CLOCK_REALTIME, &tp);
+	ret = clock_gettime(CLOCK_REALTIME, &tp);
 	if (ret != 0) {
 		printf("clock_gettime error %d", ret);
 		return 0;

@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: socket_stub.c 1856 2019-03-30 14:31:58Z coas-nagasima $
+ *  @(#) $Id: socket_stub.c 1863 2019-04-02 06:10:48Z coas-nagasima $
  */
 #include "shellif.h"
 #include <kernel.h>
@@ -78,6 +78,7 @@ static size_t tcp_fd_write(struct SHELL_FILE *fp, const unsigned char *data, siz
 static off_t tcp_fd_seek(struct SHELL_FILE *fp, off_t ofs, int org);
 static int tcp_fd_ioctl(struct SHELL_FILE *fp, int req, void *arg);
 static bool_t tcp_fd_readable(struct SHELL_FILE *fp);
+static void tcp_fd_delete(struct SHELL_FILE *fp);
 
 static int udp_fd_close(struct SHELL_FILE *fp);
 static size_t udp_fd_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
@@ -85,9 +86,10 @@ static size_t udp_fd_write(struct SHELL_FILE *fp, const unsigned char *data, siz
 static off_t udp_fd_seek(struct SHELL_FILE *fp, off_t ofs, int org);
 static int udp_fd_ioctl(struct SHELL_FILE *fp, int req, void *arg);
 static bool_t udp_fd_readable(struct SHELL_FILE *fp);
+static void udp_fd_delete(struct SHELL_FILE *fp);
 
-IO_TYPE IO_TYPE_TCP = { tcp_fd_close, tcp_fd_read, tcp_fd_write, tcp_fd_seek, tcp_fd_ioctl, tcp_fd_readable };
-IO_TYPE IO_TYPE_UDP = { udp_fd_close, udp_fd_read, udp_fd_write, udp_fd_seek, udp_fd_ioctl, udp_fd_readable };
+IO_TYPE IO_TYPE_TCP = { tcp_fd_close, tcp_fd_read, tcp_fd_write, tcp_fd_seek, tcp_fd_ioctl, tcp_fd_readable, tcp_fd_delete };
+IO_TYPE IO_TYPE_UDP = { udp_fd_close, udp_fd_read, udp_fd_write, udp_fd_seek, udp_fd_ioctl, udp_fd_readable, udp_fd_delete };
 
 typedef struct id_table_t {
 	int used;
@@ -163,25 +165,26 @@ int shell_socket(int family, int type, int protocol)
 		if (fp == NULL)
 			return -ENOMEM;
 
-		fp->psock = malloc(sizeof(socket_t));
-		memset(fp->psock, 0, sizeof(socket_t));
+		fp->exinf = malloc(sizeof(socket_t));
+		memset(fp->exinf, 0, sizeof(socket_t));
 		break;
 	case SOCK_DGRAM:
 		fp = new_fp(&IO_TYPE_UDP, 0, 1);
 		if (fp == NULL)
 			return -ENOMEM;
 
-		fp->psock = malloc(sizeof(socket_t));
-		memset(fp->psock, 0, sizeof(socket_t));
+		fp->exinf = malloc(sizeof(socket_t));
+		memset(fp->exinf, 0, sizeof(socket_t));
 		break;
 	default:
 		return -ENOPROTOOPT;
 	}
 
-	fp->psock->family = family;
-	fp->psock->type = type;
-	fp->psock->protocol = protocol;
-	fp->psock->flags = flags;
+	socket_t *socket = (socket_t *)fp->exinf;
+	socket->family = family;
+	socket->type = type;
+	socket->protocol = protocol;
+	socket->flags = flags;
 
 	return fp->fd;
 }
@@ -191,7 +194,8 @@ int shell_bind(int fd, const struct sockaddr *addr, socklen_t len)
 	SOCKET *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
-	if (fp->psock->family != addr->sa_family)
+	socket_t *socket = (socket_t *)fp->exinf;
+	if (socket->family != addr->sa_family)
 		return -EINVAL;
 
 	ER ret;
@@ -201,26 +205,26 @@ int shell_bind(int fd, const struct sockaddr *addr, socklen_t len)
 			return -EINVAL;
 		}
 		struct sockaddr_in *addr_in = (struct sockaddr_in *)addr;
-		memcpy(&fp->psock->laddr4, addr, len);
-		switch (fp->psock->type) {
+		memcpy(&socket->laddr4, addr, len);
+		switch (socket->type) {
 		case SOCK_STREAM: {
 			ID cepid = new_id(tcp_cepid_table, tcp_cepid_table_count);
 			if (cepid < 0)
 				return -ENOMEM;
 
-			fp->psock->buf_size = 512 + 512;
-			fp->psock->buf = malloc(fp->psock->buf_size);
+			socket->buf_size = 512 + 512;
+			socket->buf = malloc(socket->buf_size);
 #ifdef _DEBUG
-			memset(fp->psock->buf, 0, fp->psock->buf_size);
+			memset(socket->buf, 0, socket->buf_size);
 #endif
-			T_TCP_CCEP ccep = { 0, fp->psock->buf, 512, &fp->psock->buf[512], 512, (FP)socket_tcp_callback };
+			T_TCP_CCEP ccep = { 0, socket->buf, 512, &socket->buf[512], 512, (FP)socket_tcp_callback };
 			ret = tcp_cre_cep(cepid, &ccep);
 			if (ret != E_OK) {
 				delete_id(tcp_cepid_table, tcp_cepid_table_count, cepid);
 				return -ENOMEM;
 			}
 			fp->handle = cepid;
-			fp->psock->cepid = cepid;
+			socket->cepid = cepid;
 			break;
 		}
 		case SOCK_DGRAM: {
@@ -235,7 +239,7 @@ int shell_bind(int fd, const struct sockaddr *addr, socklen_t len)
 				return -ENOMEM;
 			}
 			fp->handle = cepid;
-			fp->psock->cepid = cepid;
+			socket->cepid = cepid;
 			break;
 		}
 		default:
@@ -247,7 +251,7 @@ int shell_bind(int fd, const struct sockaddr *addr, socklen_t len)
 		if (len < 20) {
 			return -EINVAL;
 		}
-		memcpy(&fp->psock->laddr4, addr, len);
+		memcpy(&socket->laddr4, addr, len);
 		break;
 	}
 	}
@@ -260,26 +264,27 @@ int shell_listen(int fd, int backlog)
 	SOCKET *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
-	if (fp->psock->type != SOCK_STREAM)
+	socket_t *socket = (socket_t *)fp->exinf;
+	if (socket->type != SOCK_STREAM)
 		return -EINVAL;
 
-	fp->psock->backlog = backlog;
+	socket->backlog = backlog;
 
 	ER ret;
-	switch (fp->psock->family) {
+	switch (socket->family) {
 	case AF_INET: {
 		ID repid = new_id(tcp_repid_table, tcp_repid_table_count);
 		if (repid < 0)
 			return -ENOMEM;
 
-		struct sockaddr_in *laddr = &fp->psock->laddr4;
+		struct sockaddr_in *laddr = &socket->laddr4;
 		T_TCP_CREP crep = { 0, {ntohl(laddr->sin_addr.s_addr), ntohs(laddr->sin_port)} };
 		ret = tcp_cre_rep(repid, &crep);
 		if (ret != E_OK) {
 			delete_id(tcp_repid_table, tcp_repid_table_count, repid);
 			return -ENOMEM;
 		}
-		fp->psock->repid = repid;
+		socket->repid = repid;
 		break;
 	}
 	case AF_INET6: {
@@ -295,41 +300,42 @@ int shell_connect(int fd, const struct sockaddr *addr, socklen_t len)
 	SOCKET *fp = fd_to_fp(fd);
 	if (fp == NULL)
 		return -EBADF;
-	if (fp->psock->type != SOCK_STREAM)
+	socket_t *socket = (socket_t *)fp->exinf;
+	if (socket->type != SOCK_STREAM)
 		return -EINVAL;
 
 	ER ret;
-	switch (fp->psock->family) {
+	switch (socket->family) {
 	case AF_INET: {
 		if (len < 8) {
 			return -EINVAL;
 		}
-		if (fp->psock->cepid == 0) {
+		if (socket->cepid == 0) {
 			ID cepid = new_id(tcp_cepid_table, tcp_cepid_table_count);
 			if (cepid < 0)
 				return -ENOMEM;
 
-			fp->psock->buf_size = 512 + 512;
-			fp->psock->buf = malloc(fp->psock->buf_size);
+			socket->buf_size = 512 + 512;
+			socket->buf = malloc(socket->buf_size);
 #ifdef _DEBUG
-			memset(fp->psock->buf, 0, fp->psock->buf_size);
+			memset(socket->buf, 0, socket->buf_size);
 #endif
-			T_TCP_CCEP ccep = { 0, fp->psock->buf, 512, &fp->psock->buf[512], 512, (FP)socket_tcp_callback };
+			T_TCP_CCEP ccep = { 0, socket->buf, 512, &socket->buf[512], 512, (FP)socket_tcp_callback };
 			ret = tcp_cre_cep(cepid, &ccep);
 			if (ret != E_OK) {
 				delete_id(tcp_cepid_table, tcp_cepid_table_count, cepid);
 				return -ENOMEM;
 			}
 			fp->handle = cepid;
-			fp->psock->cepid = cepid;
+			socket->cepid = cepid;
 		}
-		struct sockaddr_in *laddr = &fp->psock->laddr4;
-		struct sockaddr_in *raddr = &fp->psock->raddr4;
+		struct sockaddr_in *laddr = &socket->laddr4;
+		struct sockaddr_in *raddr = &socket->raddr4;
 		memset(raddr, 0, sizeof(*raddr));
 		memcpy(raddr, addr, len);
 		T_IPV4EP lep = { ntohl(laddr->sin_addr.s_addr), ntohs(laddr->sin_port) };
 		T_IPV4EP rep = { ntohl(raddr->sin_addr.s_addr), ntohs(raddr->sin_port) };
-		ret = tcp_con_cep(fp->psock->cepid, &lep, &rep, SOCKET_TIMEOUT);
+		ret = tcp_con_cep(socket->cepid, &lep, &rep, SOCKET_TIMEOUT);
 		if (ret < 0) {
 			return -EHOSTUNREACH;
 		}
@@ -348,55 +354,56 @@ int shell_accept(int fd, struct sockaddr *__restrict addr, socklen_t *__restrict
 	SOCKET *lfp = fd_to_fp(fd);
 	if (lfp == NULL)
 		return -EBADF;
-	if (lfp->psock->type != SOCK_STREAM)
+	if (((socket_t *)lfp->exinf)->type != SOCK_STREAM)
 		return -EINVAL;
 
 	SOCKET *fp = new_fp(&IO_TYPE_TCP, 0, 0);
 	if (fp == NULL)
 		return -ENOMEM;
 
-	fp->psock = malloc(sizeof(socket_t));
-	memset(fp->psock, 0, sizeof(socket_t));
+	fp->exinf = malloc(sizeof(socket_t));
+	memset(fp->exinf, 0, sizeof(socket_t));
 
-	memcpy(fp->psock, lfp->psock, offsetof(socket_t, buf_size));
+	memcpy(fp->exinf, lfp->exinf, offsetof(socket_t, buf_size));
 
 	ER ret;
-	switch (fp->psock->family) {
+	socket_t *socket = (socket_t *)fp->exinf;
+	switch (socket->family) {
 	case AF_INET: {
 		ID cepid;
-		if (fp->psock->cepid == 0) {
+		if (socket->cepid == 0) {
 			cepid = new_id(tcp_cepid_table, tcp_cepid_table_count);
 			if (cepid < 0)
 				return -ENOMEM;
 
-			fp->psock->buf_size = 512 + 512;
-			fp->psock->buf = malloc(fp->psock->buf_size);
+			socket->buf_size = 512 + 512;
+			socket->buf = malloc(socket->buf_size);
 #ifdef _DEBUG
-			memset(fp->psock->buf, 0, fp->psock->buf_size);
+			memset(socket->buf, 0, socket->buf_size);
 #endif
-			T_TCP_CCEP ccep = { 0, fp->psock->buf, 512, &fp->psock->buf[512], 512, (FP)socket_tcp_callback };
+			T_TCP_CCEP ccep = { 0, socket->buf, 512, &socket->buf[512], 512, (FP)socket_tcp_callback };
 			ret = tcp_cre_cep(cepid, &ccep);
 			if (ret != E_OK) {
 				delete_id(tcp_cepid_table, tcp_cepid_table_count, cepid);
 				return -ENOMEM;
 			}
 			fp->handle = cepid;
-			fp->psock->cepid = cepid;
+			socket->cepid = cepid;
 		}
 		else {
-			cepid = lfp->psock->cepid;
+			cepid = ((socket_t *)lfp->exinf)->cepid;
 			fp->handle = cepid;
-			lfp->handle = tmax_tcp_cepid + lfp->psock->repid;
-			lfp->psock->cepid = 0;
-			lfp->psock->buf_size = 0;
-			lfp->psock->buf = 0;
+			lfp->handle = tmax_tcp_cepid + ((socket_t *)lfp->exinf)->repid;
+			((socket_t *)lfp->exinf)->cepid = 0;
+			((socket_t *)lfp->exinf)->buf_size = 0;
+			((socket_t *)lfp->exinf)->buf = 0;
 		}
 		T_IPV4EP rep = { 0, 0 };
-		ret = tcp_acp_cep(fp->psock->cepid, fp->psock->repid, &rep, TMO_FEVR);
+		ret = tcp_acp_cep(socket->cepid, socket->repid, &rep, TMO_FEVR);
 		if (ret < 0) {
 			return -ENOMEM;
 		}
-		struct sockaddr_in *raddr = &fp->psock->raddr4;
+		struct sockaddr_in *raddr = &socket->raddr4;
 		memset(raddr, 0, sizeof(*raddr));
 		raddr->sin_family = AF_INET;
 		raddr->sin_port = htons(rep.portno);
@@ -413,7 +420,7 @@ int shell_accept(int fd, struct sockaddr *__restrict addr, socklen_t *__restrict
 		if (sz < 8) {
 			return -EINVAL;
 		}
-		struct sockaddr_in *raddr = &fp->psock->raddr4;
+		struct sockaddr_in *raddr = &socket->raddr4;
 		if (sz > sizeof(*raddr))
 			sz = sizeof(*raddr);
 		memcpy(addr, raddr, sz);
@@ -431,23 +438,24 @@ ssize_t shell_sendto(int fd, const void *buf, size_t len, int flags, const struc
 	}
 
 	int ret = 0;
-	switch (fp->psock->family) {
+	socket_t *socket = (socket_t *)fp->exinf;
+	switch (socket->family) {
 	case AF_INET: {
-		switch (fp->psock->type) {
+		switch (socket->type) {
 		case SOCK_STREAM: {
 			if ((addr != NULL) || (alen != 0)) {
 				return -EISCONN;
 			}
 
 			if (flags & MSG_OOB) {
-				ret = tcp_snd_oob(fp->psock->cepid, (void *)buf, len, SOCKET_TIMEOUT);
+				ret = tcp_snd_oob(socket->cepid, (void *)buf, len, SOCKET_TIMEOUT);
 				if (ret < 0) {
 					return -ECOMM;
 				}
 			}
 			else {
 				for (;;) {
-					ret = tcp_snd_dat(fp->psock->cepid, (void *)buf, len, SOCKET_TIMEOUT);
+					ret = tcp_snd_dat(socket->cepid, (void *)buf, len, SOCKET_TIMEOUT);
 					if (ret < 0) {
 						if (ret == E_TMOUT)
 							return -ETIME;
@@ -466,12 +474,12 @@ ssize_t shell_sendto(int fd, const void *buf, size_t len, int flags, const struc
 			if ((addr == NULL) || (sz < 8)) {
 				return -EINVAL;
 			}
-			struct sockaddr_in *raddr = &fp->psock->raddr4;
+			struct sockaddr_in *raddr = &socket->raddr4;
 			memset(raddr, 0, sizeof(*raddr));
 			memcpy(raddr, addr, sz);
 			T_IPV4EP rep = { ntohl(raddr->sin_addr.s_addr), ntohs(raddr->sin_port) };
-			ret = udp_snd_dat(fp->psock->cepid, &rep, (void *)buf, len,
-				(fp->psock->flags & O_NONBLOCK) ? TMO_POL : SOCKET_TIMEOUT);
+			ret = udp_snd_dat(socket->cepid, &rep, (void *)buf, len,
+				(socket->flags & O_NONBLOCK) ? TMO_POL : SOCKET_TIMEOUT);
 			if (ret < 0) {
 				return (ret == E_TMOUT) ? -ETIME : -ECOMM;
 			}
@@ -502,12 +510,13 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 	}
 
 	int ret = 0;
-	switch (fp->psock->family) {
+	socket_t *socket = (socket_t *)fp->exinf;
+	switch (socket->family) {
 	case AF_INET: {
-		switch (fp->psock->type) {
+		switch (socket->type) {
 		case SOCK_STREAM: {
 			if (flags & MSG_OOB) {
-				ret = tcp_rcv_oob(fp->psock->cepid, buf, len);
+				ret = tcp_rcv_oob(socket->cepid, buf, len);
 				if (ret < 0) {
 					syslog(LOG_ERROR, "tcp_rcv_oob => %d", ret);
 					return -ECOMM;
@@ -515,17 +524,17 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 			}
 			else {
 				int rsz, tmp;
-				if (fp->psock->input == NULL) {
+				if (socket->input == NULL) {
 					ret = wai_sem(SEM_FILEDESC);
 					if (ret < 0) {
 						syslog(LOG_ERROR, "wai_sem => %d", ret);
 					}
-					fp->psock->len = 0;
+					socket->len = 0;
 					ret = sig_sem(SEM_FILEDESC);
 					if (ret < 0) {
 						syslog(LOG_ERROR, "sig_sem => %d", ret);
 					}
-					ret = tcp_rcv_buf(fp->psock->cepid, &fp->psock->input, TMO_FEVR);
+					ret = tcp_rcv_buf(socket->cepid, &socket->input, TMO_FEVR);
 					if (ret < 0) {
 						syslog(LOG_ERROR, "tcp_rcv_buf => %d", ret);
 						return -ECOMM;
@@ -533,27 +542,27 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 					rsz = ret;
 				}
 				else
-					rsz = fp->psock->len;
+					rsz = socket->len;
 				tmp = rsz;
 				if (rsz > len)
 					rsz = len;
 				if (rsz >= 0) {
-					memcpy(buf, fp->psock->input, rsz);
+					memcpy(buf, socket->input, rsz);
 					ret = wai_sem(SEM_FILEDESC);
 					if (ret < 0) {
 						syslog(LOG_ERROR, "wai_sem => %d", ret);
 					}
-					fp->psock->len = tmp - rsz;
+					socket->len = tmp - rsz;
 					ret = sig_sem(SEM_FILEDESC);
 					if (ret < 0) {
 						syslog(LOG_ERROR, "sig_sem => %d", ret);
 					}
 					if (tmp - rsz == 0) {
-						fp->psock->input = NULL;
+						socket->input = NULL;
 					}
 					else
-						fp->psock->input = (void *)&((uint8_t *)fp->psock->input)[rsz];
-					ret = tcp_rel_buf(fp->psock->cepid, rsz);
+						socket->input = (void *)&((uint8_t *)socket->input)[rsz];
+					ret = tcp_rel_buf(socket->cepid, rsz);
 					if ((ret != E_OBJ) && (ret < 0)) {
 						syslog(LOG_ERROR, "tcp_rel_buf => %d", ret);
 						//return -ECOMM;
@@ -564,13 +573,13 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 			break;
 		}
 		case SOCK_DGRAM: {
-			struct sockaddr_in *raddr = &fp->psock->raddr4;
+			struct sockaddr_in *raddr = &socket->raddr4;
 			int rsz;
 			ret = wai_sem(SEM_FILEDESC);
 			if (ret < 0) {
 				syslog(LOG_ERROR, "wai_sem => %d", ret);
 			}
-			T_NET_BUF *input = fp->psock->input;
+			T_NET_BUF *input = socket->input;
 			if (input == NULL) {
 				ret = sig_sem(SEM_FILEDESC);
 				if (ret < 0) {
@@ -578,10 +587,10 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 				}
 
 				T_IPV4EP rep = { 0, 0 };
-				ret = udp_rcv_dat(fp->psock->cepid, &rep, buf, len,
-					(fp->psock->flags & O_NONBLOCK) ? TMO_POL : SOCKET_TIMEOUT);
+				ret = udp_rcv_dat(socket->cepid, &rep, buf, len,
+					(socket->flags & O_NONBLOCK) ? TMO_POL : SOCKET_TIMEOUT);
 				if (ret < 0) {
-					if ((fp->psock->flags & O_NONBLOCK) == 0)
+					if ((socket->flags & O_NONBLOCK) == 0)
 						syslog(LOG_ERROR, "udp_rcv_buf => %d", ret);
 					return (ret == E_TMOUT) ? -ETIME : -ECOMM;
 				}
@@ -592,12 +601,12 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 						syslog(LOG_ERROR, "wai_sem => %d", ret);
 					}
 					int sz = *alen;
-					memset(raddr, 0, sizeof(fp->psock->raddr4));
+					memset(raddr, 0, sizeof(socket->raddr4));
 					raddr->sin_family = AF_INET;
 					raddr->sin_port = htons(rep.portno);
 					raddr->sin_addr.s_addr = htonl(rep.ipaddr);
-					if (sz > sizeof(fp->psock->raddr4))
-						sz = sizeof(fp->psock->raddr4);
+					if (sz > sizeof(socket->raddr4))
+						sz = sizeof(socket->raddr4);
 					memcpy(addr, raddr, sz);
 					*alen = sz;
 					ret = sig_sem(SEM_FILEDESC);
@@ -607,15 +616,15 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 				}
 			}
 			else {
-				rsz = fp->psock->len;
-				void *pbuf = fp->psock->buf;
-				fp->psock->input = NULL;
-				fp->psock->len = 0;
-				fp->psock->buf = NULL;
+				rsz = socket->len;
+				void *pbuf = socket->buf;
+				socket->input = NULL;
+				socket->len = 0;
+				socket->buf = NULL;
 				if ((addr != NULL) && (alen != NULL)) {
 					int sz = *alen;
-					if (sz > sizeof(fp->psock->raddr4))
-						sz = sizeof(fp->psock->raddr4);
+					if (sz > sizeof(socket->raddr4))
+						sz = sizeof(socket->raddr4);
 					memcpy(addr, raddr, sz);
 					*alen = sz;
 				}
@@ -659,11 +668,12 @@ int shell_shutdown(int fd, int how)
 	}
 
 	ER ret;
-	switch (fp->psock->family) {
+	socket_t *socket = (socket_t *)fp->exinf;
+	switch (socket->family) {
 	case AF_INET: {
-		switch (fp->psock->type) {
+		switch (socket->type) {
 		case SOCK_STREAM: {
-			ret = tcp_sht_cep(fp->psock->cepid);
+			ret = tcp_sht_cep(socket->cepid);
 			if (ret < 0) {
 				return -ECOMM;
 			}
@@ -688,15 +698,16 @@ int shell_getsockopt(int fd, int level, int optname, void *optval, socklen_t *__
 	}
 
 	ER ret;
-	switch (fp->psock->family) {
+	socket_t *socket = (socket_t *)fp->exinf;
+	switch (socket->family) {
 	case AF_INET: {
-		switch (fp->psock->type) {
+		switch (socket->type) {
 		case SOCK_STREAM: {
 			switch (level) {
 			case SOL_SOCKET:
 				switch (optname) {
 				case SO_REUSEADDR:
-					if (fp->psock->flags & SO_REUSEADDR) {
+					if (socket->flags & SO_REUSEADDR) {
 						*(bool *)optval = true;
 					}
 					else {
@@ -704,7 +715,7 @@ int shell_getsockopt(int fd, int level, int optname, void *optval, socklen_t *__
 					}
 					break;
 				case SO_KEEPALIVE:
-					if (fp->psock->flags & SO_KEEPALIVE) {
+					if (socket->flags & SO_KEEPALIVE) {
 						*(bool *)optval = true;
 					}
 					else {
@@ -719,7 +730,7 @@ int shell_getsockopt(int fd, int level, int optname, void *optval, socklen_t *__
 				}
 				break;
 			case IPPROTO_TCP:
-				ret = tcp_get_opt(fp->psock->cepid, optname, (void *)optval, *optlen);
+				ret = tcp_get_opt(socket->cepid, optname, (void *)optval, *optlen);
 				if (ret < 0) {
 					return -EINVAL;
 				}
@@ -733,7 +744,7 @@ int shell_getsockopt(int fd, int level, int optname, void *optval, socklen_t *__
 		case SOCK_DGRAM: {
 			switch (level) {
 			case IPPROTO_UDP:
-				ret = udp_get_opt(fp->psock->cepid, optname, (void *)optval, *optlen);
+				ret = udp_get_opt(socket->cepid, optname, (void *)optval, *optlen);
 				if (ret < 0) {
 					return -EINVAL;
 				}
@@ -763,27 +774,28 @@ int shell_setsockopt(int fd, int level, int optname, const void *optval, socklen
 	}
 
 	ER ret;
-	switch (fp->psock->family) {
+	socket_t *socket = (socket_t *)fp->exinf;
+	switch (socket->family) {
 	case AF_INET: {
-		switch (fp->psock->type) {
+		switch (socket->type) {
 		case SOCK_STREAM: {
 			switch (level){
 			case SOL_SOCKET:
 				switch (optname) {
 				case SO_REUSEADDR:
 					if (*(bool *)optval) {
-						fp->psock->flags |= SO_REUSEADDR;
+						socket->flags |= SO_REUSEADDR;
 					}
 					else {
-						fp->psock->flags &= ~SO_REUSEADDR;
+						socket->flags &= ~SO_REUSEADDR;
 					}
 					break;
 				case SO_KEEPALIVE:
 					if (*(bool *)optval) {
-						fp->psock->flags |= SO_KEEPALIVE;
+						socket->flags |= SO_KEEPALIVE;
 					}
 					else {
-						fp->psock->flags &= ~SO_KEEPALIVE;
+						socket->flags &= ~SO_KEEPALIVE;
 					}
 					break;
 				default:
@@ -791,7 +803,7 @@ int shell_setsockopt(int fd, int level, int optname, const void *optval, socklen
 				}
 				break;
 			case IPPROTO_TCP:
-				ret = tcp_set_opt(fp->psock->cepid, optname, (void *)optval, optlen);
+				ret = tcp_set_opt(socket->cepid, optname, (void *)optval, optlen);
 				if (ret < 0) {
 					return -EINVAL;
 				}
@@ -804,7 +816,7 @@ int shell_setsockopt(int fd, int level, int optname, const void *optval, socklen
 		case SOCK_DGRAM: {
 			switch (level){
 			case IPPROTO_UDP:
-				ret = udp_set_opt(fp->psock->cepid, optname, (void *)optval, optlen);
+				ret = udp_set_opt(socket->cepid, optname, (void *)optval, optlen);
 				if (ret < 0) {
 					return -EINVAL;
 				}
@@ -836,9 +848,10 @@ int shell_getpeername(int fd, struct sockaddr *restrict addr, socklen_t *restric
 	}
 
 	socklen_t size = *len;
-	switch (fp->psock->family) {
+	socket_t *socket = (socket_t *)fp->exinf;
+	switch (socket->family) {
 	case AF_INET: {
-		struct sockaddr_in *raddr = &fp->psock->raddr4;
+		struct sockaddr_in *raddr = &socket->raddr4;
 		*len = sizeof(struct sockaddr_in);
 		if (size > sizeof(struct sockaddr_in))
 			size = sizeof(struct sockaddr_in);
@@ -864,13 +877,14 @@ int shell_getsockname(int fd, struct sockaddr *restrict addr, socklen_t *restric
 	}
 
 	socklen_t size = *len;
-	switch (fp->psock->family) {
+	socket_t *socket = (socket_t *)fp->exinf;
+	switch (socket->family) {
 	case AF_INET: {
 		const T_IN4_ADDR *laddr4 = in4_get_ifaddr(0);
 		struct sockaddr_in laddr;
 		laddr.sin_family = AF_INET;
 		laddr.sin_addr.s_addr = htonl(*laddr4);
-		laddr.sin_port = fp->psock->laddr4.sin_port;
+		laddr.sin_port = socket->laddr4.sin_port;
 		memset(&laddr.sin_zero, 0, sizeof(laddr.sin_zero));
 		*len = sizeof(struct sockaddr_in);
 		if (size > sizeof(struct sockaddr_in))
@@ -890,38 +904,33 @@ int tcp_fd_close(struct SHELL_FILE *fp)
 {
 	ER ret, ret2;
 
-	switch (fp->psock->family) {
+	socket_t *socket = (socket_t *)fp->exinf;
+	switch (socket->family) {
 	case AF_INET: {
-		if (fp->psock->cepid != 0) {
-			ID cepid = fp->psock->cepid;
+		if (socket->cepid != 0) {
+			ID cepid = socket->cepid;
 			ret = tcp_sht_cep(cepid);
 			if (ret < 0) {
 				//return -1;
 			}
-			ret = tcp_cls_cep(cepid, (fp->psock->repid != 0) ? 0 : SOCKET_TIMEOUT);
+			ret = tcp_cls_cep(cepid, (socket->repid != 0) ? 0 : SOCKET_TIMEOUT);
 			ret2 = tcp_del_cep(cepid);
-			free(fp->psock->buf);
-			fp->psock->buf = NULL;
-			delete_fd(&IO_TYPE_TCP, cepid);
+			//delete_fd_by_id(&IO_TYPE_TCP, cepid);
 			delete_id(tcp_cepid_table, tcp_cepid_table_count, cepid);
 			if ((ret < 0) || (ret2 < 0)) {
 				return (ret == E_TMOUT) ? -ETIME : -EINVAL;
 			}
 		}
-		else if (fp->psock->repid != 0) {
-			ID repid = fp->psock->repid;
+		else if (socket->repid != 0) {
+			ID repid = socket->repid;
 			ret = tcp_del_rep(repid);
-			free(fp->psock->buf);
-			fp->psock->buf = NULL;
-			delete_fd(&IO_TYPE_TCP, tmax_tcp_cepid + repid);
+			//delete_fd_by_id(&IO_TYPE_TCP, tmax_tcp_cepid + repid);
 			delete_id(tcp_repid_table, tcp_repid_table_count, repid);
 			if (ret < 0) {
 				return -EINVAL;
 			}
 		}
 		else {
-			free(fp->psock->buf);
-			fp->psock->buf = NULL;
 			return -EINVAL;
 		}
 		break;
@@ -958,9 +967,10 @@ bool_t tcp_fd_readable(struct SHELL_FILE *fp)
 {
 	ER ret;
 
-	if (fp->psock->cepid != 0) {
-		if (fp->psock->len == 0) {
-			ret = tcp_rcv_buf(fp->psock->cepid, &fp->psock->input, TMO_NBLK);
+	socket_t *socket = (socket_t *)fp->exinf;
+	if (socket->cepid != 0) {
+		if (socket->len == 0) {
+			ret = tcp_rcv_buf(socket->cepid, &socket->input, TMO_NBLK);
 			if ((ret != E_WBLK) && (ret != E_OBJ) && (ret < 0)) {
 				syslog(LOG_ERROR, "tcp_rcv_buf => %d", ret);
 				//return ret;
@@ -970,7 +980,7 @@ bool_t tcp_fd_readable(struct SHELL_FILE *fp)
 				if (ret < 0) {
 					syslog(LOG_ERROR, "wai_sem => %d", ret);
 				}
-				fp->psock->len += ret;
+				socket->len += ret;
 				ret = sig_sem(SEM_FILEDESC);
 				if (ret < 0) {
 					syslog(LOG_ERROR, "sig_sem => %d", ret);
@@ -984,6 +994,15 @@ bool_t tcp_fd_readable(struct SHELL_FILE *fp)
 	}
 
 	return false;
+}
+
+void tcp_fd_delete(struct SHELL_FILE *fp)
+{
+	socket_t *socket = (socket_t *)fp->exinf;
+	free(socket->buf);
+	socket->buf = NULL;
+	free(fp->exinf);
+	fp->exinf = NULL;
 }
 
 ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk)
@@ -1002,14 +1021,15 @@ ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk)
 	switch (fncd) {
 	case TFN_TCP_RCV_BUF:
 		len = *(int *)p_parblk;
-		if (len <= 0)
+		if ((len <= 0) || (fp->exinf == NULL))
 			return E_OK;
 
 		ret = wai_sem(SEM_FILEDESC);
 		if (ret < 0) {
 			syslog(LOG_ERROR, "wai_sem => %d", ret);
 		}
-		fp->psock->len += len;
+		socket_t *socket = (socket_t *)fp->exinf;
+		socket->len += len;
 		ret = sig_sem(SEM_FILEDESC);
 		if (ret < 0) {
 			syslog(LOG_ERROR, "sig_sem => %d", ret);
@@ -1022,14 +1042,14 @@ ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk)
 
 	case TFN_TCP_RCV_DAT:
 		len = *(int *)p_parblk;
-		if (len <= 0)
+		if ((len <= 0) || (fp->exinf == NULL))
 			return E_OK;
 
 		ret = wai_sem(SEM_FILEDESC);
 		if (ret < 0) {
 			syslog(LOG_ERROR, "wai_sem => %d", ret);
 		}
-		fp->psock->len += len;
+		socket->len += len;
 		ret = sig_sem(SEM_FILEDESC);
 		if (ret < 0) {
 			syslog(LOG_ERROR, "sig_sem => %d", ret);
@@ -1053,11 +1073,11 @@ ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk)
 		return E_OK;
 
 	case TFN_TCP_DEL_REP:
-		delete_fd(&IO_TYPE_TCP, tmax_tcp_cepid + cepid);
+		delete_fd_by_id(&IO_TYPE_TCP, tmax_tcp_cepid + cepid);
 		return E_OK;
 
 	case TFN_TCP_DEL_CEP:
-		delete_fd(&IO_TYPE_TCP, cepid);
+		delete_fd_by_id(&IO_TYPE_TCP, cepid);
 		return E_OK;
 
 	default:
@@ -1070,13 +1090,12 @@ int udp_fd_close(struct SHELL_FILE *fp)
 	ER ret;
 	ID cepid;
 
-	switch (fp->psock->family) {
+	socket_t *socket = (socket_t *)fp->exinf;
+	switch (socket->family) {
 	case AF_INET: {
-		cepid = fp->psock->cepid;
+		cepid = socket->cepid;
 		ret = udp_del_cep(cepid);
-		//free(fp->psock->buf);
-		//fp->psock->buf = NULL;
-		delete_fd(&IO_TYPE_UDP, cepid);
+		//delete_fd_by_id(&IO_TYPE_UDP, cepid);
 		delete_id(udp_cepid_table, udp_cepid_table_count, cepid);
 		if (ret < 0) {
 			return -EINVAL;
@@ -1113,13 +1132,23 @@ int udp_fd_ioctl(struct SHELL_FILE *fp, int req, void *arg)
 
 bool_t udp_fd_readable(struct SHELL_FILE *fp)
 {
-	if (fp->psock->cepid != 0) {
-		if (fp->psock->input != NULL) {
+	socket_t *socket = (socket_t *)fp->exinf;
+	if (socket->cepid != 0) {
+		if (socket->input != NULL) {
 			return true;
 		}
 	}
 
 	return false;
+}
+
+void udp_fd_delete(struct SHELL_FILE *fp)
+{
+	//socket_t *socket = (socket_t *)fp->exinf;
+	//free(socket->buf);
+	//socket->buf = NULL;
+	free(fp->exinf);
+	fp->exinf = NULL;
 }
 
 ER socket_udp_callback(ID cepid, FN fncd, void *p_parblk)
@@ -1139,26 +1168,27 @@ ER socket_udp_callback(ID cepid, FN fncd, void *p_parblk)
 	{
 		T_UDP_RCV_DAT_PARA *udppara = (T_UDP_RCV_DAT_PARA *)p_parblk;
 		len = udppara->len;
-		if (len <= 0)
+		if ((len <= 0) || (fp->exinf == NULL))
 			return E_OK;
 
 		ER ret = wai_sem(SEM_FILEDESC);
 		if (ret < 0) {
 			syslog(LOG_ERROR, "wai_sem => %d", ret);
 		}
-		fp->psock->len = len;
-		if (fp->psock->input != NULL) {
-			ret = rel_net_buf(fp->psock->input);
+		socket_t *socket = (socket_t *)fp->exinf;
+		socket->len = len;
+		if (socket->input != NULL) {
+			ret = rel_net_buf(socket->input);
 			if (ret < 0) {
 				syslog(LOG_ERROR, "rel_net_buf => %d", ret);
 			}
 		}
-		fp->psock->input = udppara->input;
-		fp->psock->buf = GET_UDP_SDU(udppara->input, udppara->off);
-		memset(&fp->psock->raddr4, 0, sizeof(fp->psock->raddr4));
-		fp->psock->raddr4.sin_family = AF_INET;
-		fp->psock->raddr4.sin_port = htons(udppara->rep4.portno);
-		fp->psock->raddr4.sin_addr.s_addr = htonl(udppara->rep4.ipaddr);
+		socket->input = udppara->input;
+		socket->buf = GET_UDP_SDU(udppara->input, udppara->off);
+		memset(&socket->raddr4, 0, sizeof(socket->raddr4));
+		socket->raddr4.sin_family = AF_INET;
+		socket->raddr4.sin_port = htons(udppara->rep4.portno);
+		socket->raddr4.sin_addr.s_addr = htonl(udppara->rep4.ipaddr);
 		udppara->input->flags |= NB_FLG_NOREL_IFOUT;
 		ret = sig_sem(SEM_FILEDESC);
 		if (ret < 0) {
@@ -1175,7 +1205,7 @@ ER socket_udp_callback(ID cepid, FN fncd, void *p_parblk)
 
 	case TFN_UDP_RCV_DAT:
 		len = *(int *)p_parblk;
-		if (len <= 0)
+		if ((len <= 0) || (fp->exinf == NULL))
 			return E_OK;
 
 		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
@@ -1196,7 +1226,7 @@ ER socket_udp_callback(ID cepid, FN fncd, void *p_parblk)
 		return E_OK;
 
 	case TFN_UDP_DEL_CEP:
-		delete_fd(&IO_TYPE_UDP, cepid);
+		delete_fd_by_id(&IO_TYPE_UDP, cepid);
 		return E_OK;
 
 	default:

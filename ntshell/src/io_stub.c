@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  *
- *  @(#) $Id: io_stub.c 1856 2019-03-30 14:31:58Z coas-nagasima $
+ *  @(#) $Id: io_stub.c 1863 2019-04-02 06:10:48Z coas-nagasima $
  */
 #include "shellif.h"
 #include <stdint.h>
@@ -84,6 +84,7 @@ static size_t file_write(struct SHELL_FILE *fp, const unsigned char *data, size_
 static off_t file_seek(struct SHELL_FILE *fp, off_t ofs, int org);
 static int file_ioctl(struct SHELL_FILE *fp, int req, void *arg);
 static bool_t file_readable(struct SHELL_FILE *fp);
+static void file_delete(struct SHELL_FILE *fp);
 
 static int dir_close(struct SHELL_FILE *fp);
 static size_t dir_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
@@ -91,11 +92,12 @@ static size_t dir_write(struct SHELL_FILE *fp, const unsigned char *data, size_t
 static off_t dir_seek(struct SHELL_FILE *fp, off_t ofs, int org);
 static int dir_ioctl(struct SHELL_FILE *fp, int req, void *arg);
 static bool_t dir_readable(struct SHELL_FILE *fp);
+static void dir_delete(struct SHELL_FILE *fp);
 
-IO_TYPE IO_TYPE_FILE = { file_close, file_read, file_write, file_seek, file_ioctl, file_readable };
-IO_TYPE IO_TYPE_DIR = { dir_close, dir_read, dir_write, dir_seek, dir_ioctl, dir_readable };
+IO_TYPE IO_TYPE_FILE = { file_close, file_read, file_write, file_seek, file_ioctl, file_readable, file_delete };
+IO_TYPE IO_TYPE_DIR = { dir_close, dir_read, dir_write, dir_seek, dir_ioctl, dir_readable, dir_delete };
 
-int shell_open(const char * path, int flags, void *arg)
+int shell_open(const char *path, int flags, void *arg)
 {
 	FRESULT res;
 	struct SHELL_FILE *fp;
@@ -105,10 +107,10 @@ int shell_open(const char * path, int flags, void *arg)
 		if (fp == NULL)
 			return -ENOMEM;
 
-		fp->pdir = malloc(sizeof(struct SHELL_DIR));
-		memset(fp->pdir, 0, sizeof(struct SHELL_DIR));
+		fp->exinf = malloc(sizeof(struct SHELL_DIR));
+		memset(fp->exinf, 0, sizeof(struct SHELL_DIR));
 
-		FATFS_DIR *dir = &fp->pdir->dir;
+		FATFS_DIR *dir = &((struct SHELL_DIR *)fp->exinf)->dir;
 		FRESULT res;
 		if ((res = f_opendir(dir, path)) != FR_OK) {
 			return fresult2errno(res);
@@ -120,8 +122,8 @@ int shell_open(const char * path, int flags, void *arg)
 	if (fp == NULL)
 		return -ENOMEM;
 
-	fp->pfile = malloc(sizeof(FIL));
-	memset(fp->pfile, 0, sizeof(FIL));
+	fp->exinf = malloc(sizeof(FIL));
+	memset(fp->exinf, 0, sizeof(FIL));
 
 	BYTE fmd = 0;
 	switch (flags & O_ACCMODE) {
@@ -157,7 +159,7 @@ int shell_open(const char * path, int flags, void *arg)
 		}
 	}
 
-	if ((res = f_open(fp->pfile, path, fmd)) == FR_OK) {
+	if ((res = f_open((FIL *)fp->exinf, path, fmd)) == FR_OK) {
 		fp->handle = fp->fd;
 		return fp->fd;
 	}
@@ -169,7 +171,7 @@ int file_close(struct SHELL_FILE *fp)
 {
 	FRESULT res;
 
-	if ((res = f_close(fp->pfile)) == FR_OK) {
+	if ((res = f_close((FIL *)fp->exinf)) == FR_OK) {
 		return 0;
 	}
 
@@ -181,7 +183,7 @@ size_t file_read(struct SHELL_FILE *fp, unsigned char *data, size_t len)
 	unsigned int ret = 0;
 	FRESULT res;
 
-	if ((res = f_read(fp->pfile, data, len, &ret)) != FR_OK)
+	if ((res = f_read((FIL *)fp->exinf, data, len, &ret)) != FR_OK)
 		return -EIO;
 
 	return ret;
@@ -192,7 +194,7 @@ size_t file_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
 	unsigned int ret = 0;
 	FRESULT res;
 
-	if ((res = f_write(fp->pfile, data, len, &ret)) != FR_OK)
+	if ((res = f_write((FIL *)fp->exinf, data, len, &ret)) != FR_OK)
 		return -EIO;
 
 	return ret;
@@ -215,17 +217,17 @@ off_t file_seek(struct SHELL_FILE *fp, off_t ptr, int dir)
 	}
 
 	FRESULT res;
-	if ((res = f_seek(fp->pfile, ptr, dir)) != FR_OK)
+	if ((res = f_seek((FIL *)fp->exinf, ptr, dir)) != FR_OK)
 		return -EIO;
 
-	return fp->pfile->fptr;
+	return ((FIL *)fp->exinf)->fptr;
 }
 
 int file_ioctl(struct SHELL_FILE *fp, int req, void *arg)
 {
 	DRESULT res;
 
-	if ((res = disk_ioctl(fp->pfile->fs->drv, req, arg) != RES_OK))
+	if ((res = disk_ioctl(((FIL *)fp->exinf)->fs->drv, req, arg) != RES_OK))
 		return -EINVAL;
 
 	return 0;
@@ -234,6 +236,12 @@ int file_ioctl(struct SHELL_FILE *fp, int req, void *arg)
 bool_t file_readable(struct SHELL_FILE *fp)
 {
 	return fp->readevt_w != fp->readevt_r;
+}
+
+void file_delete(struct SHELL_FILE *fp)
+{
+	free((FIL *)fp->exinf);
+	fp->exinf = NULL;
 }
 
 int shell_close(int fd)
@@ -338,7 +346,7 @@ int shell_ftruncate(int fd, off_t length)
 		return -EBADF;
 
 	FRESULT res;
-	if ((res = f_truncate(fp->pfile)) != FR_OK)
+	if ((res = f_truncate((FIL *)fp->exinf)) != FR_OK)
 		return fresult2errno(res);
 
 	return 0;
@@ -357,7 +365,7 @@ int sio_tcgetattr(int fd, struct termios *termios)
 	if ((fp == NULL) || (fp->type != &IO_TYPE_SIO))
 		return -EBADF;
 
-	ntstdio_t *ntstdio = fp->ntstdio;
+	ntstdio_t *ntstdio = (ntstdio_t *)fp->exinf;
 
 	memset(termios, 0, sizeof(*termios));
 
@@ -395,7 +403,7 @@ int sio_tcsetattr(int fd, int optional_actions, const struct termios *termios)
 	if ((fp == NULL) || (fp->type != &IO_TYPE_SIO))
 		return -EBADF;
 
-	ntstdio_t *ntstdio = fp->ntstdio;
+	ntstdio_t *ntstdio = (ntstdio_t *)fp->exinf;
 
 	if (optional_actions == TCSANOW) {
 		if (termios->c_lflag & ECHO) {
@@ -589,7 +597,7 @@ int shell_chroot(const char *path)
 int dir_close(struct SHELL_FILE *fp)
 {
 	FRESULT res;
-	if ((res = f_closedir(&fp->pdir->dir)) != FR_OK) {
+	if ((res = f_closedir(&((struct SHELL_DIR *)fp->exinf)->dir)) != FR_OK) {
 		return fresult2errno(res);
 	}
 
@@ -612,7 +620,7 @@ int shell_getdents(int fd, struct dirent *de, size_t len)
 	fno.lfsize = sizeof lfn;
 #endif
 	FRESULT res;
-	if ((res = f_readdir(&fp->pdir->dir, &fno)) != FR_OK || fno.fname[0] == '\0') {
+	if ((res = f_readdir(&((struct SHELL_DIR *)fp->exinf)->dir, &fno)) != FR_OK || fno.fname[0] == '\0') {
 		return fresult2errno(res);
 	}
 
@@ -644,7 +652,7 @@ off_t dir_seek(struct SHELL_FILE *fp, off_t ptr, int dir)
 		return -EINVAL;
 
 	if (ptr == 0) {
-		if ((res = f_rewinddir(&fp->pdir->dir)) != FR_OK) {
+		if ((res = f_rewinddir(&((struct SHELL_DIR *)fp->exinf)->dir)) != FR_OK) {
 			return fresult2errno(res);
 		}
 	}
@@ -655,12 +663,12 @@ off_t dir_seek(struct SHELL_FILE *fp, off_t ptr, int dir)
 		fno.lfname = lfn;
 		fno.lfsize = sizeof lfn;
 #endif
-		if ((res = f_rewinddir(&fp->pdir->dir)) != FR_OK) {
+		if ((res = f_rewinddir(&((struct SHELL_DIR *)fp->exinf)->dir)) != FR_OK) {
 			return fresult2errno(res);
 		}
 
 		for (int i = 0; i < ptr; i++) {
-			if ((res = f_readdir(&fp->pdir->dir, &fno)) != FR_OK || fno.fname[0] == '\0') {
+			if ((res = f_readdir(&((struct SHELL_DIR *)fp->exinf)->dir, &fno)) != FR_OK || fno.fname[0] == '\0') {
 				return fresult2errno(res);
 			}
 		}
@@ -677,6 +685,12 @@ int dir_ioctl(struct SHELL_FILE *fp, int req, void *arg)
 bool_t dir_readable(struct SHELL_FILE *fp)
 {
 	return fp->readevt_w != fp->readevt_r;
+}
+
+void dir_delete(struct SHELL_FILE *fp)
+{
+	free((struct SHELL_DIR *)fp->exinf);
+	fp->exinf = NULL;
 }
 
 pid_t shell_getpid(void)

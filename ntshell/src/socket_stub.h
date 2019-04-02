@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: socket_stub.h 1856 2019-03-30 14:31:58Z coas-nagasima $
+ *  @(#) $Id: socket_stub.h 1863 2019-04-02 06:10:48Z coas-nagasima $
  */
 #ifndef SOCKET_STUB_H
 #define SOCKET_STUB_H
@@ -120,12 +120,7 @@ struct SHELL_FILE {
 	int writable;
 	int errorevt_r;
 	int errorevt_w;
-	union {
-		FIL *pfile;
-		struct SHELL_DIR *pdir;
-		socket_t *psock;
-		struct ntstdio_t *ntstdio;
-	};
+	void *exinf;
 };
 
 struct io_type_s {
@@ -135,6 +130,7 @@ struct io_type_s {
 	off_t (*seek)(struct SHELL_FILE *, off_t, int);
 	int (*ioctl)(struct SHELL_FILE *, int, void *);
 	bool_t (*readable)(struct SHELL_FILE *);
+	void (*delete)(struct SHELL_FILE *);
 };
 
 #ifndef bool
@@ -148,7 +144,7 @@ struct io_type_s {
 #endif
 
 struct SHELL_FILE *new_fp(IO_TYPE *type, int id, int writable);
-int delete_fd(IO_TYPE *type, int id);
+int delete_fd_by_id(IO_TYPE *type, int id);
 struct SHELL_FILE *fd_to_fp(int fd);
 struct SHELL_FILE *id_to_fd(IO_TYPE *type, int id);
 

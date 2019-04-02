@@ -71,12 +71,13 @@ static uint8_t serial_available_buffer(serial_t *obj);
 static void serial_irq_err_set(serial_t *obj, uint32_t enable);
 
 static const struct st_scif *SCIF[] = SCIF_ADDRESS_LIST;
-static uart_irq_handler irq_handler;
+//static uart_irq_handler irq_handler;
 
 int stdio_uart_inited = 0;
 serial_t stdio_uart;
 
 struct serial_global_data_s {
+    /*add*/uart_irq_handler irq_handler;
     uint32_t serial_irq_id;
     gpio_t sw_rts, sw_cts;
     serial_t *tranferring_obj, *receiving_obj;
@@ -342,8 +343,9 @@ static void uart_tx_irq(IRQn_Type irq_num, uint32_t index) {
             ((void (*)())uart_data[index].async_tx_callback)();
         }
     }
-    
-    irq_handler(uart_data[index].serial_irq_id, TxIrq);
+
+    if (uart_data[index].irq_handler != NULL)
+        uart_data[index].irq_handler(uart_data[index].serial_irq_id, TxIrq);
 }
 
 static void uart_rx_irq(IRQn_Type irq_num, uint32_t index) {
@@ -406,8 +408,9 @@ static void uart_rx_irq(IRQn_Type irq_num, uint32_t index) {
             return;
         }
     }
-    
-    irq_handler(uart_data[index].serial_irq_id, RxIrq);
+
+    if (uart_data[index].irq_handler != NULL)
+        uart_data[index].irq_handler(uart_data[index].serial_irq_id, RxIrq);
 }
 
 static void uart_err_irq(IRQn_Type irq_num, uint32_t index) {
@@ -522,7 +525,7 @@ static void uart7_er_irq(void) {
 #endif
 
 void serial_irq_handler(serial_t *obj, uart_irq_handler handler, uint32_t id) {
-    irq_handler = handler;
+    uart_data[obj->serial.index].irq_handler = handler;
     uart_data[obj->serial.index].serial_irq_id = id;
 }
 

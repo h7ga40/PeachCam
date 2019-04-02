@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: fdtable.c 1856 2019-03-30 14:31:58Z coas-nagasima $
+ *  @(#) $Id: fdtable.c 1863 2019-04-02 06:10:48Z coas-nagasima $
  */
 #include "shellif.h"
 #include <stdint.h>
@@ -80,6 +80,7 @@ static size_t stdio_write(struct SHELL_FILE *fp, const unsigned char *data, size
 static size_t stdin_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
 static size_t stdout_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
 static size_t stderr_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
+static void stdio_delete(struct SHELL_FILE *fp);
 
 static int sio_close(struct SHELL_FILE *fp);
 static size_t sio_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
@@ -87,17 +88,18 @@ static size_t sio_write(struct SHELL_FILE *fp, const unsigned char *data, size_t
 static off_t sio_seek(struct SHELL_FILE *fp, off_t ofs, int org);
 static int sio_ioctl(struct SHELL_FILE *fp, int req, void *arg);
 static bool_t sio_readable(struct SHELL_FILE *fp);
+static void sio_delete(struct SHELL_FILE *fp);
 
-IO_TYPE IO_TYPE_STDIN = { stdio_close, stdin_read, stdio_write, sio_seek, sio_ioctl, sio_readable };
-IO_TYPE IO_TYPE_STDOUT = { stdio_close, stdio_read, stdout_write, sio_seek, sio_ioctl, sio_readable };
-IO_TYPE IO_TYPE_STDERR = { stdio_close, stdio_read, stderr_write, sio_seek, sio_ioctl, sio_readable };
-IO_TYPE IO_TYPE_SIO = { sio_close, sio_read, sio_write, sio_seek, sio_ioctl, sio_readable };
+IO_TYPE IO_TYPE_STDIN = { stdio_close, stdin_read, stdio_write, sio_seek, sio_ioctl, sio_readable, stdio_delete };
+IO_TYPE IO_TYPE_STDOUT = { stdio_close, stdio_read, stdout_write, sio_seek, sio_ioctl, sio_readable, stdio_delete };
+IO_TYPE IO_TYPE_STDERR = { stdio_close, stdio_read, stderr_write, sio_seek, sio_ioctl, sio_readable, stdio_delete };
+IO_TYPE IO_TYPE_SIO = { sio_close, sio_read, sio_write, sio_seek, sio_ioctl, sio_readable, sio_delete };
 ntstdio_t ntstdio;
 
 static struct SHELL_FILE fd_table[8 * sizeof(FLGPTN)] = {
-	{ 0, &IO_TYPE_STDIN, 0, .ntstdio = &ntstdio },
-	{ 1, &IO_TYPE_STDOUT, 0, .ntstdio = &ntstdio },
-	{ 2, &IO_TYPE_STDERR, 0,.ntstdio = &ntstdio },
+	{ 0, &IO_TYPE_STDIN, 0, .exinf = &ntstdio },
+	{ 1, &IO_TYPE_STDOUT, 0, .exinf = &ntstdio },
+	{ 2, &IO_TYPE_STDERR, 0,.exinf = &ntstdio },
 };
 #define fd_table_count (sizeof(fd_table) / sizeof(fd_table[0]))
 
@@ -139,7 +141,7 @@ size_t stdin_read(struct SHELL_FILE *fp, unsigned char *data, size_t len)
 {
 	int i = 0;
 	while (i < len) {
-		int c = ntstdio_getc(fp->ntstdio);
+		int c = ntstdio_getc((struct ntstdio_t *)fp->exinf);
 		data[i++] = c;
 		if ((c == EOF) || (c == '\n'))
 			break;
@@ -150,7 +152,7 @@ size_t stdin_read(struct SHELL_FILE *fp, unsigned char *data, size_t len)
 size_t stdout_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
 {
 	for (int i = 0; i < len; i++) {
-		ntstdio_putc(fp->ntstdio, data[i]);
+		ntstdio_putc((struct ntstdio_t *)fp->exinf, data[i]);
 	}
 	return len;
 }
@@ -158,9 +160,13 @@ size_t stdout_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len
 size_t stderr_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
 {
 	for (int i = 0; i < len; i++) {
-		ntstdio_putc(fp->ntstdio, data[i]);
+		ntstdio_putc((struct ntstdio_t *)fp->exinf, data[i]);
 	}
 	return len;
+}
+
+void stdio_delete(struct SHELL_FILE *fp)
+{
 }
 
 int sio_close(struct SHELL_FILE *fp)
@@ -204,10 +210,26 @@ bool_t sio_readable(struct SHELL_FILE *fp)
 	return fp->readevt_w != fp->readevt_r;
 }
 
+void sio_delete(struct SHELL_FILE *fp)
+{
+	free((serial_t *)((struct ntstdio_t *)fp->exinf)->exinf);
+	((struct ntstdio_t *)fp->exinf)->exinf = NULL;
+	free((struct ntstdio_t *)fp->exinf);
+	fp->exinf = NULL;
+}
+
 struct SHELL_FILE *new_fp(IO_TYPE *type, int id, int writable)
 {
+	struct SHELL_FILE *fp = NULL;
+	ER ret;
+
+	ret = wai_sem(SEM_FILEDESC);
+	if (ret < 0) {
+		syslog(LOG_ERROR, "wai_sem => %d", ret);
+	}
+
 	for (int fd = 3; fd < fd_table_count; fd++) {
-		struct SHELL_FILE *fp = &fd_table[fd];
+		fp = &fd_table[fd];
 		if (fp->type != NULL)
 			continue;
 
@@ -216,24 +238,42 @@ struct SHELL_FILE *new_fp(IO_TYPE *type, int id, int writable)
 		fp->type = type;
 		fp->handle = id;
 		fp->writable = writable;
-		return fp;
+		break;
 	}
 
-	return NULL;
+	ret = sig_sem(SEM_FILEDESC);
+	if (ret < 0) {
+		syslog(LOG_ERROR, "sig_sem => %d", ret);
+	}
+
+	return fp;
 }
 
 struct SHELL_FILE *id_to_fd(IO_TYPE *type, int id)
 {
-	for (int fd = 3; fd < fd_table_count; fd++) {
-		struct SHELL_FILE *fp = &fd_table[fd];
-		if ((fp->type == type) && (fp->handle == id))
-			return fp;
+	struct SHELL_FILE *fp = NULL;
+	ER ret;
+
+	ret = wai_sem(SEM_FILEDESC);
+	if (ret < 0) {
+		syslog(LOG_ERROR, "wai_sem => %d", ret);
 	}
 
-	return NULL;
+	for (int fd = 3; fd < fd_table_count; fd++) {
+		fp = &fd_table[fd];
+		if ((fp->type == type) && (fp->handle == id))
+			break;
+	}
+
+	ret = sig_sem(SEM_FILEDESC);
+	if (ret < 0) {
+		syslog(LOG_ERROR, "sig_sem => %d", ret);
+	}
+
+	return fp;
 }
 
-int delete_fd(IO_TYPE *type, int id)
+int delete_fd_by_id(IO_TYPE *type, int id)
 {
 	struct SHELL_FILE *fp = id_to_fd(type, id);
 	if (fp == NULL)
@@ -244,13 +284,21 @@ int delete_fd(IO_TYPE *type, int id)
 
 int delete_fp(struct SHELL_FILE *fp)
 {
-	free(fp->pfile);
-	fp->pfile = NULL;
-	free(fp->pdir);
-	fp->pdir = NULL;
-	free(fp->psock);
-	fp->psock = NULL;
+	ER ret;
+
+	fp->type->delete(fp);
+
+	ret = wai_sem(SEM_FILEDESC);
+	if (ret < 0) {
+		syslog(LOG_ERROR, "wai_sem => %d", ret);
+	}
+
 	memset(fp, 0, sizeof(struct SHELL_FILE));
+
+	ret = sig_sem(SEM_FILEDESC);
+	if (ret < 0) {
+		syslog(LOG_ERROR, "sig_sem => %d", ret);
+	}
 
 	return 0;
 }
@@ -398,12 +446,12 @@ void stdio_update_evts()
 	struct SHELL_FILE *fp = &fd_table[fd];
 	FLGPTN flgptn = 0;
 
-	if (serial_readable((serial_t *)fp->ntstdio->exinf)) {
+	if (serial_readable((serial_t *)((struct ntstdio_t *)fp->exinf)->exinf)) {
 		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
 
 		FD_SET(fd, (fd_set *)&flgptn);
 	}
-	if (serial_writable((serial_t *)fp->ntstdio->exinf)) {
+	if (serial_writable((serial_t *)((struct ntstdio_t *)fp->exinf)->exinf)) {
 		if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
 
 		FD_SET(fd, (fd_set *)&flgptn);
@@ -421,12 +469,12 @@ void stdio_flgptn(FLGPTN *flgptn)
 	struct SHELL_FILE *fp = &fd_table[fd];
 	*flgptn = 0;
 
-	if (serial_readable((serial_t *)fp->ntstdio->exinf)) {
+	if (serial_readable((serial_t *)((struct ntstdio_t *)fp->exinf)->exinf)) {
 		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
 
 		FD_SET(fd, (fd_set *)flgptn);
 	}
-	if (serial_writable((serial_t *)fp->ntstdio->exinf)) {
+	if (serial_writable((serial_t *)((struct ntstdio_t *)fp->exinf)->exinf)) {
 		if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
 
 		FD_SET(fd, (fd_set *)flgptn);

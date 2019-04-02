@@ -35,7 +35,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  *
- *  $Id: mbed_stub.c 1833 2019-03-03 16:01:08Z coas-nagasima $
+ *  $Id: mbed_stub.c 1862 2019-04-02 06:08:10Z coas-nagasima $
  */
 
 /*
@@ -213,24 +213,61 @@ long SYS_munmap()
 	return -ENOSYS;
 }
 
+int malloc_lock_sem_count[TNUM_TSKID];
+
 void __malloc_lock(struct _reent *_r)
 {
 	ER ercd;
+	ID tskid = 0;
 
-	ercd = wai_sem(SEM_MALLOC);
+	ercd = get_tid(&tskid);
 	if (ercd != E_OK) {
-		syslog(LOG_ERROR, "%s (%d) __malloc_lock error.",
-			itron_strerror(ercd), SERCD(ercd));
+		goto error;
 	}
+
+	if (malloc_lock_sem_count[tskid - 1] == 0) {
+		ercd = wai_sem(SEM_MALLOC);
+		if (ercd != E_OK) {
+			goto error;
+		}
+	}
+
+	malloc_lock_sem_count[tskid - 1]++;
+	return;
+error:
+	syslog(LOG_ERROR, "%s (%d) __malloc_lock error.",
+		itron_strerror(ercd), SERCD(ercd));
+	asm("bkpt #0");
+	while(0);
 }
 
 void __malloc_unlock(struct _reent *_r)
 {
 	ER ercd;
+	ID tskid = 0;
+	int count;
+
+	ercd = get_tid(&tskid);
+	if (ercd != E_OK) {
+		goto error;
+	}
+
+	malloc_lock_sem_count[tskid - 1]--;
+	if (malloc_lock_sem_count[tskid - 1] > 0)
+		return;
+
+	if (malloc_lock_sem_count[tskid - 1] < 0) {
+		goto error;
+	}
 
 	ercd = sig_sem(SEM_MALLOC);
 	if (ercd != E_OK) {
-		syslog(LOG_ERROR, "%s (%d) __malloc_unlock error.",
-			itron_strerror(ercd), SERCD(ercd));
+		goto error;
 	}
+	return;
+error:
+	syslog(LOG_ERROR, "%s (%d) __malloc_unlock error.",
+		itron_strerror(ercd), SERCD(ercd));
+	asm("bkpt #0");
+	while(0);
 }

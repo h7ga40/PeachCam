@@ -3,9 +3,7 @@
  *      Toyohashi Open Platform for Embedded Real-Time Systems/
  *      Advanced Standard Profile Kernel
  * 
- *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
- *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2016 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2006-2016 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -37,107 +35,172 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: tSIOPortGRPeachMain_inline.h 1846 2019-03-28 10:22:45Z coas-nagasima $
+ *  $Id: tMbedSerial.c 1846 2019-03-28 10:22:45Z coas-nagasima $
  */
 
 /*
- *		シリアルインタフェースドライバのターゲット依存部（GR-PEACH用）
+ *		FIFO内蔵シリアルコミュニケーションインタフェース用 簡易SIOドライバ
  */
 
+#include <sil.h>
+#include "tMbedSerial_tecsgen.h"
+#include "serial_api.h"
+
+static void mbed_serial_irq_handler(uint32_t id, SerialIrq event);
+
 /*
- *  SIOポートのオープン
+ *  シリアルI/Oポートのオープン
  */
-Inline void
+void
 eSIOPort_open(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
+	serial_t *obj = &p_cellcb->serial;
+	uint_t	brr;
 
-	/*
-	 *  デバイス依存のオープン処理
-	 */
-	cSIOPort_open();
+	if (VAR_initialized) {
+		/*
+		 *  既に初期化している場合は、二重に初期化しない．
+		 */
+		return;
+	}
+
+	serial_init(obj, ATTR_tx, ATTR_rx);
+	serial_baud(obj, ATTR_baudRate);
+	serial_format(obj, 8, ParityNone, 1);
+
+	serial_irq_handler(obj, mbed_serial_irq_handler, idx);
+
+	VAR_initialized = true;
 }
 
 /*
- *  SIOポートのクローズ
+ *  シリアルI/Oポートのクローズ
  */
-Inline void
+void
 eSIOPort_close(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
+	serial_t *obj = &p_cellcb->serial;
 
-	/*
-	 *  デバイス依存のクローズ処理
-	 */
-	cSIOPort_close();
+	serial_free(obj);
 }
 
 /*
- *  SIOポートへの文字送信
+ *  シリアルI/Oポートへの文字送信
  */
-Inline bool_t
+bool_t
 eSIOPort_putChar(CELLIDX idx, char c)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
+	serial_t *obj = &p_cellcb->serial;
 
-	return(cSIOPort_putChar(c));
+	if (serial_writable(obj)){
+		serial_putc(obj, c);
+		return(true);
+	}
+	return(false);
 }
 
 /*
- *  SIOポートからの文字受信
+ *  シリアルI/Oポートからの文字受信
  */
-Inline int_t
+int_t
 eSIOPort_getChar(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
+	serial_t *obj = &p_cellcb->serial;
+	char	c;
 
-	return(cSIOPort_getChar());
+	if (serial_readable(obj)) {
+		if (c = serial_getc(obj)) {
+			return((int_t) c);
+		}
+	}
+	return(-1);
 }
 
 /*
- *  SIOポートからのコールバックの許可
+ *  シリアルI/Oポートからのコールバックの許可
  */
-Inline void
+void
 eSIOPort_enableCBR(CELLIDX idx, uint_t cbrtn)
 {
-	CELLCB	*p_cellcb = GET_CELLCB(idx);
+	CELLCB		*p_cellcb = GET_CELLCB(idx);
+	serial_t *obj = &p_cellcb->serial;
 
-	cSIOPort_enableCBR(cbrtn);
-}
-
-/*
- *  SIOポートからのコールバックの禁止
- */
-Inline void
-eSIOPort_disableCBR(CELLIDX idx, uint_t cbrtn)
-{
-	CELLCB	*p_cellcb = GET_CELLCB(idx);
-
-	cSIOPort_disableCBR(cbrtn);
-}
-
-/*
- *  SIOポートからの送信可能コールバック
- */
-Inline void
-eiSIOCBR_readySend(CELLIDX idx)
-{
-	CELLCB	*p_cellcb = GET_CELLCB(idx);
-
-	if (is_ciSIOCBR_joined()) {
-		ciSIOCBR_readySend();
+	switch (cbrtn) {
+	case SIOSendReady:
+		serial_irq_set(obj, TxIrq, true);
+		break;
+	case SIOReceiveReady:
+		serial_irq_set(obj, RxIrq, true);
+		break;
 	}
 }
 
 /*
- *  SIOポートからの受信通知コールバック
+ *  シリアルI/Oポートからのコールバックの禁止
  */
-Inline void
-eiSIOCBR_readyReceive(CELLIDX idx)
+void
+eSIOPort_disableCBR(CELLIDX idx, uint_t cbrtn)
+{
+	CELLCB		*p_cellcb = GET_CELLCB(idx);
+	serial_t *obj = &p_cellcb->serial;
+
+	switch (cbrtn) {
+	case SIOSendReady:
+		serial_irq_set(obj, TxIrq, false);
+		break;
+	case SIOReceiveReady:
+		serial_irq_set(obj, RxIrq, false);
+		break;
+	}
+}
+
+/*
+ *  シリアルI/Oポートに対する受信割込み処理
+ */
+void
+eiRxISR_main(CELLIDX idx)
 {
 	CELLCB	*p_cellcb = GET_CELLCB(idx);
-	
-	if (is_ciSIOCBR_joined()) {
+	serial_t *obj = &p_cellcb->serial;
+
+	if (serial_readable(obj)) {
+		/*
+		 *  受信通知コールバックルーチンを呼び出す．
+		 */
 		ciSIOCBR_readyReceive();
+	}
+}
+
+/*
+ *  シリアルI/Oポートに対する送信割込み処理
+ */
+void
+eiTxISR_main(CELLIDX idx)
+{
+	CELLCB	*p_cellcb = GET_CELLCB(idx);
+	serial_t *obj = &p_cellcb->serial;
+
+	if (serial_writable(obj)) {
+		/*
+		 *  送信可能コールバックルーチンを呼び出す．
+		 */
+		ciSIOCBR_readySend();
+	}
+}
+
+void
+mbed_serial_irq_handler(uint32_t id, SerialIrq event)
+{
+	switch (event) {
+	case TxIrq:
+		eiTxISR_main(id);
+		break;
+	case RxIrq:
+		eiRxISR_main(id);
+		break;
 	}
 }

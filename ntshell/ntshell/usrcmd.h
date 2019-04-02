@@ -55,9 +55,5 @@ int usrcmd_help(int argc, char **argv);
 int usrcmd_info(int argc, char **argv);
 int usrcmd_exit(int argc, char **argv);
 
-void shell_abort();
-void shell_exit(int exitcd);
-int shell_kill(int pid, int sig);
-
 #endif
 

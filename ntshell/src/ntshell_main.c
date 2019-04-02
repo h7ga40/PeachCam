@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: ntshell_main.c 1856 2019-03-30 14:31:58Z coas-nagasima $
+ *  @(#) $Id: ntshell_main.c 1863 2019-04-02 06:10:48Z coas-nagasima $
  */
 
 /* 
@@ -175,6 +175,7 @@ void shell_exit_group(int exitcd)
 
 int execute_command(int wait)
 {
+	T_RTSK rtsk;
 	ER ret;
 
 	ret = ter_tsk(NTSHELL_TASK);
@@ -197,6 +198,10 @@ int execute_command(int wait)
 
 	do {
 		tslp_tsk(100000);
+
+		ret = ref_tsk(NTSHELL_TASK, &rtsk);
+		if ((ret != E_OK) || (rtsk.tskstat == TTS_DMT))
+			ntshell_state = 3;
 	} while(ntshell_state == 1);
 
 	return ntshell_exit_code;
