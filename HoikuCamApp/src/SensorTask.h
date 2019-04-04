@@ -146,6 +146,8 @@ private:
 	GlobalState *_globalState;
 	LeptonTask leptonTask;
 public:
+	uint16_t GetMinValue() { return leptonTask.GetMinValue(); }
+	uint16_t GetMaxValue() { return leptonTask.GetMaxValue(); }
 };
 
 #endif // _SENSORTASK_H_

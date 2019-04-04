@@ -334,6 +334,14 @@ int main()
 
 			temp = std::string(ctime(&tm));
 			lcd_drawString(temp.c_str(), 330, 0, 0xFCCC, 0x0000);
+
+			uint16_t minValue, maxValue;
+			minValue = leptonTask.GetMinValue() << 2;
+			maxValue = leptonTask.GetMaxValue() << 2;
+			snprintf(textbuf, sizeof(textbuf), "min:%-3.2f℃", (minValue / 100.0 - 273.15) / 2);
+			lcd_drawString(textbuf, 400, 180, 0xFCCC, 0x0000);
+			snprintf(textbuf, sizeof(textbuf), "max:%-3.2f℃", (maxValue / 100.0 - 273.15) / 2);
+			lcd_drawString(textbuf, 400, 192, 0xFCCC, 0x0000);
 		}
 		/* Get coordinates */
 		touch_num = touch.GetCoordinates(TOUCH_NUM, touch_pos);

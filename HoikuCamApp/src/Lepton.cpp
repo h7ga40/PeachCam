@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "LEPTON_SDK.h"
 #include "LEPTON_SYS.h"
 #include "LEPTON_OEM.h"
+#include "LEPTON_RAD.h"
 #include "Palettes.h"
 #include "EasyAttach_CameraAndLCD.h"
 
@@ -56,8 +57,6 @@ LeptonTask::~LeptonTask()
 
 void LeptonTask::OnStart()
 {
-	LEP_SYS_FLIR_SERIAL_NUMBER_T sysSerialNumberBuf;
-
 	_spi.format(8, 3/*?*/);
 	//_spi.frequency(20000000);
 	_spi.frequency(16000000);
@@ -76,6 +75,7 @@ void LeptonTask::OnStart()
 		return;
 	}
 
+	LEP_SYS_FLIR_SERIAL_NUMBER_T sysSerialNumberBuf;
 	printf("SYS FLiR Serial Number\n");
 	ret = LEP_GetSysFlirSerialNumber(&_port, &sysSerialNumberBuf);
 	if (ret != LEP_OK) {
@@ -83,6 +83,27 @@ void LeptonTask::OnStart()
 	}
 	else {
 		printf("  %llu\n", sysSerialNumberBuf);
+	}
+
+	LEP_OEM_SW_VERSION_T oemSoftwareVersion;
+	ret = LEP_GetOemSoftwareVersion(&_port, &oemSoftwareVersion);
+	if (ret == LEP_OK) {
+		printf("FLiR OEM software version GPP:%u.%u.%03u DSP:%u.%u.%03u\n",
+				oemSoftwareVersion.gpp_major,
+				oemSoftwareVersion.gpp_minor,
+				oemSoftwareVersion.gpp_build,
+				oemSoftwareVersion.dsp_major,
+				oemSoftwareVersion.dsp_minor,
+				oemSoftwareVersion.dsp_build);
+	}
+	LEP_RAD_RADIOMETRY_FILTER_T radRadiometryFilter;
+	ret = LEP_SetRadRadometryFilter(&_port, LEP_RAD_ENABLE);
+	if (ret != LEP_OK) {
+		printf("Radometry filter set error %d\n", ret);
+	}
+	ret = LEP_GetRadRadometryFilter(&_port, &radRadiometryFilter);
+	if (ret == LEP_OK) {
+		printf("Radometry filter %s\n", radRadiometryFilter == LEP_RAD_ENABLE ? "enabled" : "disabled");
 	}
 #if 0
 	printf("SYS Telemetry Location\n");

@@ -44,6 +44,8 @@ public:
 	void OnStart() override;
 	void ProcessEvent(InterTaskSignals::T signals) override;
 	void Process() override;
+	uint16_t GetMinValue() { return _minValue; }
+	uint16_t GetMaxValue() { return _maxValue; }
 };
 
 #endif // LEPTON_H
