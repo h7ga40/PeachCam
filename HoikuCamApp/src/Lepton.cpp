@@ -99,23 +99,42 @@ void LeptonTask::OnStart()
 	LEP_RAD_RADIOMETRY_FILTER_T radRadiometryFilter;
 	ret = LEP_SetRadRadometryFilter(&_port, LEP_RAD_ENABLE);
 	if (ret != LEP_OK) {
-		printf("Radometry filter set error %d\n", ret);
+		printf("Radiometry filter set error %d\n", ret);
 	}
 	ret = LEP_GetRadRadometryFilter(&_port, &radRadiometryFilter);
 	if (ret == LEP_OK) {
-		printf("Radometry filter %s\n", radRadiometryFilter == LEP_RAD_ENABLE ? "enabled" : "disabled");
+		printf("Radiometry filter %s\n", radRadiometryFilter == LEP_RAD_ENABLE ? "enabled" : "disabled");
 	}
-#if 0
-	printf("SYS Telemetry Location\n");
-	ret = LEP_SetSysTelemetryLocation(&_port, LEP_TELEMETRY_LOCATION_HEADER);
+	LEP_RAD_ENABLE_E tLinear;
+	ret = LEP_SetRadTLinearEnableState(&_port, LEP_RAD_ENABLE);
+	if (ret != LEP_OK) {
+		printf("TLinear enable error %d\n", ret);
+	}
+	ret = LEP_GetRadTLinearEnableState(&_port, &tLinear);
+	if (ret == LEP_OK) {
+		printf("TLinear enable %s\n", tLinear == LEP_RAD_ENABLE ? "enabled" : "disabled");
+	}
+	ret = LEP_RunSysFFCNormalization(&_port);
+	if (ret != LEP_OK) {
+		printf("Flat-Field Correction normalization error %d\n", ret);
+	}
+#if 1
+	printf("SYS Telemetry Location");
+	ret = LEP_SetSysTelemetryLocation(&_port, LEP_TELEMETRY_LOCATION_FOOTER);
 	if (ret != LEP_OK) {
 		printf("  error %d\n", ret);
 	}
+	else {
+		printf(" Footer\n");
+	}
 
-	printf("SYS Telemetry Enable\n");
+	printf("SYS Telemetry");
 	ret = LEP_SetSysTelemetryEnableState(&_port, LEP_TELEMETRY_ENABLED);
 	if (ret != LEP_OK) {
 		printf("  error %d\n", ret);
+	}
+	else {
+		printf(" Enable\n");
 	}
 #endif
 	LEP_SYS_TELEMETRY_ENABLE_STATE_E telemetory = LEP_TELEMETRY_DISABLED;
@@ -189,8 +208,8 @@ void LeptonTask::Process()
 			}
 
 			if ((packet_id == -1) && ((id & 0x0FFF) != 0x7FF)) {
-				int r = 2 * (id & 0x003F);
-				if (r >= PACKETS_PER_FRAME)
+				int r = 2 * (id & 0x00FF);
+				if (r >= _packets_per_frame)
 					continue;
 				row = r;
 			}
@@ -214,6 +233,20 @@ void LeptonTask::Process()
 					}
 					*pixel++ = value;
 				}
+			}
+			else switch (row - PACKETS_PER_FRAME) {
+			case 0:
+				frameBuffer = (uint16_t *)result;
+				memcpy(&_telemetryA, frameBuffer, sizeof(_telemetryA));
+				break;
+			case 1:
+				frameBuffer = (uint16_t *)result;
+				memcpy(&_telemetryB, frameBuffer, sizeof(_telemetryB));
+				break;
+			case 2:
+				frameBuffer = (uint16_t *)result;
+				memcpy(&_telemetryC, frameBuffer, sizeof(_telemetryC));
+				break;
 			}
 
 			row++;
