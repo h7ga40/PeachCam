@@ -24,7 +24,7 @@ void client_init(google_drive_t *gd)
 {
 	memset(gd, 0, sizeof(google_drive_t));
 
-	read_client_info(gd, ".\\client_secret.json");
+	read_client_info(gd, "1:/client_secret.json");
 
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 }
