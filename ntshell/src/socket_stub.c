@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: socket_stub.c 1863 2019-04-02 06:10:48Z coas-nagasima $
+ *  @(#) $Id: socket_stub.c 1867 2019-04-05 01:24:01Z coas-nagasima $
  */
 #include "shellif.h"
 #include <kernel.h>
@@ -72,6 +72,42 @@ static const char THIS_FILE[] = __FILE__;
 
 #define SOCKET_TIMEOUT 2000000
 
+#define tcp6_cre_cep tcp_cre_cep
+#define tcp6_del_cep tcp_del_cep
+#define tcp6_del_rep tcp_del_rep
+#define tcp6_sht_cep tcp_sht_cep
+#define tcp6_cls_cep tcp_cls_cep
+#define tcp6_snd_oob tcp_snd_oob
+#define tcp6_snd_dat tcp_snd_dat
+#define tcp6_rcv_oob tcp_rcv_oob
+#define tcp6_rcv_buf tcp_rcv_buf
+#define tcp6_rel_buf tcp_rel_buf
+#define tcp6_get_opt tcp_get_opt
+#define tcp6_set_opt tcp_set_opt
+
+#define udp6_del_cep udp_del_cep
+#define udp6_get_opt udp_get_opt
+#define udp6_set_opt udp_set_opt
+
+#ifndef SUPPORT_INET6
+
+ER	tcp6_cre_rep (ID repid, T_TCP6_CREP *pk_crep) { return E_SYS; }
+ER	tcp6_acp_cep (ID cepid, ID repid, T_IPV6EP *p_dstaddr, TMO tmout) { return E_SYS; }
+ER	tcp6_con_cep (ID cepid, T_IPV6EP *p_myaddr, T_IPV6EP *p_dstaddr, TMO tmout) { return E_SYS; }
+
+ER	udp6_cre_cep (ID cepid, T_UDP6_CCEP *pk_ccep) { return E_SYS; }
+ER_UINT	udp6_snd_dat (ID cepid, T_IPV6EP *p_dstaddr, void *data, int_t len, TMO tmout) { return E_SYS; }
+ER_UINT	udp6_rcv_dat (ID cepid, T_IPV6EP *p_dstaddr, void *data, int_t len, TMO tmout) { return E_SYS; }
+
+const T_IN6_ADDR *in6_get_ifaddr (int_t index) { return NULL; }
+
+#endif
+
+ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk);
+ER socket_tcp6_callback(ID cepid, FN fncd, void *p_parblk);
+ER socket_udp_callback(ID cepid, FN fncd, void *p_parblk);
+ER socket_udp6_callback(ID cepid, FN fncd, void *p_parblk);
+
 static int tcp_fd_close(struct SHELL_FILE *fp);
 static size_t tcp_fd_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
 static size_t tcp_fd_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
@@ -109,10 +145,49 @@ id_table_t tcp_cepid_table[] = {
 };
 #define tcp_cepid_table_count (sizeof(tcp_cepid_table) / sizeof(tcp_cepid_table[0]))
 
+#ifdef SUPPORT_INET6
+
+id_table_t tcp6_repid_table[] = {
+	{0, USR_TCP6_REP1}, {0, USR_TCP6_REP2}, {0, USR_TCP6_REP3}, {0, USR_TCP6_REP4}
+};
+#define tcp6_repid_table_count (sizeof(tcp6_repid_table) / sizeof(tcp6_repid_table[0]))
+
+id_table_t tcp6_cepid_table[] = {
+	{0, USR_TCP6_CEP1}, {0, USR_TCP6_CEP2}, {0, USR_TCP6_CEP3}, {0, USR_TCP6_CEP4},
+#ifndef TOPPERS_GRSAKURA
+	{0, USR_TCP6_CEP5}, {0, USR_TCP6_CEP6}, {0, USR_TCP6_CEP7}, {0, USR_TCP6_CEP8}
+#endif
+};
+#define tcp6_cepid_table_count (sizeof(tcp6_cepid_table) / sizeof(tcp6_cepid_table[0]))
+
+#else
+
+#define tcp6_repid_table NULL
+#define tcp6_repid_table_count 0
+
+#define tcp6_cepid_table NULL
+#define tcp6_cepid_table_count 0
+
+#endif
+
 id_table_t udp_cepid_table[] = {
 	{0, USR_UDP_CEP1}, {0, USR_UDP_CEP2}, {0, USR_UDP_CEP3}, {0, USR_UDP_CEP4}
 };
 #define udp_cepid_table_count (sizeof(udp_cepid_table) / sizeof(udp_cepid_table[0]))
+
+#ifdef SUPPORT_INET6
+
+id_table_t udp6_cepid_table[] = {
+	{0, USR_UDP6_CEP1}, {0, USR_UDP6_CEP2}, {0, USR_UDP6_CEP3}, {0, USR_UDP6_CEP4}
+};
+#define udp6_cepid_table_count (sizeof(udp6_cepid_table) / sizeof(udp6_cepid_table[0]))
+
+#else
+
+#define udp6_cepid_table NULL
+#define udp6_cepid_table_count 0
+
+#endif
 
 ID new_id(id_table_t *table, int count)
 {
@@ -251,9 +326,51 @@ int shell_bind(int fd, const struct sockaddr *addr, socklen_t len)
 		if (len < 20) {
 			return -EINVAL;
 		}
-		memcpy(&socket->laddr4, addr, len);
+		struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)addr;
+		memcpy(&socket->laddr6, addr, len);
+		switch (socket->type) {
+		case SOCK_STREAM: {
+			ID cepid = new_id(tcp6_cepid_table, tcp6_cepid_table_count);
+			if (cepid < 0)
+				return -ENOMEM;
+
+			socket->buf_size = 512 + 512;
+			socket->buf = malloc(socket->buf_size);
+#ifdef _DEBUG
+			memset(socket->buf, 0, socket->buf_size);
+#endif
+			T_TCP6_CCEP ccep = { 0, socket->buf, 512, &socket->buf[512], 512, (FP)socket_tcp6_callback };
+			ret = tcp6_cre_cep(cepid, &ccep);
+			if (ret != E_OK) {
+				delete_id(tcp6_cepid_table, tcp6_cepid_table_count, cepid);
+				return -ENOMEM;
+			}
+			fp->handle = cepid;
+			socket->cepid = cepid;
+			break;
+		}
+		case SOCK_DGRAM: {
+			ID cepid = new_id(udp_cepid_table, udp_cepid_table_count);
+			if (cepid < 0)
+				return -ENOMEM;
+
+			T_UDP6_CCEP ccep = { 0, {ntohl(addr_in6->sin6_addr.__in6_union.__s6_addr), ntohs(addr_in6->sin6_port)}, (FP)socket_udp6_callback };
+			ret = udp6_cre_cep(cepid, &ccep);
+			if (ret != E_OK) {
+				delete_id(udp_cepid_table, udp_cepid_table_count, cepid);
+				return -ENOMEM;
+			}
+			fp->handle = cepid;
+			socket->cepid = cepid;
+			break;
+		}
+		default:
+			return -ENOPROTOOPT;
+		}
 		break;
 	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return 0;
@@ -288,8 +405,22 @@ int shell_listen(int fd, int backlog)
 		break;
 	}
 	case AF_INET6: {
+		ID repid = new_id(tcp6_repid_table, tcp6_repid_table_count);
+		if (repid < 0)
+			return -ENOMEM;
+
+		struct sockaddr_in6 *laddr = &socket->laddr6;
+		T_TCP6_CREP crep = { 0, {ntohl(laddr->sin6_addr.__in6_union.__s6_addr), ntohs(laddr->sin6_port)} };
+		ret = tcp6_cre_rep(repid, &crep);
+		if (ret != E_OK) {
+			delete_id(tcp6_repid_table, tcp6_repid_table_count, repid);
+			return -ENOMEM;
+		}
+		socket->repid = repid;
 		break;
 	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return 0;
@@ -342,8 +473,42 @@ int shell_connect(int fd, const struct sockaddr *addr, socklen_t len)
 		break;
 	}
 	case AF_INET6: {
+		if (len < 20) {
+			return -EINVAL;
+		}
+		if (socket->cepid == 0) {
+			ID cepid = new_id(tcp6_cepid_table, tcp6_cepid_table_count);
+			if (cepid < 0)
+				return -ENOMEM;
+
+			socket->buf_size = 512 + 512;
+			socket->buf = malloc(socket->buf_size);
+#ifdef _DEBUG
+			memset(socket->buf, 0, socket->buf_size);
+#endif
+			T_TCP6_CCEP ccep = { 0, socket->buf, 512, &socket->buf[512], 512, (FP)socket_tcp6_callback };
+			ret = tcp6_cre_cep(cepid, &ccep);
+			if (ret != E_OK) {
+				delete_id(tcp6_cepid_table, tcp6_cepid_table_count, cepid);
+				return -ENOMEM;
+			}
+			fp->handle = cepid;
+			socket->cepid = cepid;
+		}
+		struct sockaddr_in6 *laddr = &socket->laddr6;
+		struct sockaddr_in6 *raddr = &socket->raddr6;
+		memset(raddr, 0, sizeof(*raddr));
+		memcpy(raddr, addr, len);
+		T_IPV6EP lep = { ntohl(laddr->sin6_addr.__in6_union.__s6_addr), ntohs(laddr->sin6_port) };
+		T_IPV6EP rep = { ntohl(raddr->sin6_addr.__in6_union.__s6_addr), ntohs(raddr->sin6_port) };
+		ret = tcp6_con_cep(socket->cepid, &lep, &rep, SOCKET_TIMEOUT);
+		if (ret < 0) {
+			return -EHOSTUNREACH;
+		}
 		break;
 	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return 0;
@@ -408,23 +573,80 @@ int shell_accept(int fd, struct sockaddr *__restrict addr, socklen_t *__restrict
 		raddr->sin_family = AF_INET;
 		raddr->sin_port = htons(rep.portno);
 		raddr->sin_addr.s_addr = htonl(rep.ipaddr);
+
+		if (addr != NULL && len != NULL) {
+			int sz = *len;
+			if (sz < 8) {
+				return -EINVAL;
+			}
+			struct sockaddr_in *raddr = &socket->raddr4;
+			if (sz > sizeof(*raddr))
+				sz = sizeof(*raddr);
+			memcpy(addr, raddr, sz);
+			*len = sizeof(*raddr);
+		}
 		break;
 	}
 	case AF_INET6: {
-		return -EAFNOSUPPORT;
-	}
-	}
+		ID cepid;
+		if (socket->cepid == 0) {
+			cepid = new_id(tcp6_cepid_table, tcp6_cepid_table_count);
+			if (cepid < 0)
+				return -ENOMEM;
 
-	if (addr != NULL && len != NULL) {
-		int sz = *len;
-		if (sz < 8) {
-			return -EINVAL;
+			socket->buf_size = 512 + 512;
+			socket->buf = malloc(socket->buf_size);
+#ifdef _DEBUG
+			memset(socket->buf, 0, socket->buf_size);
+#endif
+			T_TCP6_CCEP ccep = { 0, socket->buf, 512, &socket->buf[512], 512, (FP)socket_tcp6_callback };
+			ret = tcp6_cre_cep(cepid, &ccep);
+			if (ret != E_OK) {
+				delete_id(tcp6_cepid_table, tcp6_cepid_table_count, cepid);
+				return -ENOMEM;
+			}
+			fp->handle = cepid;
+			socket->cepid = cepid;
 		}
-		struct sockaddr_in *raddr = &socket->raddr4;
-		if (sz > sizeof(*raddr))
-			sz = sizeof(*raddr);
-		memcpy(addr, raddr, sz);
-		*len = sizeof(*raddr);
+		else {
+			cepid = ((socket_t *)lfp->exinf)->cepid;
+			fp->handle = cepid;
+			lfp->handle = tmax_tcp6_cepid + ((socket_t *)lfp->exinf)->repid;
+			((socket_t *)lfp->exinf)->cepid = 0;
+			((socket_t *)lfp->exinf)->buf_size = 0;
+			((socket_t *)lfp->exinf)->buf = 0;
+		}
+		T_IPV6EP rep = { 0, 0 };
+		ret = tcp6_acp_cep(socket->cepid, socket->repid, &rep, TMO_FEVR);
+		if (ret < 0) {
+			return -ENOMEM;
+		}
+		struct sockaddr_in6 *raddr = &socket->raddr6;
+		memset(raddr, 0, sizeof(*raddr));
+		raddr->sin6_family = AF_INET;
+		raddr->sin6_port = htons(rep.portno);
+#if _NET_CFG_BYTE_ORDER == _NET_CFG_BIG_ENDIAN
+		memcpy(raddr->sin6_addr.__in6_union.__s6_addr, rep.ipaddr.__u6_addr.__u6_addr8, 16);
+#else
+		for (int i = 0; i < 16; i++)
+			raddr->sin6_addr.__in6_union.__s6_addr[i] = rep.ipaddr.__u6_addr.__u6_addr8[i];
+#endif
+
+		if (addr != NULL && len != NULL) {
+			int sz = *len;
+			if (sz < 8) {
+				return -EINVAL;
+			}
+			struct sockaddr_in6 *raddr = &socket->raddr6;
+			if (sz > sizeof(*raddr))
+				sz = sizeof(*raddr);
+			memcpy(addr, raddr, sz);
+			*len = sizeof(*raddr);
+		}
+		break;
+	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return fp->fd;
@@ -489,8 +711,55 @@ ssize_t shell_sendto(int fd, const void *buf, size_t len, int flags, const struc
 		break;
 	}
 	case AF_INET6: {
-		return -EAFNOSUPPORT;
+		switch (socket->type) {
+		case SOCK_STREAM: {
+			if ((addr != NULL) || (alen != 0)) {
+				return -EISCONN;
+			}
+
+			if (flags & MSG_OOB) {
+				ret = tcp6_snd_oob(socket->cepid, (void *)buf, len, SOCKET_TIMEOUT);
+				if (ret < 0) {
+					return -ECOMM;
+				}
+			}
+			else {
+				for (;;) {
+					ret = tcp6_snd_dat(socket->cepid, (void *)buf, len, SOCKET_TIMEOUT);
+					if (ret < 0) {
+						if (ret == E_TMOUT)
+							return -ETIME;
+						return -ECOMM;
+					}
+					len -= ret;
+					if (len <= 0)
+						break;
+					buf = (const void *)&((uint8_t *)buf)[ret];
+				} 
+			}
+			break;
+		}
+		case SOCK_DGRAM: {
+			int sz = alen;
+			if ((addr == NULL) || (sz < 8)) {
+				return -EINVAL;
+			}
+			struct sockaddr_in6 *raddr = &socket->raddr6;
+			memset(raddr, 0, sizeof(*raddr));
+			memcpy(raddr, addr, sz);
+			T_IPV6EP rep = { ntohl(raddr->sin6_addr.__in6_union.__s6_addr), ntohs(raddr->sin6_port) };
+			ret = udp6_snd_dat(socket->cepid, &rep, (void *)buf, len,
+				(socket->flags & O_NONBLOCK) ? TMO_POL : SOCKET_TIMEOUT);
+			if (ret < 0) {
+				return (ret == E_TMOUT) ? -ETIME : -ECOMM;
+			}
+			break;
+		}
+		}
+		break;
 	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return ret;
@@ -647,8 +916,146 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 		break;
 	}
 	case AF_INET6: {
-		return -EAFNOSUPPORT;
+		switch (socket->type) {
+		case SOCK_STREAM: {
+			if (flags & MSG_OOB) {
+				ret = tcp6_rcv_oob(socket->cepid, buf, len);
+				if (ret < 0) {
+					syslog(LOG_ERROR, "tcp6_rcv_oob => %d", ret);
+					return -ECOMM;
+				}
+			}
+			else {
+				int rsz, tmp;
+				if (socket->input == NULL) {
+					ret = wai_sem(SEM_FILEDESC);
+					if (ret < 0) {
+						syslog(LOG_ERROR, "wai_sem => %d", ret);
+					}
+					socket->len = 0;
+					ret = sig_sem(SEM_FILEDESC);
+					if (ret < 0) {
+						syslog(LOG_ERROR, "sig_sem => %d", ret);
+					}
+					ret = tcp6_rcv_buf(socket->cepid, &socket->input, TMO_FEVR);
+					if (ret < 0) {
+						syslog(LOG_ERROR, "tcp6_rcv_buf => %d", ret);
+						return -ECOMM;
+					}
+					rsz = ret;
+				}
+				else
+					rsz = socket->len;
+				tmp = rsz;
+				if (rsz > len)
+					rsz = len;
+				if (rsz >= 0) {
+					memcpy(buf, socket->input, rsz);
+					ret = wai_sem(SEM_FILEDESC);
+					if (ret < 0) {
+						syslog(LOG_ERROR, "wai_sem => %d", ret);
+					}
+					socket->len = tmp - rsz;
+					ret = sig_sem(SEM_FILEDESC);
+					if (ret < 0) {
+						syslog(LOG_ERROR, "sig_sem => %d", ret);
+					}
+					if (tmp - rsz == 0) {
+						socket->input = NULL;
+					}
+					else
+						socket->input = (void *)&((uint8_t *)socket->input)[rsz];
+					ret = tcp6_rel_buf(socket->cepid, rsz);
+					if ((ret != E_OBJ) && (ret < 0)) {
+						syslog(LOG_ERROR, "tcp6_rel_buf => %d", ret);
+						//return -ECOMM;
+					}
+				}
+				ret = rsz;
+			}
+			break;
+		}
+		case SOCK_DGRAM: {
+			struct sockaddr_in6 *raddr = &socket->raddr6;
+			int rsz;
+			ret = wai_sem(SEM_FILEDESC);
+			if (ret < 0) {
+				syslog(LOG_ERROR, "wai_sem => %d", ret);
+			}
+			T_NET_BUF *input = socket->input;
+			if (input == NULL) {
+				ret = sig_sem(SEM_FILEDESC);
+				if (ret < 0) {
+					syslog(LOG_ERROR, "sig_sem => %d", ret);
+				}
+
+				T_IPV6EP rep = { 0, 0 };
+				ret = udp6_rcv_dat(socket->cepid, &rep, buf, len,
+					(socket->flags & O_NONBLOCK) ? TMO_POL : SOCKET_TIMEOUT);
+				if (ret < 0) {
+					if ((socket->flags & O_NONBLOCK) == 0)
+						syslog(LOG_ERROR, "udp6_rcv_buf => %d", ret);
+					return (ret == E_TMOUT) ? -ETIME : -ECOMM;
+				}
+				rsz = ret;
+				if ((addr != NULL) && (alen != NULL)) {
+					ret = wai_sem(SEM_FILEDESC);
+					if (ret < 0) {
+						syslog(LOG_ERROR, "wai_sem => %d", ret);
+					}
+					int sz = *alen;
+					memset(raddr, 0, sizeof(socket->raddr6));
+					raddr->sin6_family = AF_INET;
+					raddr->sin6_port = htons(rep.portno);
+#if _NET_CFG_BYTE_ORDER == _NET_CFG_BIG_ENDIAN
+					memcpy(raddr->sin6_addr.__in6_union.__s6_addr, rep.ipaddr.__u6_addr.__u6_addr8, 16);
+#else
+					for (int i = 0; i < 16; i++)
+						raddr->sin6_addr.__in6_union.__s6_addr[i] = rep.ipaddr.__u6_addr.__u6_addr8[i];
+#endif
+					if (sz > sizeof(socket->raddr6))
+						sz = sizeof(socket->raddr6);
+					memcpy(addr, raddr, sz);
+					*alen = sz;
+					ret = sig_sem(SEM_FILEDESC);
+					if (ret < 0) {
+						syslog(LOG_ERROR, "sig_sem => %d", ret);
+					}
+				}
+			}
+			else {
+				rsz = socket->len;
+				void *pbuf = socket->buf;
+				socket->input = NULL;
+				socket->len = 0;
+				socket->buf = NULL;
+				if ((addr != NULL) && (alen != NULL)) {
+					int sz = *alen;
+					if (sz > sizeof(socket->raddr6))
+						sz = sizeof(socket->raddr6);
+					memcpy(addr, raddr, sz);
+					*alen = sz;
+				}
+				ret = sig_sem(SEM_FILEDESC);
+				if (ret < 0) {
+					syslog(LOG_ERROR, "sig_sem => %d", ret);
+				}
+				if (rsz > len)
+					rsz = len;
+				memcpy(buf, pbuf, rsz);
+				ret = rel_net_buf(input);
+				if (ret < 0) {
+					syslog(LOG_ERROR, "rel_net_buf => %d", ret);
+					//return -ECOMM;
+				}
+			}
+			ret = rsz;
+		}
+		}
+		break;
 	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return ret;
@@ -683,8 +1090,19 @@ int shell_shutdown(int fd, int how)
 		break;
 	}
 	case AF_INET6: {
-		return -EAFNOSUPPORT;
+		switch (socket->type) {
+		case SOCK_STREAM: {
+			ret = tcp6_sht_cep(socket->cepid);
+			if (ret < 0) {
+				return -ECOMM;
+			}
+			break;
+		}
+		}
+		break;
 	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return 0;
@@ -759,8 +1177,65 @@ int shell_getsockopt(int fd, int level, int optname, void *optval, socklen_t *__
 		break;
 	}
 	case AF_INET6: {
-		return -EAFNOSUPPORT;
+		switch (socket->type) {
+		case SOCK_STREAM: {
+			switch (level) {
+			case SOL_SOCKET:
+				switch (optname) {
+				case SO_REUSEADDR:
+					if (socket->flags & SO_REUSEADDR) {
+						*(bool *)optval = true;
+					}
+					else {
+						*(bool *)optval = false;
+					}
+					break;
+				case SO_KEEPALIVE:
+					if (socket->flags & SO_KEEPALIVE) {
+						*(bool *)optval = true;
+					}
+					else {
+						*(bool *)optval = false;
+					}
+					break;
+				case SO_ERROR:
+					*(int *)optval = 0;
+					break;
+				default:
+					return -EINVAL;
+				}
+				break;
+			case IPPROTO_TCP:
+				ret = tcp6_get_opt(socket->cepid, optname, (void *)optval, *optlen);
+				if (ret < 0) {
+					return -EINVAL;
+				}
+				*optlen = ret;
+				break;
+			default:
+				return -EINVAL;
+			}
+			break;
+		}
+		case SOCK_DGRAM: {
+			switch (level) {
+			case IPPROTO_UDP:
+				ret = udp6_get_opt(socket->cepid, optname, (void *)optval, *optlen);
+				if (ret < 0) {
+					return -EINVAL;
+				}
+				*optlen = ret;
+				break;
+			default:
+				return -EINVAL;
+			}
+			break;
+		}
+		}
+		break;
 	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return 0;
@@ -830,8 +1305,60 @@ int shell_setsockopt(int fd, int level, int optname, const void *optval, socklen
 		break;
 	}
 	case AF_INET6: {
-		return -EAFNOSUPPORT;
+		switch (socket->type) {
+		case SOCK_STREAM: {
+			switch (level){
+			case SOL_SOCKET:
+				switch (optname) {
+				case SO_REUSEADDR:
+					if (*(bool *)optval) {
+						socket->flags |= SO_REUSEADDR;
+					}
+					else {
+						socket->flags &= ~SO_REUSEADDR;
+					}
+					break;
+				case SO_KEEPALIVE:
+					if (*(bool *)optval) {
+						socket->flags |= SO_KEEPALIVE;
+					}
+					else {
+						socket->flags &= ~SO_KEEPALIVE;
+					}
+					break;
+				default:
+					return -EINVAL;
+				}
+				break;
+			case IPPROTO_TCP:
+				ret = tcp6_set_opt(socket->cepid, optname, (void *)optval, optlen);
+				if (ret < 0) {
+					return -EINVAL;
+				}
+				break;
+			default:
+				return -EINVAL;
+			}
+			break;
+		}
+		case SOCK_DGRAM: {
+			switch (level){
+			case IPPROTO_UDP:
+				ret = udp6_set_opt(socket->cepid, optname, (void *)optval, optlen);
+				if (ret < 0) {
+					return -EINVAL;
+				}
+				break;
+			default:
+				return -EINVAL;
+			}
+			break;
+		}
+		}
+		break;
 	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return 0;
@@ -859,8 +1386,15 @@ int shell_getpeername(int fd, struct sockaddr *restrict addr, socklen_t *restric
 		break;
 	}
 	case AF_INET6: {
-		return -EAFNOSUPPORT;
+		struct sockaddr_in6 *raddr = &socket->raddr6;
+		*len = sizeof(struct sockaddr_in6);
+		if (size > sizeof(struct sockaddr_in6))
+			size = sizeof(struct sockaddr_in6);
+		memcpy(addr, raddr, size);
+		break;
 	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return 0;
@@ -893,8 +1427,24 @@ int shell_getsockname(int fd, struct sockaddr *restrict addr, socklen_t *restric
 		break;
 	}
 	case AF_INET6: {
-		return -EAFNOSUPPORT;
+		const T_IN6_ADDR *laddr6 = in6_get_ifaddr(0);
+		struct sockaddr_in6 laddr;
+		laddr.sin6_family = AF_INET;
+#if _NET_CFG_BYTE_ORDER == _NET_CFG_BIG_ENDIAN
+		memcpy(laddr.sin6_addr.__in6_union.__s6_addr, laddr6->__u6_addr.__u6_addr8, 16);
+#else
+		for (int i = 0; i < 16; i++)
+			laddr.sin6_addr.__in6_union.__s6_addr[i] = laddr6->__u6_addr.__u6_addr8[i];
+#endif
+		laddr.sin6_port = socket->laddr6.sin6_port;
+		*len = sizeof(struct sockaddr_in6);
+		if (size > sizeof(struct sockaddr_in6))
+			size = sizeof(struct sockaddr_in6);
+		memcpy(addr, &laddr, size);
+		break;
 	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return 0;
@@ -936,8 +1486,36 @@ int tcp_fd_close(struct SHELL_FILE *fp)
 		break;
 	}
 	case AF_INET6: {
-		return -EAFNOSUPPORT;
+		if (socket->cepid != 0) {
+			ID cepid = socket->cepid;
+			ret = tcp6_sht_cep(cepid);
+			if (ret < 0) {
+				//return -1;
+			}
+			ret = tcp6_cls_cep(cepid, (socket->repid != 0) ? 0 : SOCKET_TIMEOUT);
+			ret2 = tcp6_del_cep(cepid);
+			//delete_fd_by_id(&IO_TYPE_TCP, cepid);
+			delete_id(tcp6_cepid_table, tcp6_cepid_table_count, cepid);
+			if ((ret < 0) || (ret2 < 0)) {
+				return (ret == E_TMOUT) ? -ETIME : -EINVAL;
+			}
+		}
+		else if (socket->repid != 0) {
+			ID repid = socket->repid;
+			ret = tcp6_del_rep(repid);
+			//delete_fd_by_id(&IO_TYPE_TCP, tmax_tcp6_cepid + repid);
+			delete_id(tcp6_repid_table, tcp6_repid_table_count, repid);
+			if (ret < 0) {
+				return -EINVAL;
+			}
+		}
+		else {
+			return -EINVAL;
+		}
+		break;
 	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return 0;
@@ -1085,6 +1663,86 @@ ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk)
 	}
 }
 
+ER socket_tcp6_callback(ID cepid, FN fncd, void *p_parblk)
+{
+	struct SHELL_FILE *fp = id_to_fd(&IO_TYPE_TCP, cepid);
+	FLGPTN flgptn = 0;
+	ER ret;
+	int len;
+
+	if (fp == NULL)
+		return E_PAR;
+
+	int fd = fp->fd;
+	FD_SET(fd, (fd_set *)&flgptn);
+
+	switch (fncd) {
+	case TFN_TCP_RCV_BUF:
+		len = *(int *)p_parblk;
+		if ((len <= 0) || (fp->exinf == NULL))
+			return E_OK;
+
+		ret = wai_sem(SEM_FILEDESC);
+		if (ret < 0) {
+			syslog(LOG_ERROR, "wai_sem => %d", ret);
+		}
+		socket_t *socket = (socket_t *)fp->exinf;
+		socket->len += len;
+		ret = sig_sem(SEM_FILEDESC);
+		if (ret < 0) {
+			syslog(LOG_ERROR, "sig_sem => %d", ret);
+		}
+
+		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_TCP_RCV_DAT:
+		len = *(int *)p_parblk;
+		if ((len <= 0) || (fp->exinf == NULL))
+			return E_OK;
+
+		ret = wai_sem(SEM_FILEDESC);
+		if (ret < 0) {
+			syslog(LOG_ERROR, "wai_sem => %d", ret);
+		}
+		socket->len += len;
+		ret = sig_sem(SEM_FILEDESC);
+		if (ret < 0) {
+			syslog(LOG_ERROR, "sig_sem => %d", ret);
+		}
+
+		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_TCP_SND_DAT:
+		if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_TCP_CAN_CEP:
+		if (fp->errorevt_w == fp->errorevt_r) fp->errorevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_TCP_DEL_REP:
+		delete_fd_by_id(&IO_TYPE_TCP, tmax_tcp_cepid + cepid);
+		return E_OK;
+
+	case TFN_TCP_DEL_CEP:
+		delete_fd_by_id(&IO_TYPE_TCP, cepid);
+		return E_OK;
+
+	default:
+		return E_OK;
+	}
+}
+
 int udp_fd_close(struct SHELL_FILE *fp)
 {
 	ER ret;
@@ -1103,8 +1761,17 @@ int udp_fd_close(struct SHELL_FILE *fp)
 		break;
 	}
 	case AF_INET6: {
-		return -EAFNOSUPPORT;
+		cepid = socket->cepid;
+		ret = udp6_del_cep(cepid);
+		//delete_fd_by_id(&IO_TYPE_UDP, cepid);
+		delete_id(udp6_cepid_table, udp6_cepid_table_count, cepid);
+		if (ret < 0) {
+			return -EINVAL;
+		}
+		break;
 	}
+	default:
+		return -ENOPROTOOPT;
 	}
 
 	return 0;
@@ -1189,6 +1856,94 @@ ER socket_udp_callback(ID cepid, FN fncd, void *p_parblk)
 		socket->raddr4.sin_family = AF_INET;
 		socket->raddr4.sin_port = htons(udppara->rep4.portno);
 		socket->raddr4.sin_addr.s_addr = htonl(udppara->rep4.ipaddr);
+		udppara->input->flags |= NB_FLG_NOREL_IFOUT;
+		ret = sig_sem(SEM_FILEDESC);
+		if (ret < 0) {
+			syslog(LOG_ERROR, "sig_sem => %d", ret);
+		}
+
+		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+	}
+	case TFN_UDP_CRE_CEP:
+		return E_OK;
+
+	case TFN_UDP_RCV_DAT:
+		len = *(int *)p_parblk;
+		if ((len <= 0) || (fp->exinf == NULL))
+			return E_OK;
+
+		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_UDP_SND_DAT:
+		if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_UDP_CAN_CEP:
+		if (fp->errorevt_w == fp->errorevt_r) fp->errorevt_w++;
+
+		set_flg(FLG_SELECT_WAIT, flgptn);
+		return E_OK;
+
+	case TFN_UDP_DEL_CEP:
+		delete_fd_by_id(&IO_TYPE_UDP, cepid);
+		return E_OK;
+
+	default:
+		return E_OK;
+	}
+}
+
+ER socket_udp6_callback(ID cepid, FN fncd, void *p_parblk)
+{
+	struct SHELL_FILE *fp = id_to_fd(&IO_TYPE_UDP, cepid);
+	FLGPTN flgptn = 0;
+	int len;
+
+	if (fp == NULL)
+		return E_PAR;
+
+	int fd = fp->fd;
+	FD_SET(fd, (fd_set *)&flgptn);
+
+	switch (fncd) {
+	case TEV_UDP_RCV_DAT:
+	{
+		T_UDP_RCV_DAT_PARA *udppara = (T_UDP_RCV_DAT_PARA *)p_parblk;
+		len = udppara->len;
+		if ((len <= 0) || (fp->exinf == NULL))
+			return E_OK;
+
+		ER ret = wai_sem(SEM_FILEDESC);
+		if (ret < 0) {
+			syslog(LOG_ERROR, "wai_sem => %d", ret);
+		}
+		socket_t *socket = (socket_t *)fp->exinf;
+		socket->len = len;
+		if (socket->input != NULL) {
+			ret = rel_net_buf(socket->input);
+			if (ret < 0) {
+				syslog(LOG_ERROR, "rel_net_buf => %d", ret);
+			}
+		}
+		socket->input = udppara->input;
+		socket->buf = GET_UDP_SDU(udppara->input, udppara->off);
+		memset(&socket->raddr6, 0, sizeof(socket->raddr6));
+		socket->raddr6.sin6_family = AF_INET;
+		socket->raddr6.sin6_port = htons(udppara->rep6.portno);
+#if _NET_CFG_BYTE_ORDER == _NET_CFG_BIG_ENDIAN
+		memcpy(socket->raddr6.sin6_addr.__in6_union.__s6_addr, udppara->rep6.ipaddr.__u6_addr.__u6_addr8, 16);
+#else
+		for (int i = 0; i < 16; i++)
+			socket->raddr6.sin6_addr.__in6_union.__s6_addr[i] = udppara->rep6.ipaddr.__u6_addr.__u6_addr8[i];
+#endif
 		udppara->input->flags |= NB_FLG_NOREL_IFOUT;
 		ret = sig_sem(SEM_FILEDESC);
 		if (ret < 0) {

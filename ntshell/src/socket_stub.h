@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: socket_stub.h 1863 2019-04-02 06:10:48Z coas-nagasima $
+ *  @(#) $Id: socket_stub.h 1867 2019-04-05 01:24:01Z coas-nagasima $
  */
 #ifndef SOCKET_STUB_H
 #define SOCKET_STUB_H
@@ -150,8 +150,5 @@ struct SHELL_FILE *id_to_fd(IO_TYPE *type, int id);
 
 int delete_fp(struct SHELL_FILE *fp);
 void clean_fd();
-
-ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk);
-ER socket_udp_callback(ID cepid, FN fncd, void *p_parblk);
 
 #endif // !SOCKET_STUB_H
