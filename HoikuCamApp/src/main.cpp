@@ -334,7 +334,7 @@ int main()
 
 			temp = std::string(ctime(&tm));
 			lcd_drawString(temp.c_str(), 330, 0, 0xFCCC, 0x0000);
-
+#if 0
 			uint16_t *data = leptonTask.GetTelemetryA();
 			snprintf(textbuf, sizeof(textbuf), "TmA:%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15]);
 			lcd_drawString(textbuf, 72, 148, 0xFCCC, 0x0000);
@@ -346,13 +346,17 @@ int main()
 			data = leptonTask.GetTelemetryC();
 			snprintf(textbuf, sizeof(textbuf), "TmC:%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15]);
 			lcd_drawString(textbuf, 72, 172, 0xFCCC, 0x0000);
+#endif
+			uint16_t fpatem = leptonTask.GetFpaTemperature();
+			snprintf(textbuf, sizeof(textbuf), "FPA:%3.2f℃", fpatem / 100.0 - 273.15);
+			lcd_drawString(textbuf, 400, 172, 0xFCCC, 0x0000);
 
 			uint16_t minValue, maxValue;
-			minValue = leptonTask.GetMinValue() << 2;
-			maxValue = leptonTask.GetMaxValue() << 2;
-			snprintf(textbuf, sizeof(textbuf), "min:%3.2f℃", (minValue / 100.0 - 273.15) / 2);
+			minValue = leptonTask.GetMinValue();
+			maxValue = leptonTask.GetMaxValue();
+			snprintf(textbuf, sizeof(textbuf), "min:%3.2f℃", 0.026 * (minValue - 8192) + fpatem / 100.0 - 273.15);
 			lcd_drawString(textbuf, 400, 184, 0xFCCC, 0x0000);
-			snprintf(textbuf, sizeof(textbuf), "max:%3.2f℃", (maxValue / 100.0 - 273.15) / 2);
+			snprintf(textbuf, sizeof(textbuf), "max:%3.2f℃", 0.026 * (maxValue - 8192) + fpatem / 100.0 - 273.15);
 			lcd_drawString(textbuf, 400, 196, 0xFCCC, 0x0000);
 		}
 		/* Get coordinates */

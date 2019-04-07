@@ -118,7 +118,7 @@ void LeptonTask::OnStart()
 	if (ret != LEP_OK) {
 		printf("Flat-Field Correction normalization error %d\n", ret);
 	}
-#if 1
+#if 0
 	printf("SYS Telemetry Location");
 	ret = LEP_SetSysTelemetryLocation(&_port, LEP_TELEMETRY_LOCATION_FOOTER);
 	if (ret != LEP_OK) {
@@ -262,6 +262,11 @@ void LeptonTask::Process()
 		_minValue = minValue;
 
 		resets++;
+		_state = State::UpdateParam;
+		_timer = 0;
+		break;
+	case State::UpdateParam:
+		LEP_GetSysFpaTemperatureKelvin(&_port, &_fpaTemperature);
 		_state = State::Viewing;
 		_timer = 0;
 		break;

@@ -105,6 +105,7 @@ public:
 			PowerOff,
 			Resets,
 			Capture,
+			UpdateParam,
 			Viewing,
 		};
 	};
@@ -126,6 +127,7 @@ private:
 	TLeptonTelemetryA _telemetryA;
 	TLeptonTelemetryB _telemetryB;
 	TLeptonTelemetryC _telemetryC;
+	uint16_t _fpaTemperature;
 public:
 	void OnStart() override;
 	void ProcessEvent(InterTaskSignals::T signals) override;
@@ -139,6 +141,7 @@ public:
 	uint16_t *GetTelemetryA() { return (uint16_t *)&_telemetryA; }
 	uint16_t *GetTelemetryB() { return (uint16_t *)&_telemetryB; }
 	uint16_t *GetTelemetryC() { return (uint16_t *)&_telemetryC; }
+	uint16_t GetFpaTemperature() { return _fpaTemperature; }
 };
 
 #endif // LEPTON_H

@@ -155,6 +155,7 @@ public:
 	uint16_t *GetTelemetryA() { return leptonTask.GetTelemetryA(); }
 	uint16_t *GetTelemetryB() { return leptonTask.GetTelemetryB(); }
 	uint16_t *GetTelemetryC() { return leptonTask.GetTelemetryC(); }
+	uint16_t GetFpaTemperature() { return leptonTask.GetFpaTemperature(); }
 };
 
 #endif // _SENSORTASK_H_
