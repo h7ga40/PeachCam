@@ -52,11 +52,15 @@
 
 int main()
 {
-	const char *const args[] = {
-		1,
+	static const char *const args[] = {
+		(char *)1,
 		"asp3",
-		NULL,
-		NULL
+		0,
+		// envp
+		"TZ=JST-9",
+		0,
+		// auxv
+		0
 	};
 	musl_start(args);
 	return 0;
