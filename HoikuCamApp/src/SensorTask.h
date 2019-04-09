@@ -146,6 +146,7 @@ private:
 	GlobalState *_globalState;
 	LeptonTask leptonTask;
 public:
+	void SetConfig(lepton_config_t *config) { leptonTask.SetConfig(config); }
 	uint16_t GetMinValue() { return leptonTask.GetMinValue(); }
 	uint16_t GetMaxValue() { return leptonTask.GetMaxValue(); }
 	uint16_t GetTelemetryRevision() { return leptonTask.GetTelemetryRevision(); }

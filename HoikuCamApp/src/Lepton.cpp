@@ -96,47 +96,51 @@ void LeptonTask::OnStart()
 				oemSoftwareVersion.dsp_minor,
 				oemSoftwareVersion.dsp_build);
 	}
-	LEP_RAD_RADIOMETRY_FILTER_T radRadiometryFilter;
-	ret = LEP_SetRadRadometryFilter(&_port, LEP_RAD_ENABLE);
-	if (ret != LEP_OK) {
-		printf("Radiometry filter set error %d\n", ret);
+	if (_config->radiometry) {
+		LEP_RAD_RADIOMETRY_FILTER_T radRadiometryFilter;
+		ret = LEP_SetRadRadometryFilter(&_port, LEP_RAD_ENABLE);
+		if (ret != LEP_OK) {
+			printf("Radiometry filter set error %d\n", ret);
+		}
+		ret = LEP_GetRadRadometryFilter(&_port, &radRadiometryFilter);
+		if (ret == LEP_OK) {
+			printf("Radiometry filter %s\n", radRadiometryFilter == LEP_RAD_ENABLE ? "enabled" : "disabled");
+		}
+		LEP_RAD_ENABLE_E tLinear;
+		ret = LEP_SetRadTLinearEnableState(&_port, LEP_RAD_ENABLE);
+		if (ret != LEP_OK) {
+			printf("TLinear enable error %d\n", ret);
+		}
+		ret = LEP_GetRadTLinearEnableState(&_port, &tLinear);
+		if (ret == LEP_OK) {
+			printf("TLinear enable %s\n", tLinear == LEP_RAD_ENABLE ? "enabled" : "disabled");
+		}
 	}
-	ret = LEP_GetRadRadometryFilter(&_port, &radRadiometryFilter);
-	if (ret == LEP_OK) {
-		printf("Radiometry filter %s\n", radRadiometryFilter == LEP_RAD_ENABLE ? "enabled" : "disabled");
+	if (_config->ffcnorm) {
+		ret = LEP_RunSysFFCNormalization(&_port);
+		if (ret != LEP_OK) {
+			printf("Flat-Field Correction normalization error %d\n", ret);
+		}
 	}
-	LEP_RAD_ENABLE_E tLinear;
-	ret = LEP_SetRadTLinearEnableState(&_port, LEP_RAD_ENABLE);
-	if (ret != LEP_OK) {
-		printf("TLinear enable error %d\n", ret);
-	}
-	ret = LEP_GetRadTLinearEnableState(&_port, &tLinear);
-	if (ret == LEP_OK) {
-		printf("TLinear enable %s\n", tLinear == LEP_RAD_ENABLE ? "enabled" : "disabled");
-	}
-	ret = LEP_RunSysFFCNormalization(&_port);
-	if (ret != LEP_OK) {
-		printf("Flat-Field Correction normalization error %d\n", ret);
-	}
-#if 0
-	printf("SYS Telemetry Location");
-	ret = LEP_SetSysTelemetryLocation(&_port, LEP_TELEMETRY_LOCATION_FOOTER);
-	if (ret != LEP_OK) {
-		printf("  error %d\n", ret);
-	}
-	else {
-		printf(" Footer\n");
-	}
+	if (_config->telemetry) {
+		printf("SYS Telemetry Location");
+		ret = LEP_SetSysTelemetryLocation(&_port, LEP_TELEMETRY_LOCATION_FOOTER);
+		if (ret != LEP_OK) {
+			printf("  error %d\n", ret);
+		}
+		else {
+			printf(" Footer\n");
+		}
 
-	printf("SYS Telemetry");
-	ret = LEP_SetSysTelemetryEnableState(&_port, LEP_TELEMETRY_ENABLED);
-	if (ret != LEP_OK) {
-		printf("  error %d\n", ret);
+		printf("SYS Telemetry");
+		ret = LEP_SetSysTelemetryEnableState(&_port, LEP_TELEMETRY_ENABLED);
+		if (ret != LEP_OK) {
+			printf("  error %d\n", ret);
+		}
+		else {
+			printf(" Enable\n");
+		}
 	}
-	else {
-		printf(" Enable\n");
-	}
-#endif
 	LEP_SYS_TELEMETRY_ENABLE_STATE_E telemetory = LEP_TELEMETRY_DISABLED;
 	LEP_GetSysTelemetryEnableState(&_port, &telemetory);
 	if (telemetory != 0) {
@@ -167,7 +171,7 @@ void LeptonTask::Process()
 	uint8_t *result = _frame_packet;
 	uint16_t *frameBuffer;
 	uint16_t value, minValue, maxValue;
-	//float diff, scale;
+	float diff, scale;
 	int packet_id;
 	uint16_t *values;
 
@@ -272,44 +276,63 @@ void LeptonTask::Process()
 		break;
 	case State::Viewing:
 		//lets emit the signal for update
-		//minValue = _minValue;
-		//diff = _maxValue - minValue;
-		//scale = 255.9 / diff;
+		minValue = _minValue;
+		diff = _maxValue - minValue;
+		scale = 255.9 / diff;
+
 		values = _image;
 		for (int row = 0; row < PACKETS_PER_FRAME; row++) {
 			uint16_t *pixel = &((uint16_t *)&user_frame_buffer_result)[(LCD_PIXEL_WIDTH - PIXEL_PER_LINE) + (LCD_PIXEL_HEIGHT - PACKETS_PER_FRAME + row) * LCD_PIXEL_WIDTH];
 			for (int column = 0; column < PIXEL_PER_LINE; column++) {
-				//uint8_t index = (*values - minValue) * scale;
-				//uint8_t index = *values;
-#if 0
-				uint8_t index = (uint8_t)(*values >> 1);
-				const uint8_t *colormap = &colormap_rainbow[3 * index];
-#else
+				uint8_t index;
 				int colormap[3];
-				float s = (float)(*values / (511 * 3)) / ((float)(1 << 14) / (float)(511 * 3));
-				int h = *values % (511 * 3);
-				int b = (int)(256 * (1.0 - s));
-				switch (h / 511) {
+
+				switch (_config->color) {
 				case 0:
-					colormap[0] = b;
-					colormap[1] = (int)(s * h) + b;
-					colormap[2] = (int)(s * (511 - h)) + b;
+					index = (*values - minValue) * scale;
+					colormap[0] = colormap_rainbow[3 * index];
+					colormap[1] = colormap_rainbow[3 * index + 1];
+					colormap[2] = colormap_rainbow[3 * index + 2];
 					break;
 				case 1:
-					colormap[0] = (int)(s * (h - 511)) + b;
-					colormap[1] = (int)(s * ((2 * 511) - h)) + b;
-					colormap[2] = b;
+					index = *values;
+					colormap[0] = colormap_rainbow[3 * index];
+					colormap[1] = colormap_rainbow[3 * index + 1];
+					colormap[2] = colormap_rainbow[3 * index + 2];
 					break;
-				default:
-					colormap[0] = (int)(s * ((3 * 511) - h)) + b;
-					colormap[1] = b;
-					colormap[2] = (int)(s * (h - (2 * 511))) + b;
+				case 2:
+					index = (uint8_t)(*values >> 1);
+					colormap[0] = colormap_rainbow[3 * index];
+					colormap[1] = colormap_rainbow[3 * index + 1];
+					colormap[2] = colormap_rainbow[3 * index + 2];
+					break;
+				default: {
+					float s = (float)(*values / (511 * 3)) / ((float)(1 << 14) / (float)(511 * 3));
+					int h = *values % (511 * 3);
+					int b = (int)(256 * (1.0 - s));
+					switch (h / 511) {
+					case 0:
+						colormap[0] = b;
+						colormap[1] = (int)(s * h) + b;
+						colormap[2] = (int)(s * (511 - h)) + b;
+						break;
+					case 1:
+						colormap[0] = (int)(s * (h - 511)) + b;
+						colormap[1] = (int)(s * ((2 * 511) - h)) + b;
+						colormap[2] = b;
+						break;
+					default:
+						colormap[0] = (int)(s * ((3 * 511) - h)) + b;
+						colormap[1] = b;
+						colormap[2] = (int)(s * (h - (2 * 511))) + b;
+						break;
+					}
+					if (colormap[0] > 255) colormap[0] = 255;
+					if (colormap[1] > 255) colormap[1] = 255;
+					if (colormap[2] > 255) colormap[2] = 255;
 					break;
 				}
-				if (colormap[0] > 255) colormap[0] = 255;
-				if (colormap[1] > 255) colormap[1] = 255;
-				if (colormap[2] > 255) colormap[2] = 255;
-#endif
+				}
 				// ARGB4444
 				*pixel++ = 0xF000 | ((colormap[0] >> 4) << 8) | ((colormap[1] >> 4) << 4) | ((colormap[2] >> 4) << 0);
 				values++;

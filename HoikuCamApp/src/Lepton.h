@@ -87,6 +87,14 @@ struct TLeptonTelemetryC {
 	TLeptonROI SpotmeterROI;
 } __attribute__((packed));
 
+struct lepton_config_t {
+	int radiometry;
+	int ffcnorm;
+	int telemetry;
+	int offset;
+	int color;
+};
+
 #define PACKET_SIZE (164)
 #define PACKET_SIZE_UINT16 (PACKET_SIZE/2)
 #define PACKETS_PER_FRAME (60)
@@ -115,6 +123,7 @@ public:
 private:
 	State::T _state;
 	TaskThread *_taskThread;
+	lepton_config_t *_config;
 	mbed::SPI _spi;
 	mbed::I2C _wire;
 	mbed::DigitalOut _ss;
@@ -132,6 +141,7 @@ public:
 	void OnStart() override;
 	void ProcessEvent(InterTaskSignals::T signals) override;
 	void Process() override;
+	void SetConfig(lepton_config_t *config) { _config = config; }
 	uint16_t GetMinValue() { return _minValue; }
 	uint16_t GetMaxValue() { return _maxValue; }
 	uint16_t GetTelemetryRevision() { return _telemetryA.TelemetryRevision; }
