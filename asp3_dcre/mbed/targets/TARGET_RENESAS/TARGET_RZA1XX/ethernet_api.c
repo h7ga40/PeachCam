@@ -274,6 +274,10 @@ int ethernetext_chk_link_mode(void) {
         link = NEGO_FAIL;
     }
 
+    /* Promiscuous Mode */
+    if (ETHERECMR0 & 0x00000001)
+        link |= PROMISCUOUS_MODE;
+
     return link;
 }
 
@@ -651,7 +655,12 @@ static void lan_reg_set(int32_t link) {
     } else {
         ETHERECMR0 &= ~0x00000002;      /* Set to half-duplex mode */
     }
-    ETHERECMR0     |=  0x00002000;      /* MCT = 1 */
+    if (!prm) {
+        ETHERECMR0     |=  0x00002000;      /* MCT = 1 */
+    }
+    else {
+        ETHERECMR0     &=  ~0x00002000;     /* MCT = 0 */
+    }
 
     /* Interrupt-related */
     if (p_recv_cb_fnc != NULL) {

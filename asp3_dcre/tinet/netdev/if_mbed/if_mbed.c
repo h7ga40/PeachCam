@@ -343,7 +343,7 @@ void if_mbed_phy_task(intptr_t arg)
 					ether_set_link_down(ether);
 				}
 				if (link_mode_new != NEGO_FAIL) {
-					ethernetext_set_link_mode(link_mode_new);
+					ethernetext_set_link_mode(link_mode_new | PROMISCUOUS_MODE);
 					ETHER.EESIPR0 |= EDMAC_EESIPR_INI_TRANS;
 					ether_set_link_up(ether);
 					connect_sts = 1;
