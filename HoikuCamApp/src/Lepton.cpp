@@ -38,6 +38,29 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define RESULT_BUFFER_HEIGHT          (LCD_PIXEL_HEIGHT)
 extern uint8_t user_frame_buffer_result[RESULT_BUFFER_STRIDE * RESULT_BUFFER_HEIGHT]__attribute((section("NC_BSS"), aligned(32)));
 
+const unsigned char BMPHeader[BITMAP_HEADER_SIZE] = {
+	0x42, 0x4D,					// "BM"
+	0xC6, 0x25, 0x00, 0x00,		// ファイルサイズ[byte]
+	0x00, 0x00,					// 予約領域１
+	0x00, 0x00,					// 予約領域２
+	0x46, 0x00, 0x00, 0x00,		// ファイル先頭から画像データまでのオフセット[byte]
+	0x38, 0x00, 0x00, 0x00,		// 情報ヘッダサイズ[byte]
+	0x50, 0x00, 0x00, 0x00,		// 画像の幅[ピクセル]
+	0x3C, 0x00, 0x00, 0x00,		// 画像の高さ[ピクセル]
+	0x01, 0x00,					// プレーン数
+	0x10, 0x00,					// 色ビット数[bit]
+	0x03, 0x00, 0x00, 0x00,		// 圧縮形式
+	0x80, 0x25, 0x00, 0x00,		// 画像データサイズ[byte]
+	0x13, 0x0B, 0x00, 0x00,		// 水平解像度[dot/m]
+	0x13, 0x0B, 0x00, 0x00,		// 垂直解像度[dot/m]
+	0x00, 0x00, 0x00, 0x00,		// 格納パレット数[使用色数]
+	0x00, 0x00, 0x00, 0x00,		// 重要色数
+	0x00, 0xF8, 0x00, 0x00,		// 赤成分のカラーマスク
+	0xE0, 0x07, 0x00, 0x00,		// 緑成分のカラーマスク
+	0x1F, 0x00, 0x00, 0x00,		// 青成分のカラーマスク
+	0x00, 0x00, 0x00, 0x00		// α成分のカラーマスク
+};
+
 LeptonTask::LeptonTask(TaskThread *taskThread) :
 	Task(osWaitForever),
 	_state(State::PowerOff),
@@ -49,6 +72,7 @@ LeptonTask::LeptonTask(TaskThread *taskThread) :
 	_minValue(65535), _maxValue(0),
 	_packets_per_frame(60)
 {
+	memcpy(_image, BMPHeader, BITMAP_HEADER_SIZE);
 }
 
 LeptonTask::~LeptonTask()
@@ -220,7 +244,7 @@ void LeptonTask::Process()
 			packet_id = id;
 
 			if (row < PACKETS_PER_FRAME) {
-				uint16_t *pixel = &_image[PIXEL_PER_LINE * row];
+				uint16_t *pixel = &_image[BITMAP_HEADER_SIZE/2 + PIXEL_PER_LINE * (PACKETS_PER_FRAME - 1 - row)];
 				frameBuffer = (uint16_t *)result;
 				//skip the first 2 uint16_t's of every packet, they're 4 header bytes
 				for (int i = 2; i < PACKET_SIZE_UINT16; i++) {
@@ -276,13 +300,18 @@ void LeptonTask::Process()
 		break;
 	case State::Viewing:
 		//lets emit the signal for update
+		maxValue = _maxValue;
 		minValue = _minValue;
-		diff = _maxValue - minValue;
+		diff = maxValue - minValue;
+		if (diff < 256) {
+			diff = 256;
+			minValue = (maxValue + minValue) / 2 - 128;
+		}
 		scale = 255.9 / diff;
 
-		values = _image;
+		values = &_image[BITMAP_HEADER_SIZE/2];
 		for (int row = 0; row < PACKETS_PER_FRAME; row++) {
-			uint16_t *pixel = &((uint16_t *)&user_frame_buffer_result)[(LCD_PIXEL_WIDTH - PIXEL_PER_LINE) + (LCD_PIXEL_HEIGHT - PACKETS_PER_FRAME + row) * LCD_PIXEL_WIDTH];
+			uint16_t *pixel = &((uint16_t *)&user_frame_buffer_result)[(LCD_PIXEL_WIDTH - 1 - PIXEL_PER_LINE) + (LCD_PIXEL_HEIGHT - 1 - row) * LCD_PIXEL_WIDTH];
 			for (int column = 0; column < PIXEL_PER_LINE; column++) {
 				uint8_t index;
 				int colormap[3];
@@ -295,16 +324,16 @@ void LeptonTask::Process()
 					colormap[2] = colormap_rainbow[3 * index + 2];
 					break;
 				case 1:
-					index = *values;
-					colormap[0] = colormap_rainbow[3 * index];
-					colormap[1] = colormap_rainbow[3 * index + 1];
-					colormap[2] = colormap_rainbow[3 * index + 2];
+					index = (*values - minValue) * scale;
+					colormap[0] = colormap_grayscale[3 * index];
+					colormap[1] = colormap_grayscale[3 * index + 1];
+					colormap[2] = colormap_grayscale[3 * index + 2];
 					break;
 				case 2:
-					index = (uint8_t)(*values >> 1);
-					colormap[0] = colormap_rainbow[3 * index];
-					colormap[1] = colormap_rainbow[3 * index + 1];
-					colormap[2] = colormap_rainbow[3 * index + 2];
+					index = (*values - minValue) * scale;
+					colormap[0] = colormap_ironblack[3 * index];
+					colormap[1] = colormap_ironblack[3 * index + 1];
+					colormap[2] = colormap_ironblack[3 * index + 2];
 					break;
 				default: {
 					float s = (float)(*values / (511 * 3)) / ((float)(1 << 14) / (float)(511 * 3));
