@@ -44,12 +44,17 @@
 #include <string.h>
 #include "syssvc/serial.h"
 #include "syssvc/syslog.h"
-#include "socket_stub.h"
+#include "fdtable.h"
 #include "util/ntstdio.h"
 #include "usrcmd.h"
 #include "core/ntlibc.h"
 #include "kernel_cfg.h"
 #include "target_syssvc.h"
+
+struct SHELL_DIR {
+	FATFS_DIR dir;
+	struct dirent dirent;
+};
 
 int fresult2errno(FRESULT res)
 {
@@ -355,86 +360,6 @@ int shell_ftruncate(int fd, off_t length)
 int shell_fcntl(int fd, int cmd, void *arg)
 {
 	return shell_ioctl(fd, cmd, arg);
-}
-
-extern IO_TYPE IO_TYPE_SIO;
-
-int sio_tcgetattr(int fd, struct termios *termios)
-{
-	struct SHELL_FILE *fp = fd_to_fp(fd);
-	if ((fp == NULL) || (fp->type != &IO_TYPE_SIO))
-		return -EBADF;
-
-	ntstdio_t *ntstdio = (ntstdio_t *)fp->exinf;
-
-	memset(termios, 0, sizeof(*termios));
-
-	if (ntstdio->option & NTSTDIO_OPTION_LINE_ECHO) {
-		termios->c_lflag |= ECHO;
-	}
-	else {
-		termios->c_lflag &= ~ECHO;
-	}
-	if (ntstdio->option & NTSTDIO_OPTION_CANON) {
-		termios->c_lflag |= ICANON;
-	}
-	else {
-		termios->c_lflag &= ~ICANON;
-	}
-	if (ntstdio->option & NTSTDIO_OPTION_LF_CR) {
-		termios->c_iflag |= INLCR;
-	}
-	else {
-		termios->c_iflag &= ~INLCR;
-	}
-	if (ntstdio->option & NTSTDIO_OPTION_LF_CRLF) {
-		termios->c_oflag |= ONLCR;
-	}
-	else {
-		termios->c_oflag &= ~ONLCR;
-	}
-
-	return 0;
-}
-
-int sio_tcsetattr(int fd, int optional_actions, const struct termios *termios)
-{
-	struct SHELL_FILE *fp = fd_to_fp(fd);
-	if ((fp == NULL) || (fp->type != &IO_TYPE_SIO))
-		return -EBADF;
-
-	ntstdio_t *ntstdio = (ntstdio_t *)fp->exinf;
-
-	if (optional_actions == TCSANOW) {
-		if (termios->c_lflag & ECHO) {
-			ntstdio->option |= NTSTDIO_OPTION_LINE_ECHO;
-		}
-		else {
-			ntstdio->option &= ~NTSTDIO_OPTION_LINE_ECHO;
-		}
-		if (termios->c_lflag & ICANON) {
-			ntstdio->option |= NTSTDIO_OPTION_CANON;
-		}
-		else {
-			ntstdio->option &= ~NTSTDIO_OPTION_CANON;
-		}
-		if (termios->c_iflag & INLCR) {
-			ntstdio->option |= NTSTDIO_OPTION_LF_CR;
-		}
-		else {
-			ntstdio->option &= ~NTSTDIO_OPTION_LF_CR;
-		}
-		if (termios->c_oflag & ONLCR) {
-			ntstdio->option |= NTSTDIO_OPTION_LF_CRLF;
-		}
-		else {
-			ntstdio->option &= ~NTSTDIO_OPTION_LF_CRLF;
-		}
-		return 0;
-	}
-
-	shell_abort();
-	return 0;
 }
 
 int shell_stat(const char *__restrict path, struct stat *__restrict st)

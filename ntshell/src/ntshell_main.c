@@ -57,7 +57,7 @@
 #include "usrcmd.h"
 #include "util/ntopt.h"
 #include "ntshell_main.h"
-#include "socket_stub.h"
+#include "fdtable.h"
 
 char command[NTOPT_TEXT_MAXLEN];
 

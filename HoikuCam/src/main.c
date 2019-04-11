@@ -64,12 +64,9 @@
 #include "netapp/dhcp4_cli.h"
 #include "ffarch.h"
 #include "ff.h"
-#include "core/ntshell.h"
-#include "core/ntlibc.h"
 #include <stdio.h>
 #include "usrcmd.h"
-#include "util/ntopt.h"
-#include "socket_stub.h"
+#include "fdtable.h"
 #include "gpio_api.h"
 #include "ntshell_main.h"
 #include "ntp_cli.h"

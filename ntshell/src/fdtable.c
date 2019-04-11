@@ -43,28 +43,7 @@
 #include "syssvc/serial.h"
 #include "syssvc/syslog.h"
 #include "target_syssvc.h"
-#ifndef NTSHELL_NO_SOCKET
-#include <tinet_defs.h>
-#include <tinet_config.h>
-#include <net/net.h>
-#include <net/net_endian.h>
-#include <netinet/in.h>
-#include <netinet/in_itron.h>
-#include <tinet_nic_defs.h>
-#include <tinet_cfg.h>
-#include <netinet/in_var.h>
-#include <net/ethernet.h>
-#include <net/if6_var.h>
-#include <net/net.h>
-#include <net/if_var.h>
-#include <netinet/udp.h>
-#include <netinet/udp_var.h>
-#include <netinet/tcp.h>
-#include <netinet/tcp_var.h>
-#include <net/net_buf.h>
-#endif
-#include "ff.h"
-#include "socket_stub.h"
+#include "fdtable.h"
 #include "kernel_cfg.h"
 #include <string.h>
 #include "util/ntstdio.h"
@@ -74,27 +53,10 @@
 static const char THIS_FILE[] = __FILE__;
 #endif
 
-static int stdio_close(struct SHELL_FILE *fp);
-static size_t stdio_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
-static size_t stdio_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
-static size_t stdin_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
-static size_t stdout_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
-static size_t stderr_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
-static void stdio_delete(struct SHELL_FILE *fp);
-
-static int sio_close(struct SHELL_FILE *fp);
-static size_t sio_read(struct SHELL_FILE *fp, unsigned char *data, size_t len);
-static size_t sio_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len);
-static off_t sio_seek(struct SHELL_FILE *fp, off_t ofs, int org);
-static int sio_ioctl(struct SHELL_FILE *fp, int req, void *arg);
-static bool_t sio_readable(struct SHELL_FILE *fp);
-static void sio_delete(struct SHELL_FILE *fp);
-
-IO_TYPE IO_TYPE_STDIN = { stdio_close, stdin_read, stdio_write, sio_seek, sio_ioctl, sio_readable, stdio_delete };
-IO_TYPE IO_TYPE_STDOUT = { stdio_close, stdio_read, stdout_write, sio_seek, sio_ioctl, sio_readable, stdio_delete };
-IO_TYPE IO_TYPE_STDERR = { stdio_close, stdio_read, stderr_write, sio_seek, sio_ioctl, sio_readable, stdio_delete };
-IO_TYPE IO_TYPE_SIO = { sio_close, sio_read, sio_write, sio_seek, sio_ioctl, sio_readable, sio_delete };
-ntstdio_t ntstdio;
+extern IO_TYPE IO_TYPE_STDIN;
+extern IO_TYPE IO_TYPE_STDOUT;
+extern IO_TYPE IO_TYPE_STDERR;
+extern ntstdio_t ntstdio;
 
 static struct SHELL_FILE fd_table[8 * sizeof(FLGPTN)] = {
 	{ 0, &IO_TYPE_STDIN, 0, .exinf = &ntstdio },
@@ -102,121 +64,6 @@ static struct SHELL_FILE fd_table[8 * sizeof(FLGPTN)] = {
 	{ 2, &IO_TYPE_STDERR, 0,.exinf = &ntstdio },
 };
 #define fd_table_count (sizeof(fd_table) / sizeof(fd_table[0]))
-
-extern ntstdio_t ntstdio;
-extern serial_t stdio_uart;
-
-unsigned char ntstdio_xi(struct ntstdio_t *handle)
-{
-	return serial_getc((serial_t *)handle->exinf);
-}
-
-void ntstdio_xo(struct ntstdio_t *handle, unsigned char c)
-{
-	serial_putc((serial_t *)handle->exinf, c);
-}
-
-void sys_init(intptr_t exinf)
-{
-	ntstdio_init(&ntstdio, NTSTDIO_OPTION_LINE_ECHO | NTSTDIO_OPTION_CANON | NTSTDIO_OPTION_LF_CRLF | NTSTDIO_OPTION_LF_CR, ntstdio_xi, ntstdio_xo);
-	ntstdio.exinf = (void *)&stdio_uart;
-}
-
-int stdio_close(struct SHELL_FILE *fp)
-{
-	return -EPERM;
-}
-
-size_t stdio_read(struct SHELL_FILE *fp, unsigned char *data, size_t len)
-{
-	return -EPERM;
-}
-
-size_t stdio_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
-{
-	return -EPERM;
-}
-
-size_t stdin_read(struct SHELL_FILE *fp, unsigned char *data, size_t len)
-{
-	int i = 0;
-	while (i < len) {
-		int c = ntstdio_getc((struct ntstdio_t *)fp->exinf);
-		data[i++] = c;
-		if ((c == EOF) || (c == '\n'))
-			break;
-	}
-	return i;
-}
-
-size_t stdout_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
-{
-	for (int i = 0; i < len; i++) {
-		ntstdio_putc((struct ntstdio_t *)fp->exinf, data[i]);
-	}
-	return len;
-}
-
-size_t stderr_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
-{
-	for (int i = 0; i < len; i++) {
-		ntstdio_putc((struct ntstdio_t *)fp->exinf, data[i]);
-	}
-	return len;
-}
-
-void stdio_delete(struct SHELL_FILE *fp)
-{
-}
-
-int sio_close(struct SHELL_FILE *fp)
-{
-	return -EPERM;
-}
-
-size_t sio_read(struct SHELL_FILE *fp, unsigned char *data, size_t len)
-{
-	return -EPERM;
-}
-
-size_t sio_write(struct SHELL_FILE *fp, const unsigned char *data, size_t len)
-{
-	return -EPERM;
-}
-
-off_t sio_seek(struct SHELL_FILE *fp, off_t ofs, int org)
-{
-	return -EPERM;
-}
-
-int sio_ioctl(struct SHELL_FILE *fp, int request, void *arg)
-{
-	switch (request) {
-	case TIOCGWINSZ:
-		return 0;
-	case TCGETS:
-		return sio_tcgetattr(fp->fd, (struct termios *)arg);
-	case TCSETS + TCSANOW:
-	case TCSETS + TCSADRAIN:
-	case TCSETS + TCSAFLUSH:
-		return sio_tcsetattr(fp->fd, request - TCSETS, (const struct termios *)arg);
-	}
-
-	return -EINVAL;
-}
-
-bool_t sio_readable(struct SHELL_FILE *fp)
-{
-	return fp->readevt_w != fp->readevt_r;
-}
-
-void sio_delete(struct SHELL_FILE *fp)
-{
-	free((serial_t *)((struct ntstdio_t *)fp->exinf)->exinf);
-	((struct ntstdio_t *)fp->exinf)->exinf = NULL;
-	free((struct ntstdio_t *)fp->exinf);
-	fp->exinf = NULL;
-}
 
 struct SHELL_FILE *new_fp(IO_TYPE *type, int id, int writable)
 {

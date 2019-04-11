@@ -196,9 +196,6 @@ int shell_getsockname(int fd, struct sockaddr *__restrict addr, socklen_t *__res
 int shell_select(int, fd_set *__restrict, fd_set *__restrict, fd_set *__restrict, struct timeval *__restrict);
 // syslog.h
 void vsyslog (int, const char *, va_list);
-// termios.h
-int sio_tcgetattr (int, struct termios *);
-int sio_tcsetattr(int, int, const struct termios *);
 // fcntl.h
 int shell_open(const char *, int, void *arg);
 int shell_fcntl(int fd, int cmd, void *arg);
