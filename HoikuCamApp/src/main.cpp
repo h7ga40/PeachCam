@@ -16,8 +16,6 @@
 #define TOUCH_NUM               (1u)
 
 /* Application variables */
-Mat frame_gray;     // Input frame (in grayscale)
-
 DigitalOut led1(LED1);
 DigitalOut led2(LED2);
 DigitalOut led3(LED3);

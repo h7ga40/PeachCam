@@ -120,16 +120,17 @@ void LeptonTask::OnStart()
 				oemSoftwareVersion.dsp_minor,
 				oemSoftwareVersion.dsp_build);
 	}
+
+	LEP_RAD_RADIOMETRY_FILTER_T radRadiometryFilter;
+	ret = LEP_SetRadRadometryFilter(&_port, _config->radiometry ? LEP_RAD_ENABLE : LEP_RAD_DISABLE);
+	if (ret != LEP_OK) {
+		printf("Radiometry filter set error %d\n", ret);
+	}
+	ret = LEP_GetRadRadometryFilter(&_port, &radRadiometryFilter);
+	if (ret == LEP_OK) {
+		printf("Radiometry filter %s\n", radRadiometryFilter == LEP_RAD_ENABLE ? "enabled" : "disabled");
+	}
 	if (_config->radiometry) {
-		LEP_RAD_RADIOMETRY_FILTER_T radRadiometryFilter;
-		ret = LEP_SetRadRadometryFilter(&_port, LEP_RAD_ENABLE);
-		if (ret != LEP_OK) {
-			printf("Radiometry filter set error %d\n", ret);
-		}
-		ret = LEP_GetRadRadometryFilter(&_port, &radRadiometryFilter);
-		if (ret == LEP_OK) {
-			printf("Radiometry filter %s\n", radRadiometryFilter == LEP_RAD_ENABLE ? "enabled" : "disabled");
-		}
 		LEP_RAD_ENABLE_E tLinear;
 		ret = LEP_SetRadTLinearEnableState(&_port, LEP_RAD_ENABLE);
 		if (ret != LEP_OK) {
@@ -155,16 +156,17 @@ void LeptonTask::OnStart()
 		else {
 			printf(" Footer\n");
 		}
-
-		printf("SYS Telemetry");
-		ret = LEP_SetSysTelemetryEnableState(&_port, LEP_TELEMETRY_ENABLED);
-		if (ret != LEP_OK) {
-			printf("  error %d\n", ret);
-		}
-		else {
-			printf(" Enable\n");
-		}
 	}
+
+	printf("SYS Telemetry");
+	ret = LEP_SetSysTelemetryEnableState(&_port, _config->telemetry ? LEP_TELEMETRY_ENABLED : LEP_TELEMETRY_DISABLED);
+	if (ret != LEP_OK) {
+		printf("  error %d\n", ret);
+	}
+	else {
+		printf(" Enable\n");
+	}
+
 	LEP_SYS_TELEMETRY_ENABLE_STATE_E telemetory = LEP_TELEMETRY_DISABLED;
 	LEP_GetSysTelemetryEnableState(&_port, &telemetory);
 	if (telemetory != 0) {
@@ -336,24 +338,39 @@ void LeptonTask::Process()
 					colormap[2] = colormap_ironblack[3 * index + 2];
 					break;
 				default: {
-					float s = (float)(*values / (511 * 3)) / ((float)(1 << 14) / (float)(511 * 3));
-					int h = *values % (511 * 3);
+					float s = (float)(*values / (255 * 6)) / ((float)(1 << 14) / (float)(255 * 6));
+					int h = *values % (255 * 6);
 					int b = (int)(256 * (1.0 - s));
-					switch (h / 511) {
+					switch (h / 255) {
 					case 0:
 						colormap[0] = b;
 						colormap[1] = (int)(s * h) + b;
-						colormap[2] = (int)(s * (511 - h)) + b;
+						colormap[2] = (int)(s * 255) + b;
 						break;
 					case 1:
-						colormap[0] = (int)(s * (h - 511)) + b;
-						colormap[1] = (int)(s * ((2 * 511) - h)) + b;
+						colormap[0] = b;
+						colormap[1] = (int)(s * 255) + b;
+						colormap[2] = (int)(s * ((2 * 255) - h)) + b;
+						break;
+					case 2:
+						colormap[0] = (int)(s * (h - (2 * 255))) + b;
+						colormap[1] = (int)(s * 255) + b;
 						colormap[2] = b;
 						break;
-					default:
-						colormap[0] = (int)(s * ((3 * 511) - h)) + b;
+					case 3:
+						colormap[0] = (int)(s * 255) + b;
+						colormap[1] = (int)(s * ((4 * 255) - h)) + b;
+						colormap[2] = b;
+						break;
+					case 4:
+						colormap[0] = (int)(s * 255) + b;
 						colormap[1] = b;
-						colormap[2] = (int)(s * (h - (2 * 511))) + b;
+						colormap[2] = (int)(s * (h - (4 * 255))) + b;
+						break;
+					default:
+						colormap[0] = (int)(s * ((6 * 255) - h)) + b;
+						colormap[1] = b;
+						colormap[2] = (int)(s * 255) + b;
 						break;
 					}
 					if (colormap[0] > 255) colormap[0] = 255;
