@@ -113,12 +113,12 @@ void LeptonTask::OnStart()
 	ret = LEP_GetOemSoftwareVersion(&_port, &oemSoftwareVersion);
 	if (ret == LEP_OK) {
 		printf("FLiR OEM software version GPP:%u.%u.%03u DSP:%u.%u.%03u\n",
-				oemSoftwareVersion.gpp_major,
-				oemSoftwareVersion.gpp_minor,
-				oemSoftwareVersion.gpp_build,
-				oemSoftwareVersion.dsp_major,
-				oemSoftwareVersion.dsp_minor,
-				oemSoftwareVersion.dsp_build);
+			oemSoftwareVersion.gpp_major,
+			oemSoftwareVersion.gpp_minor,
+			oemSoftwareVersion.gpp_build,
+			oemSoftwareVersion.dsp_major,
+			oemSoftwareVersion.dsp_minor,
+			oemSoftwareVersion.dsp_build);
 	}
 
 	LEP_RAD_RADIOMETRY_FILTER_T radRadiometryFilter;
@@ -246,7 +246,7 @@ void LeptonTask::Process()
 			packet_id = id;
 
 			if (row < PACKETS_PER_FRAME) {
-				uint16_t *pixel = &_image[BITMAP_HEADER_SIZE/2 + PIXEL_PER_LINE * (PACKETS_PER_FRAME - 1 - row)];
+				uint16_t *pixel = &_image[BITMAP_HEADER_SIZE / 2 + PIXEL_PER_LINE * (PACKETS_PER_FRAME - 1 - row)];
 				frameBuffer = (uint16_t *)result;
 				//skip the first 2 uint16_t's of every packet, they're 4 header bytes
 				for (int i = 2; i < PACKET_SIZE_UINT16; i++) {
@@ -311,71 +311,87 @@ void LeptonTask::Process()
 		}
 		scale = 255.9 / diff;
 
-		values = &_image[BITMAP_HEADER_SIZE/2];
+		values = &_image[BITMAP_HEADER_SIZE / 2];
 		for (int row = 0; row < PACKETS_PER_FRAME; row++) {
 			uint16_t *pixel = &((uint16_t *)&user_frame_buffer_result)[(LCD_PIXEL_WIDTH - 1 - PIXEL_PER_LINE) + (LCD_PIXEL_HEIGHT - 1 - row) * LCD_PIXEL_WIDTH];
 			for (int column = 0; column < PIXEL_PER_LINE; column++) {
+				uint16_t value = *values;
 				uint8_t index;
 				int colormap[3];
 
 				switch (_config->color) {
 				case 0:
-					index = (*values - minValue) * scale;
+					index = (value - minValue) * scale;
 					colormap[0] = colormap_rainbow[3 * index];
 					colormap[1] = colormap_rainbow[3 * index + 1];
 					colormap[2] = colormap_rainbow[3 * index + 2];
 					break;
 				case 1:
-					index = (*values - minValue) * scale;
+					index = (value - minValue) * scale;
 					colormap[0] = colormap_grayscale[3 * index];
 					colormap[1] = colormap_grayscale[3 * index + 1];
 					colormap[2] = colormap_grayscale[3 * index + 2];
 					break;
 				case 2:
-					index = (*values - minValue) * scale;
+					index = (value - minValue) * scale;
 					colormap[0] = colormap_ironblack[3 * index];
 					colormap[1] = colormap_ironblack[3 * index + 1];
 					colormap[2] = colormap_ironblack[3 * index + 2];
 					break;
-				default: {
-					float s = (float)(*values / (255 * 6)) / ((float)(1 << 14) / (float)(255 * 6));
-					int h = *values % (255 * 6);
-					int b = (int)(256 * (1.0 - s));
-					switch (h / 255) {
+				default:
+				{
+					int span = 256;
+					int max = span - 1;
+					int h = value % (max * 6);
+					int s;
+					int b;
+					if (value < (1 << 13)) {
+						s = (span * value) / (1 << 13);
+						b = 0;
+					}
+					else {
+						value -= (1 << 13);
+						b = (span * value) / (1 << 13);
+						s = span - b;
+					}
+
+					int p = (h / max) % 6;
+					h %= span;
+					switch (p) {
 					case 0:
 						colormap[0] = b;
-						colormap[1] = (int)(s * h) + b;
-						colormap[2] = (int)(s * 255) + b;
+						colormap[1] = ((s * h) / span) + b;
+						colormap[2] = ((s * max) / span) + b;
 						break;
 					case 1:
 						colormap[0] = b;
-						colormap[1] = (int)(s * 255) + b;
-						colormap[2] = (int)(s * ((2 * 255) - h)) + b;
+						colormap[1] = ((s * max) / span) + b;
+						colormap[2] = ((s * (max - h)) / span) + b;
 						break;
 					case 2:
-						colormap[0] = (int)(s * (h - (2 * 255))) + b;
-						colormap[1] = (int)(s * 255) + b;
+						colormap[0] = ((s * h) / span) + b;
+						colormap[1] = ((s * max) / span) + b;
 						colormap[2] = b;
 						break;
 					case 3:
-						colormap[0] = (int)(s * 255) + b;
-						colormap[1] = (int)(s * ((4 * 255) - h)) + b;
+						colormap[0] = ((s * max) / span) + b;
+						colormap[1] = ((s * (max - h)) / span) + b;
 						colormap[2] = b;
 						break;
 					case 4:
-						colormap[0] = (int)(s * 255) + b;
+						colormap[0] = ((s * max) / span) + b;
 						colormap[1] = b;
-						colormap[2] = (int)(s * (h - (4 * 255))) + b;
+						colormap[2] = ((s * h) / span) + b;
 						break;
 					default:
-						colormap[0] = (int)(s * ((6 * 255) - h)) + b;
+						colormap[0] = ((s * (max - h)) / span) + b;
 						colormap[1] = b;
-						colormap[2] = (int)(s * 255) + b;
+						colormap[2] = ((s * max) / span) + b;
 						break;
 					}
-					if (colormap[0] > 255) colormap[0] = 255;
-					if (colormap[1] > 255) colormap[1] = 255;
-					if (colormap[2] > 255) colormap[2] = 255;
+					colormap[0] = 256 * colormap[0] / span;
+					colormap[1] = 256 * colormap[1] / span;
+					colormap[2] = 256 * colormap[2] / span;
 					break;
 				}
 				}
@@ -407,168 +423,168 @@ void LeptonTask::Process()
 
 extern "C" {
 
-LEP_RESULT LEP_I2C_MasterOpen(LEP_PORTID portID,
-	LEP_UINT16 *portBaudRate)
-{
-	mbed::I2C *wire = (mbed::I2C *)portID;
-	LEP_RESULT result = LEP_OK;
+	LEP_RESULT LEP_I2C_MasterOpen(LEP_PORTID portID,
+		LEP_UINT16 *portBaudRate)
+	{
+		mbed::I2C *wire = (mbed::I2C *)portID;
+		LEP_RESULT result = LEP_OK;
 
-	wire->frequency(*portBaudRate * 1000);
+		wire->frequency(*portBaudRate * 1000);
 
-	return result;
-}
-
-LEP_RESULT LEP_I2C_MasterClose(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr)
-{
-	mbed::I2C *wire = (mbed::I2C *)portDescPtr->portID;
-	LEP_RESULT result = LEP_OK;
-
-	(void)wire;
-
-	return result;
-}
-
-LEP_RESULT LEP_I2C_MasterReset(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr)
-{
-	mbed::I2C *wire = (mbed::I2C *)portDescPtr->portID;
-	LEP_RESULT result = LEP_OK;
-
-	(void)wire;
-
-	return result;
-}
-
-LEP_RESULT LEP_I2C_MasterReadData(LEP_PORTID portID,
-	LEP_UINT8  deviceAddress,
-	LEP_UINT16 subAddress,
-	LEP_UINT16 *dataPtr,
-	LEP_UINT16 dataLength)
-{
-	mbed::I2C *wire = (mbed::I2C *)portID;
-	LEP_RESULT result = LEP_OK;
-	int error;
-	LEP_UINT8 *data, *pos;
-
-	pos = data = (LEP_UINT8 *)dataPtr;
-	*pos++ = (LEP_UINT8)(subAddress >> 8);
-	*pos++ = (LEP_UINT8)subAddress;
-
-	error = wire->write(deviceAddress << 1, (char *)data, sizeof(subAddress));
-	if (error != 0)
-		return LEP_ERROR_I2C_FAIL;
-
-	error = wire->read(deviceAddress << 1, (char *)dataPtr, sizeof(LEP_UINT16) * dataLength);
-	if (error != 0)
-		return LEP_ERROR_I2C_FAIL;
-
-	for (int i = 0; i < dataLength; i++) {
-		LEP_UINT16 temp = dataPtr[i];
-		dataPtr[i] = (temp >> 8) | (temp << 8);
+		return result;
 	}
 
-	return result;
-}
+	LEP_RESULT LEP_I2C_MasterClose(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr)
+	{
+		mbed::I2C *wire = (mbed::I2C *)portDescPtr->portID;
+		LEP_RESULT result = LEP_OK;
 
-LEP_RESULT LEP_I2C_MasterWriteData(LEP_PORTID portID,
-	LEP_UINT8  deviceAddress,
-	LEP_UINT16 subAddress,
-	LEP_UINT16 *dataPtr,
-	LEP_UINT16 dataLength)
-{
-	mbed::I2C *wire = (mbed::I2C *)portID;
-	LEP_RESULT result = LEP_OK;
-	int error;
-	int len = sizeof(subAddress) + sizeof(LEP_UINT16) * dataLength;
-	LEP_UINT8 *data = (LEP_UINT8 *)malloc(len);
-	LEP_UINT8 *pos;
+		(void)wire;
 
-	if (data == NULL)
-		return LEP_ERROR;
-
-	pos = data;
-	*pos++ = (LEP_UINT8)(subAddress >> 8);
-	*pos++ = (LEP_UINT8)subAddress;
-
-	for (int i = 0; i < dataLength; i++) {
-		LEP_UINT16 temp = dataPtr[i];
-		*pos++ = (LEP_UINT8)(temp >> 8);
-		*pos++ = (LEP_UINT8)temp;
+		return result;
 	}
 
-	error = wire->write(deviceAddress << 1, (char *)data, len);
-	if (error != 0)
-		result = LEP_ERROR_I2C_FAIL;
+	LEP_RESULT LEP_I2C_MasterReset(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr)
+	{
+		mbed::I2C *wire = (mbed::I2C *)portDescPtr->portID;
+		LEP_RESULT result = LEP_OK;
 
-	free(data);
+		(void)wire;
 
-	return result;
-}
+		return result;
+	}
 
-LEP_RESULT LEP_I2C_MasterReadRegister(LEP_PORTID portID,
-	LEP_UINT8  deviceAddress,
-	LEP_UINT16 regAddress,
-	LEP_UINT16 *regValue)
-{
-	mbed::I2C *wire = (mbed::I2C *)portID;
-	LEP_RESULT result = LEP_OK;
-	int error;
-	LEP_UINT8 data[2], *pos;
+	LEP_RESULT LEP_I2C_MasterReadData(LEP_PORTID portID,
+		LEP_UINT8  deviceAddress,
+		LEP_UINT16 subAddress,
+		LEP_UINT16 *dataPtr,
+		LEP_UINT16 dataLength)
+	{
+		mbed::I2C *wire = (mbed::I2C *)portID;
+		LEP_RESULT result = LEP_OK;
+		int error;
+		LEP_UINT8 *data, *pos;
 
-	pos = data;
-	*pos++ = (LEP_UINT8)(regAddress >> 8);
-	*pos++ = (LEP_UINT8)regAddress;
+		pos = data = (LEP_UINT8 *)dataPtr;
+		*pos++ = (LEP_UINT8)(subAddress >> 8);
+		*pos++ = (LEP_UINT8)subAddress;
 
-	error = wire->write(deviceAddress << 1, (char *)data, sizeof(regAddress));
-	if (error != 0)
-		return LEP_ERROR_I2C_FAIL;
+		error = wire->write(deviceAddress << 1, (char *)data, sizeof(subAddress));
+		if (error != 0)
+			return LEP_ERROR_I2C_FAIL;
 
-	error = wire->read(deviceAddress << 1, (char *)data, sizeof(*regValue));
-	if (error != 0)
-		return LEP_ERROR_I2C_FAIL;
+		error = wire->read(deviceAddress << 1, (char *)dataPtr, sizeof(LEP_UINT16) * dataLength);
+		if (error != 0)
+			return LEP_ERROR_I2C_FAIL;
 
-	*regValue = (data[0] << 8) | data[1];
+		for (int i = 0; i < dataLength; i++) {
+			LEP_UINT16 temp = dataPtr[i];
+			dataPtr[i] = (temp >> 8) | (temp << 8);
+		}
 
-	return result;
-}
+		return result;
+	}
 
-LEP_RESULT LEP_I2C_MasterWriteRegister(LEP_PORTID portID,
-	LEP_UINT8  deviceAddress,
-	LEP_UINT16 regAddress,
-	LEP_UINT16 regValue)
-{
-	mbed::I2C *wire = (mbed::I2C *)portID;
-	LEP_RESULT result = LEP_OK;
-	int error;
-	LEP_UINT8 data[sizeof(regAddress) + sizeof(regValue)];
-	LEP_UINT8 *pos;
+	LEP_RESULT LEP_I2C_MasterWriteData(LEP_PORTID portID,
+		LEP_UINT8  deviceAddress,
+		LEP_UINT16 subAddress,
+		LEP_UINT16 *dataPtr,
+		LEP_UINT16 dataLength)
+	{
+		mbed::I2C *wire = (mbed::I2C *)portID;
+		LEP_RESULT result = LEP_OK;
+		int error;
+		int len = sizeof(subAddress) + sizeof(LEP_UINT16) * dataLength;
+		LEP_UINT8 *data = (LEP_UINT8 *)malloc(len);
+		LEP_UINT8 *pos;
 
-	if (data == NULL)
-		return LEP_ERROR;
+		if (data == NULL)
+			return LEP_ERROR;
 
-	pos = data;
-	*pos++ = (LEP_UINT8)(regAddress >> 8);
-	*pos++ = (LEP_UINT8)regAddress;
+		pos = data;
+		*pos++ = (LEP_UINT8)(subAddress >> 8);
+		*pos++ = (LEP_UINT8)subAddress;
 
-	*pos++ = (LEP_UINT8)(regValue >> 8);
-	*pos++ = (LEP_UINT8)regValue;
+		for (int i = 0; i < dataLength; i++) {
+			LEP_UINT16 temp = dataPtr[i];
+			*pos++ = (LEP_UINT8)(temp >> 8);
+			*pos++ = (LEP_UINT8)temp;
+		}
 
-	error = wire->write(deviceAddress << 1, (char *)data, sizeof(data));
-	if (error != 0)
-		result = LEP_ERROR_I2C_FAIL;
+		error = wire->write(deviceAddress << 1, (char *)data, len);
+		if (error != 0)
+			result = LEP_ERROR_I2C_FAIL;
 
-	return result;
-}
+		free(data);
 
-LEP_RESULT LEP_I2C_MasterStatus(LEP_PORTID portID,
-	LEP_UINT16 *portStatus)
-{
-	mbed::I2C *wire = (mbed::I2C *)portID;
-	LEP_RESULT result = LEP_OK;
+		return result;
+	}
 
-	(void)wire;
-	*portStatus = 0;
+	LEP_RESULT LEP_I2C_MasterReadRegister(LEP_PORTID portID,
+		LEP_UINT8  deviceAddress,
+		LEP_UINT16 regAddress,
+		LEP_UINT16 *regValue)
+	{
+		mbed::I2C *wire = (mbed::I2C *)portID;
+		LEP_RESULT result = LEP_OK;
+		int error;
+		LEP_UINT8 data[2], *pos;
 
-	return result;
-}
+		pos = data;
+		*pos++ = (LEP_UINT8)(regAddress >> 8);
+		*pos++ = (LEP_UINT8)regAddress;
+
+		error = wire->write(deviceAddress << 1, (char *)data, sizeof(regAddress));
+		if (error != 0)
+			return LEP_ERROR_I2C_FAIL;
+
+		error = wire->read(deviceAddress << 1, (char *)data, sizeof(*regValue));
+		if (error != 0)
+			return LEP_ERROR_I2C_FAIL;
+
+		*regValue = (data[0] << 8) | data[1];
+
+		return result;
+	}
+
+	LEP_RESULT LEP_I2C_MasterWriteRegister(LEP_PORTID portID,
+		LEP_UINT8  deviceAddress,
+		LEP_UINT16 regAddress,
+		LEP_UINT16 regValue)
+	{
+		mbed::I2C *wire = (mbed::I2C *)portID;
+		LEP_RESULT result = LEP_OK;
+		int error;
+		LEP_UINT8 data[sizeof(regAddress) + sizeof(regValue)];
+		LEP_UINT8 *pos;
+
+		if (data == NULL)
+			return LEP_ERROR;
+
+		pos = data;
+		*pos++ = (LEP_UINT8)(regAddress >> 8);
+		*pos++ = (LEP_UINT8)regAddress;
+
+		*pos++ = (LEP_UINT8)(regValue >> 8);
+		*pos++ = (LEP_UINT8)regValue;
+
+		error = wire->write(deviceAddress << 1, (char *)data, sizeof(data));
+		if (error != 0)
+			result = LEP_ERROR_I2C_FAIL;
+
+		return result;
+	}
+
+	LEP_RESULT LEP_I2C_MasterStatus(LEP_PORTID portID,
+		LEP_UINT16 *portStatus)
+	{
+		mbed::I2C *wire = (mbed::I2C *)portID;
+		LEP_RESULT result = LEP_OK;
+
+		(void)wire;
+		*portStatus = 0;
+
+		return result;
+	}
 
 }
