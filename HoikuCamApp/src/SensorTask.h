@@ -147,16 +147,7 @@ private:
 	LeptonTask leptonTask;
 public:
 	void SetConfig(lepton_config_t *config) { leptonTask.SetConfig(config); }
-	uint16_t GetMinValue() { return leptonTask.GetMinValue(); }
-	uint16_t GetMaxValue() { return leptonTask.GetMaxValue(); }
-	uint16_t GetTelemetryRevision() { return leptonTask.GetTelemetryRevision(); }
-	uint32_t GetTimeCounter() { return leptonTask.GetTimeCounter(); }
-	uint16_t GetFPA_Temp() { return leptonTask.GetFPA_Temp(); }
-	uint16_t GetWindowTemperature() { return leptonTask.GetWindowTemperature(); }
-	uint16_t *GetTelemetryA() { return leptonTask.GetTelemetryA(); }
-	uint16_t *GetTelemetryB() { return leptonTask.GetTelemetryB(); }
-	uint16_t *GetTelemetryC() { return leptonTask.GetTelemetryC(); }
-	uint16_t GetFpaTemperature() { return leptonTask.GetFpaTemperature(); }
+	LeptonTask *GetLeptonTask() { return &leptonTask; }
 };
 
 #endif // _SENSORTASK_H_

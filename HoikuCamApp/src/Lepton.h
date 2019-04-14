@@ -143,6 +143,7 @@ public:
 	void ProcessEvent(InterTaskSignals::T signals) override;
 	void Process() override;
 	void SetConfig(lepton_config_t *config) { _config = config; }
+	void SaveImage(const char *filename);
 	uint16_t GetMinValue() { return _minValue; }
 	uint16_t GetMaxValue() { return _maxValue; }
 	uint16_t GetTelemetryRevision() { return _telemetryA.TelemetryRevision; }

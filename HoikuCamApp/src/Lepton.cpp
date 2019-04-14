@@ -421,6 +421,13 @@ void LeptonTask::Process()
 	}
 }
 
+void LeptonTask::SaveImage(const char *filename)
+{
+	FILE *fp = fopen(filename, "wb");
+	fwrite(_image, sizeof(uint16_t), IMAGE_SIZE, fp);
+	fclose(fp);
+}
+
 extern "C" {
 
 	LEP_RESULT LEP_I2C_MasterOpen(LEP_PORTID portID,

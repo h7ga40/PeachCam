@@ -162,7 +162,7 @@ int read_client_info(google_drive_t *gd, const char *fname)
 
 	file = fopen(fname, "r");
 	if (file == NULL) {
-		printf("not open %s file %d\n", fname, ret);
+		printf("not open %s file %d\n", fname, errno);
 		ret = -1;
 		goto error;
 	}

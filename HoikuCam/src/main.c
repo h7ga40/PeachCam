@@ -310,6 +310,7 @@ void hoikucam_task(intptr_t exinf)
 }
 
 extern int curl_main(int argc, char **argv);
+extern int usrcmd_lpt(int argc, char **argv);
 
 static const cmd_table_t cmdlist[] = {
 	{"cd", "change directory", usrcmd_cd },
@@ -325,6 +326,7 @@ static const cmd_table_t cmdlist[] = {
 	{"dhcpc", "DHCP Client rel/renew/info", usrcmd_dhcp4c},
 	{"dnsc", "DNS client", usrcmd_dnsc },
 	{"ntpc", "NTP client", usrcmd_ntpc },
+	{"lpt", "Lepton cotrol", usrcmd_lpt },
 	{"info", "This is a description text string for info command.", usrcmd_info},
 	{"exit", "Exit Natural Tiny Shell", usrcmd_exit},
 };
