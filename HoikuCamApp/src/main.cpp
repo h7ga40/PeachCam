@@ -376,6 +376,27 @@ extern "C" int usrcmd_lpt(int argc, char **argv)
 		auto file = globalState.GetFilePath() + ".bmp";
 		lepton->SaveImage(file.c_str());
 	}
+	else if ((strcmp(argv[1], "r") == 0) && (argc > 2)) {
+		lepton->ReqRadiometry(strcmp(argv[2], "0") == 0);
+	}
+	else if (strcmp(argv[1], "r0") == 0) {
+		lepton->ReqRadiometry(false);
+	}
+	else if (strcmp(argv[1], "r1") == 0) {
+		lepton->ReqRadiometry(true);
+	}
+	else if (strcmp(argv[1], "n") == 0) {
+		lepton->ReqFFCNormalization();
+	}
+	else if ((strcmp(argv[1], "t") == 0) && (argc > 2)) {
+		lepton->ReqTelemetry(strcmp(argv[2], "0") == 0);
+	}
+	else if (strcmp(argv[1], "t0") == 0) {
+		lepton->ReqTelemetry(false);
+	}
+	else if (strcmp(argv[1], "t1") == 0) {
+		lepton->ReqTelemetry(true);
+	}
 
 	return 0;
 }

@@ -138,12 +138,21 @@ private:
 	TLeptonTelemetryB _telemetryB;
 	TLeptonTelemetryC _telemetryC;
 	uint16_t _fpaTemperature;
+	int _radiometryReq;
+	bool _runFFCNormReq;
+	int _telemetryReq;
+	void EnableRadiometry(bool enable);
+	void RunFFCNormalization();
+	void EnableTelemetry(bool enable);
 public:
 	void OnStart() override;
 	void ProcessEvent(InterTaskSignals::T signals) override;
 	void Process() override;
 	void SetConfig(lepton_config_t *config) { _config = config; }
 	void SaveImage(const char *filename);
+	void ReqRadiometry(bool enable) { _radiometryReq = enable ? 2 : 1; }
+	void ReqFFCNormalization() { _runFFCNormReq = 1; }
+	void ReqTelemetry(bool enable) { _telemetryReq = enable ? 2 : 1; }
 	uint16_t GetMinValue() { return _minValue; }
 	uint16_t GetMaxValue() { return _maxValue; }
 	uint16_t GetTelemetryRevision() { return _telemetryA.TelemetryRevision; }

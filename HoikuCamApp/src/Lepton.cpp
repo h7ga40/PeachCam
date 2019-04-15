@@ -121,8 +121,19 @@ void LeptonTask::OnStart()
 			oemSoftwareVersion.dsp_build);
 	}
 
+	EnableRadiometry(_config->radiometry);
+
+	if (_config->ffcnorm) {
+		RunFFCNormalization();
+	}
+
+	EnableTelemetry(_config->telemetry);
+}
+
+void LeptonTask::EnableRadiometry(bool enable)
+{
 	LEP_RAD_RADIOMETRY_FILTER_T radRadiometryFilter;
-	ret = LEP_SetRadRadometryFilter(&_port, _config->radiometry ? LEP_RAD_ENABLE : LEP_RAD_DISABLE);
+	LEP_RESULT ret = LEP_SetRadRadometryFilter(&_port, enable ? LEP_RAD_ENABLE : LEP_RAD_DISABLE);
 	if (ret != LEP_OK) {
 		printf("Radiometry filter set error %d\n", ret);
 	}
@@ -130,7 +141,7 @@ void LeptonTask::OnStart()
 	if (ret == LEP_OK) {
 		printf("Radiometry filter %s\n", radRadiometryFilter == LEP_RAD_ENABLE ? "enabled" : "disabled");
 	}
-	if (_config->radiometry) {
+	if (enable) {
 		LEP_RAD_ENABLE_E tLinear;
 		ret = LEP_SetRadTLinearEnableState(&_port, LEP_RAD_ENABLE);
 		if (ret != LEP_OK) {
@@ -141,13 +152,25 @@ void LeptonTask::OnStart()
 			printf("TLinear enable %s\n", tLinear == LEP_RAD_ENABLE ? "enabled" : "disabled");
 		}
 	}
-	if (_config->ffcnorm) {
-		ret = LEP_RunSysFFCNormalization(&_port);
-		if (ret != LEP_OK) {
-			printf("Flat-Field Correction normalization error %d\n", ret);
-		}
+}
+
+void LeptonTask::RunFFCNormalization()
+{
+	printf("Flat-Field Correction normalization");
+	LEP_RESULT ret = LEP_RunSysFFCNormalization(&_port);
+	if (ret != LEP_OK) {
+		printf("error %d\n", ret);
 	}
-	if (_config->telemetry) {
+	else {
+		printf("\n");
+	}
+}
+
+void LeptonTask::EnableTelemetry(bool enable)
+{
+	LEP_RESULT ret;
+
+	if (enable) {
 		printf("SYS Telemetry Location");
 		ret = LEP_SetSysTelemetryLocation(&_port, LEP_TELEMETRY_LOCATION_FOOTER);
 		if (ret != LEP_OK) {
@@ -159,12 +182,15 @@ void LeptonTask::OnStart()
 	}
 
 	printf("SYS Telemetry");
-	ret = LEP_SetSysTelemetryEnableState(&_port, _config->telemetry ? LEP_TELEMETRY_ENABLED : LEP_TELEMETRY_DISABLED);
+	ret = LEP_SetSysTelemetryEnableState(&_port, enable ? LEP_TELEMETRY_ENABLED : LEP_TELEMETRY_DISABLED);
 	if (ret != LEP_OK) {
 		printf("  error %d\n", ret);
 	}
-	else {
+	else if (enable) {
 		printf(" Enable\n");
+	}
+	else {
+		printf(" Disable\n");
 	}
 
 	LEP_SYS_TELEMETRY_ENABLE_STATE_E telemetory = LEP_TELEMETRY_DISABLED;
@@ -297,6 +323,30 @@ void LeptonTask::Process()
 		break;
 	case State::UpdateParam:
 		LEP_GetSysFpaTemperatureKelvin(&_port, &_fpaTemperature);
+		switch (_radiometryReq) {
+		case 1:
+			_radiometryReq = 0;
+			EnableRadiometry(false);
+			break;
+		case 2:
+			_radiometryReq = 0;
+			EnableRadiometry(true);
+			break;
+		}
+		if (_runFFCNormReq) {
+			_runFFCNormReq = 0;
+			RunFFCNormalization();
+		}
+		switch (_telemetryReq) {
+		case 1:
+			_telemetryReq = 0;
+			EnableTelemetry(false);
+			break;
+		case 2:
+			_telemetryReq = 0;
+			EnableTelemetry(true);
+			break;
+		}
 		_state = State::Viewing;
 		_timer = 0;
 		break;

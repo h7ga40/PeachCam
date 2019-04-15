@@ -904,7 +904,7 @@ extern "C" osThreadId_t osThreadNew(osThreadFunc_t func, void *argument, const o
 	ctsk.exinf = (intptr_t)argument;
 
 	if (attr != NULL) {
-		ctsk.itskpri = osPriorityRealtime - attr->priority + TMIN_TPRI;
+		ctsk.itskpri = TMAX_TPRI - attr->priority;
 		ctsk.stk = (STK_T *)attr->stack_mem;
 		ctsk.stksz = attr->stack_size;
 	}
@@ -994,7 +994,7 @@ extern "C" osStatus_t osThreadSetPriority(osThreadId_t thread_id, osPriority_t p
 	if (!rtos_queue_contains(&osRtxThreads, (rtos_item_t *)result))
 		return osErrorParameter;
 
-	ret = chg_pri(result->tskid, (PRI)(osPriorityRealtime - priority + TMIN_TPRI));
+	ret = chg_pri(result->tskid, (PRI)(TMAX_TPRI - priority));
 	if (ret < 0)
 		return conv_error(ret);
 
@@ -1014,7 +1014,7 @@ extern "C" osPriority_t osThreadGetPriority(osThreadId_t thread_id)
 	if (ret < 0)
 		return (osPriority_t)conv_error(ret);
 
-	return (osPriority_t)(pri - TMIN_TPRI - osPriorityRealtime);
+	return (osPriority_t)(pri - TMAX_TPRI);
 }
 
 extern "C" uint32_t osThreadFlagsSet(osThreadId_t thread_id, uint32_t flags)
