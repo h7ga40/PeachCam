@@ -3,6 +3,7 @@
 
 #include "TaskBase.h"
 #include "LEPTON_Types.h"
+#include "LEPTON_RAD.h"
 
 struct TLeptonTelemetryStatusBits {
 	uint16_t : 3;
@@ -138,12 +139,20 @@ private:
 	TLeptonTelemetryB _telemetryB;
 	TLeptonTelemetryC _telemetryC;
 	uint16_t _fpaTemperature;
+	uint16_t _auxTemperature;
 	int _radiometryReq;
 	bool _runFFCNormReq;
 	int _telemetryReq;
+	int _spotmeterReq;
+	LEP_RAD_ROI_T _spotmeterRoi;
+	LEP_RAD_ROI_T _reqSpotmeterRoi;
 	void EnableRadiometry(bool enable);
 	void RunFFCNormalization();
 	void EnableTelemetry(bool enable);
+	void GetSpotmeterObj();
+	void SetSpotmeterRoi(LEP_RAD_ROI_T newRoi);
+	void LowPower();
+	void PowerOn();
 public:
 	void OnStart() override;
 	void ProcessEvent(InterTaskSignals::T signals) override;
@@ -153,6 +162,15 @@ public:
 	void ReqRadiometry(bool enable) { _radiometryReq = enable ? 2 : 1; }
 	void ReqFFCNormalization() { _runFFCNormReq = 1; }
 	void ReqTelemetry(bool enable) { _telemetryReq = enable ? 2 : 1; }
+	void ReqGetSpotmeterObj() { _spotmeterReq = 1; }
+	void ReqSetSpotmeterRoi(int x0, int y0, int x1, int y1)
+	{
+		_reqSpotmeterRoi.startCol = (LEP_UINT16)x0;
+		_reqSpotmeterRoi.startRow = (LEP_UINT16)y0;
+		_reqSpotmeterRoi.endCol = (LEP_UINT16)x1;
+		_reqSpotmeterRoi.endRow = (LEP_UINT16)y1;
+		_spotmeterReq = 2;
+	}
 	uint16_t GetMinValue() { return _minValue; }
 	uint16_t GetMaxValue() { return _maxValue; }
 	uint16_t GetTelemetryRevision() { return _telemetryA.TelemetryRevision; }
@@ -163,6 +181,7 @@ public:
 	uint16_t *GetTelemetryB() { return (uint16_t *)&_telemetryB; }
 	uint16_t *GetTelemetryC() { return (uint16_t *)&_telemetryC; }
 	uint16_t GetFpaTemperature() { return _fpaTemperature; }
+	uint16_t GetAuxTemperature() { return _auxTemperature; }
 };
 
 #endif // LEPTON_H

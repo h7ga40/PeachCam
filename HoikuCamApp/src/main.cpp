@@ -290,15 +290,15 @@ text(void *data, const XML_Char *s, int len)
 		}
 		break;
 	case psLeptonRadiometry:
-		if (*s != '\0')
+		if ((*s != '0') || (len != 1))
 			cd->lepton.radiometry = 1;
 		break;
 	case psLeptonFFCNorm:
-		if (*s != '\0')
+		if ((*s != '0') || (len != 1))
 			cd->lepton.ffcnorm = 1;
 		break;
 	case psLeptonTelemetry:
-		if (*s != '\0')
+		if ((*s != '0') || (len != 1))
 			cd->lepton.telemetry = 1;
 		break;
 	case psLeptonOffset:
@@ -397,6 +397,12 @@ extern "C" int usrcmd_lpt(int argc, char **argv)
 	else if (strcmp(argv[1], "t1") == 0) {
 		lepton->ReqTelemetry(true);
 	}
+	else if (strcmp(argv[1], "p") == 0) {
+		lepton->ReqGetSpotmeterObj();
+	}
+	else if ((strcmp(argv[1], "b") == 0) && (argc > 5)) {
+		lepton->ReqSetSpotmeterRoi(atoi(argv[2]), atoi(argv[3]), atoi(argv[4]), atoi(argv[5]));
+	}
 
 	return 0;
 }
@@ -474,8 +480,12 @@ int main()
 			snprintf(textbuf, sizeof(textbuf), "TmC:%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15]);
 			lcd_drawString(textbuf, 72, 172, 0xFCCC, 0x0000);
 #endif
-			int fpatem = lepton->GetFpaTemperature() - 27315;
-			snprintf(textbuf, sizeof(textbuf), "FPA:%4d.%02u℃", fpatem / 100, (fpatem > 0) ? (fpatem % 100) : (100 - fpatem % 100));
+			int auxtemp = lepton->GetFpaTemperature() - 27315;
+			snprintf(textbuf, sizeof(textbuf), "FPA:%4d.%02u℃", auxtemp / 100, (auxtemp > 0) ? (auxtemp % 100) : (100 - auxtemp % 100));
+			lcd_drawString(textbuf, 400, 160, 0xFCCC, 0x0000);
+
+			int fpatemp = lepton->GetAuxTemperature() - 27315;
+			snprintf(textbuf, sizeof(textbuf), "AUX:%4d.%02u℃", fpatemp / 100, (fpatemp > 0) ? (fpatemp % 100) : (100 - fpatemp % 100));
 			lcd_drawString(textbuf, 400, 172, 0xFCCC, 0x0000);
 
 			int minValue = (int)(2.6 * (lepton->GetMinValue() - 8192)) + config.lepton.offset - 27315;
