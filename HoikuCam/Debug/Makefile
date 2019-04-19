@@ -205,8 +205,8 @@ CFLAGS = $(COPTS) $(CDEFS) $(INCLUDES)
 
 APPLDIRS := $(APPLDIRS) $(SRCDIR)/$(TINETDIR)/netapp
 APPL_COBJS := $(APPL_COBJS) ping.o ping6.o resolver.o dhcp4_cli.o netapp_subr.o ntp_cli.o net_misc.o
-APPLDIRS := $(APPLDIRS) ../../ntshell/tlsf ../../ntshell/fatfs ../../ntshell/ntshell ../../ntshell/ntshell/core ../../ntshell/ntshell/util ../../ntshell/src
-APPL_COBJS := $(APPL_COBJS) netcmd.o fdtable.o stdio_stub.o io_stub.o socket_stub.o ffarch.o diskio.o ff.o sdfs.o ccsbcs.o ntshell.o text_editor.o text_history.o usrcmd.o vtrecv.o vtsend.o ntlibc.o ntstdio.o ntopt.o syscall.o tlsf.o
+APPLDIRS := $(APPLDIRS) ../../ntshell/fatfs ../../ntshell/ntshell ../../ntshell/ntshell/core ../../ntshell/ntshell/util ../../ntshell/src
+APPL_COBJS := $(APPL_COBJS) netcmd.o fdtable.o stdio_stub.o io_stub.o socket_stub.o ffarch.o diskio.o ff.o sdfs.o ccsbcs.o ntshell.o text_editor.o text_history.o usrcmd.o vtrecv.o vtsend.o ntlibc.o ntstdio.o ntopt.o syscall.o
 
 #
 #  アプリケーションプログラムに関する定義

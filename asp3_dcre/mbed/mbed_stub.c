@@ -35,7 +35,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  *
- *  $Id: mbed_stub.c 1862 2019-04-02 06:08:10Z coas-nagasima $
+ *  $Id: mbed_stub.c 1890 2019-04-19 11:59:49Z coas-nagasima $
  */
 
 /*
@@ -50,7 +50,7 @@
 #include "kernel_cfg.h"
 #include "t_syslog.h"
 
-int main()
+int _sta_ker()
 {
 	static const char *const args[] = {
 		(char *)1,
@@ -166,8 +166,7 @@ void *_sbrk(int incr)
     return (void *) prev_heap;
 }
 
-__attribute__((weak))
-void *SYS_brk(void *addr)
+void *shell_brk(void *addr)
 {
 	if (addr == 0) {
 		return (void *)(&__HeapBase);
@@ -178,8 +177,7 @@ void *SYS_brk(void *addr)
 	return (void *)-1;
 }
 
-__attribute__((weak))
-void *SYS_mmap2(void *start, size_t length, int prot, int flags, int fd, off_t pgoffset)
+void *shell_mmap2(void *start, size_t length, int prot, int flags, int fd, off_t pgoffset)
 {
 	if (fd != -1)
 		return (void *)-EINVAL;
@@ -190,13 +188,27 @@ void *SYS_mmap2(void *start, size_t length, int prot, int flags, int fd, off_t p
 	return (void *)-1;
 }
 
-__attribute__((weak))
-int SYS_mprotect(void *addr, size_t len, int prot)
+int shell_mprotect(void *addr, size_t len, int prot)
 {
 	//if ((addr >= (void *)&__HeapBase) && (addr + len < (void *)&__HeapLimit)) {
 		return 0;
 	//}
 	//return -1;
+}
+
+__attribute__((weak))
+long SYS_brk(long a) {
+	return (long)shell_brk((void *)a);
+}
+
+__attribute__((weak))
+long SYS_mmap2(long a, long b, long c, long d, long e, long f, long g) {
+	return (int)shell_mmap2((void *)a, (size_t)b, (int)c, (int)d, (int)e, ((off_t)f << 32) | (off_t)g);
+}
+
+__attribute__((weak))
+long SYS_mprotect(long a, long b, long c) {
+	return shell_mprotect((void *)a, (size_t)b, (int)c);
 }
 
 __attribute__((weak))
@@ -219,6 +231,7 @@ long SYS_munmap()
 
 int malloc_lock_sem_count[TNUM_TSKID];
 
+__attribute__((weak))
 void __malloc_lock(struct _reent *_r)
 {
 	ER ercd;
@@ -245,6 +258,7 @@ error:
 	while(0);
 }
 
+__attribute__((weak))
 void __malloc_unlock(struct _reent *_r)
 {
 	ER ercd;

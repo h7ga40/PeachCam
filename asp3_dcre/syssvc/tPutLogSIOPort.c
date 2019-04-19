@@ -1,9 +1,8 @@
 /*
- *  TOPPERS/ASP Kernel
- *      Toyohashi Open Platform for Embedded Real-Time Systems/
- *      Advanced Standard Profile Kernel
+ *  TOPPERS Software
+ *      Toyohashi Open Platform for Embedded Real-Time Systems
  * 
- *  Copyright (C) 2007-2016 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2007-2018 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -35,14 +34,14 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: tPutLogGRPeach.c 1484 2018-03-30 12:24:59Z coas-nagasima $
+ *  $Id: tPutLogSIOPort.c 1888 2019-04-19 09:55:29Z coas-nagasima $
  */
 
 /*
- *		システムログの低レベル出力
+ *		SIOドライバによるシステムログの低レベル出力
  */
 
-#include "tPutLogGRPeach_tecsgen.h"
+#include "tPutLogSIOPort_tecsgen.h"
 
 /*
  *  システムログの低レベル出力のための初期化
@@ -51,7 +50,7 @@
  *  ト依存部から直接呼び出すための関数．
  */
 void
-tPutLogGRPeach_initialize(void)
+tPutLogSIOPort_initialize(void)
 {
 	cSIOPort_open();
 }
@@ -65,7 +64,7 @@ void
 ePutLog_putChar(char c)
 {
 	if(c == '\n'){
-		while(!cSIOPort_putChar('\r'));
+		while (!cSIOPort_putChar('\r')) ;
 	}
-	while(!cSIOPort_putChar(c));
+	while (!cSIOPort_putChar(c)) ;
 }

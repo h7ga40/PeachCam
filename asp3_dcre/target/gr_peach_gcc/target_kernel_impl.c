@@ -263,7 +263,7 @@ target_initialize(void)
 	 *  低レベル出力用にSIOを初期化
 	 */
 #ifndef TOPPERS_OMIT_TECS
-	tPutLogGRPeach_initialize();
+	tPutLogSIOPort_initialize();
 #endif /* TOPPERS_OMIT_TECS */
 }
 

@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: shellif.h 1856 2019-03-30 14:31:58Z coas-nagasima $
+ *  @(#) $Id: shellif.h 1888 2019-04-19 09:55:29Z coas-nagasima $
  */
 #ifndef SHELLIF_H
 #define SHELLIF_H
@@ -73,9 +73,9 @@ typedef unsigned int tcflag_t;
 
 #define NCCS 32
 
-#include <bits/fcntl.h>
-#include <bits/termios.h>
-#include <bits/stat.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <sys/stat.h>
 #include <sys/select.h>
 #include <time.h>
 #include <limits.h>
@@ -84,8 +84,8 @@ typedef unsigned int tcflag_t;
 #include <stdio.h>
 #include <sys/utsname.h>
 #include <dirent.h>
-#include <bits/ioctl.h>
-#include <bits/errno.h>
+#include <sys/ioctl.h>
+#include <errno.h>
 #include <sys/socket.h>
 #else
 #include "../musl-1.1.18/include/bits/alltypes.h"

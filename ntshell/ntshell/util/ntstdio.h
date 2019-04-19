@@ -73,8 +73,6 @@ typedef void (*NTSTDIO_XO)(struct ntstdio_t *handle, unsigned char c);
 typedef struct ntstdio_t {
 	NTSTDIO_XI xi;
 	NTSTDIO_XO xo;
-	char *outptr;
-	int len;
 	int pos;
 	unsigned int option;
 	void *exinf;

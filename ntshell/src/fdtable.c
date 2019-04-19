@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: fdtable.c 1863 2019-04-02 06:10:48Z coas-nagasima $
+ *  @(#) $Id: fdtable.c 1888 2019-04-19 09:55:29Z coas-nagasima $
  */
 #include "shellif.h"
 #include <stdint.h>
@@ -56,12 +56,11 @@ static const char THIS_FILE[] = __FILE__;
 extern IO_TYPE IO_TYPE_STDIN;
 extern IO_TYPE IO_TYPE_STDOUT;
 extern IO_TYPE IO_TYPE_STDERR;
-extern ntstdio_t ntstdio;
 
 static struct SHELL_FILE fd_table[8 * sizeof(FLGPTN)] = {
-	{ 0, &IO_TYPE_STDIN, 0, .exinf = &ntstdio },
-	{ 1, &IO_TYPE_STDOUT, 0, .exinf = &ntstdio },
-	{ 2, &IO_TYPE_STDERR, 0,.exinf = &ntstdio },
+	{ STDIN_FILENO, &IO_TYPE_STDIN, 0 },
+	{ STDOUT_FILENO, &IO_TYPE_STDOUT, 0 },
+	{ STDERR_FILENO, &IO_TYPE_STDERR, 0 },
 };
 #define fd_table_count (sizeof(fd_table) / sizeof(fd_table[0]))
 
@@ -286,48 +285,6 @@ int shell_poll(struct pollfd *fds, nfds_t nfds, int timeout)
 	return -EBADF;
 }
 
-/* TODO:コールバック化したい */
-void stdio_update_evts()
-{
-	int fd = STDIN_FILENO;
-	struct SHELL_FILE *fp = &fd_table[fd];
-	FLGPTN flgptn = 0;
-
-	if (serial_readable((serial_t *)((struct ntstdio_t *)fp->exinf)->exinf)) {
-		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
-
-		FD_SET(fd, (fd_set *)&flgptn);
-	}
-	if (serial_writable((serial_t *)((struct ntstdio_t *)fp->exinf)->exinf)) {
-		if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
-
-		FD_SET(fd, (fd_set *)&flgptn);
-	}
-
-	if (flgptn != 0) {
-		set_flg(FLG_SELECT_WAIT, flgptn);
-	}
-}
-
-/* TODO:コールバック化したい */
-void stdio_flgptn(FLGPTN *flgptn)
-{
-	int fd = STDIN_FILENO;
-	struct SHELL_FILE *fp = &fd_table[fd];
-	*flgptn = 0;
-
-	if (serial_readable((serial_t *)((struct ntstdio_t *)fp->exinf)->exinf)) {
-		if (fp->readevt_w == fp->readevt_r) fp->readevt_w++;
-
-		FD_SET(fd, (fd_set *)flgptn);
-	}
-	if (serial_writable((serial_t *)((struct ntstdio_t *)fp->exinf)->exinf)) {
-		if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
-
-		FD_SET(fd, (fd_set *)flgptn);
-	}
-}
-
 ER shell_get_evts(struct fd_events *evts, TMO tmout)
 {
 	int count = 0;
@@ -339,8 +296,6 @@ ER shell_get_evts(struct fd_events *evts, TMO tmout)
 		ER ret;
 		FLGPTN waitptn, flgptn, readfds = 0, writefds = 0;
 		struct SHELL_FILE *fp = NULL;
-
-		stdio_update_evts();
 
 #ifndef NTSHELL_NO_SOCKET
 		waitptn = *((FLGPTN *)&evts->errorfds);
@@ -393,8 +348,6 @@ ER shell_get_evts(struct fd_events *evts, TMO tmout)
 				syslog(LOG_ERROR, "twai_flg => %d", ret);
 				return ret;
 			}
-
-			stdio_flgptn(&flgptn);
 
 			if (flgptn == 0)
 				return E_TMOUT;

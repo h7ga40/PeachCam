@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  *
- *  @(#) $Id: io_stub.c 1863 2019-04-02 06:10:48Z coas-nagasima $
+ *  @(#) $Id: io_stub.c 1890 2019-04-19 11:59:49Z coas-nagasima $
  */
 #include "shellif.h"
 #include <stdint.h>
@@ -633,42 +633,4 @@ int shell_access(const char *path, int mode)
 		return ret;
 
 	return 0;
-}
-
-#ifndef _MSC_VER
-extern uint32_t __HeapBase;
-extern uint32_t __HeapLimit;
-#else
-uint8_t __HeapBase[14 * 4096];
-#define __HeapLimit __HeapBase[sizeof(__HeapBase)]
-#endif
-
-void *shell_brk(void *addr)
-{
-	if (addr == 0) {
-		return (void *)(&__HeapBase);
-	}
-	if ((addr >= (void *)&__HeapBase) && (addr < (void *)&__HeapLimit)) {
-		return addr;
-	}
-	return (void *)-1;
-}
-
-void *shell_mmap2(void *start, size_t length, int prot, int flags, int fd, off_t pgoffset)
-{
-	if (fd != -1)
-		return (void *)-EINVAL;
-
-	if ((length >= 0) && (length <= sizeof(&__HeapBase))) {
-		return &__HeapBase;
-	}
-	return (void *)-1;
-}
-
-int shell_mprotect(void *addr, size_t len, int prot)
-{
-	//if ((addr >= (void *)&__HeapBase) && (addr + len < (void *)&__HeapLimit)) {
-	return 0;
-//}
-//return -1;
 }

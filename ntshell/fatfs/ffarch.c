@@ -79,7 +79,7 @@ void ffarch_task(intptr_t exinf)
 
 	ret2 = get_tim(&now);
 	if (ret2 != E_OK){
-		printf("[ffarch] get_tim error: %s",
+		syslog(LOG_NOTICE, "[ffarch] get_tim error: %s",
 			itron_strerror(ret2));
 		return;
 	}
@@ -93,14 +93,14 @@ void ffarch_task(intptr_t exinf)
 		/* 待ち */
 		ret = tslp_tsk(timer);
 		if ((ret != E_OK) && (ret != E_TMOUT)) {
-			printf("[ffarch] tslp_tsk error: %s %d",
+			syslog(LOG_NOTICE, "[ffarch] tslp_tsk error: %s %d",
 				itron_strerror(ret), timer);
 			break;
 		}
 
 		ret2 = get_tim(&now);
 		if (ret2 != E_OK) {
-			printf("[ffarch] get_tim error: %s",
+			syslog(LOG_NOTICE, "[ffarch] get_tim error: %s",
 				itron_strerror(ret2));
 			break;
 		}
@@ -130,7 +130,7 @@ SD Sd;
 bool_t romdisk_init();
 bool_t SD_begin();
 
-void ffarch_init()
+void ffarch_init(void)
 {
 	/* SD_CD */
 	gpio_init_in(&ins, P7_8);
@@ -149,10 +149,10 @@ void ffarch_init()
 	act_tsk(FFARCH_TASK);
 
 	if (romdisk_init()) {
-		printf("ROM disk (0:) OK!\n");
+		syslog(LOG_NOTICE, "ROM disk (0:) OK!");
 	}
 	else {
-		printf("ROM disk (0:) NG!\n");
+		syslog(LOG_NOTICE, "ROM disk (0:) NG!");
 	}
 }
 
@@ -351,7 +351,7 @@ void sdfs_cychdr(intptr_t exinf)
 	}
 }
 
-int ffarch_get_timer()
+int ffarch_get_timer(void)
 {
 	return ffarch_timer;
 }
@@ -366,7 +366,7 @@ void ffarch_progress(int elapse)
 	}
 }
 
-void ffarch_timeout()
+void ffarch_timeout(void)
 {
 	if (ffarch_timer != 0)
 		return;
@@ -374,7 +374,7 @@ void ffarch_timeout()
 	switch (ffarch_state) {
 	case FFS_RETRY_WAIT:
 		if (ffarch_retry_count == 0) {
-			printf("SD card (1:) initialize tired...\n");
+			syslog(LOG_NOTICE, "SD card (1:) initialize tired...");
 
 			ffarch_state = FFS_IDLE;
 			ffarch_timer = TMO_FEVR;
@@ -387,10 +387,10 @@ void ffarch_timeout()
  		/* SDカードが入れられた場合 */
  		if ((sdfs._is_initialized & STA_NOINIT)
  			|| (((sdfs_prev_status & STA_NODISK) != 0) && ((sdfs_new_status & STA_NODISK) == 0))) {
-			printf("SD card initializing ...\n");
+			syslog(LOG_NOTICE, "SD card initializing ...");
 
 			if (SD_begin()) {
-				printf("SD card (1:) OK!\n");
+				syslog(LOG_NOTICE, "SD card (1:) OK!");
 
 				/* uploadディレクトリを作成しておく */
 				f_mkdir("1:/upload");
@@ -400,14 +400,14 @@ void ffarch_timeout()
 				ffarch_retry_count = 3;
 			}
 			else {
-				printf("SD card (1:) NG!\n");
+				syslog(LOG_NOTICE, "SD card (1:) NG!");
 				ffarch_state = FFS_RETRY_WAIT;
 				ffarch_timer = 1000 * 1000;
 			}
 		}
 		/* SDカードが抜かれた場合 */
 		else if (((sdfs_prev_status & STA_NODISK) == 0) && ((sdfs_new_status & STA_NODISK) != 0)) {
-			printf("SD card unmount\n");
+			syslog(LOG_NOTICE, "SD card unmount");
 
 			f_mount(&Sd.FatFs, "1:", 0);
 			ffarch_state = FFS_IDLE;

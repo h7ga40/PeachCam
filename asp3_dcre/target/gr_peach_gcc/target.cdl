@@ -59,7 +59,7 @@ const char *const BannerCopyrightNotice = "";			/* 著作権表示 */
 /*
  *  ターゲット依存のセルタイプの定義
  */
-import("tPutLogGRPeach.cdl");
+import("syssvc/tPutLogSIOPort.cdl");
 import("tSIOPortGRPeach.cdl");
 
 /*
@@ -71,7 +71,7 @@ cell tSIOPortGRPeach SIOPortTarget1 {
 /*
  *  低レベル出力の組み上げ記述
  */
-cell tPutLogGRPeach PutLogTarget {
+cell tPutLogSIOPort PutLogTarget {
 	/* SIOドライバとの結合 */
 	cSIOPort = SIOPortTarget1.eSIOPort;
 };

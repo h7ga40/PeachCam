@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: ntshell_main.c 1863 2019-04-02 06:10:48Z coas-nagasima $
+ *  @(#) $Id: ntshell_main.c 1888 2019-04-19 09:55:29Z coas-nagasima $
  */
 
 /* 
@@ -77,6 +77,7 @@ int shell_uname(struct utsname *uts)
 	return 0;
 }
 
+void stdio_open(ID portid);
 static int usrcmd_ntopt_callback(long *args, void *extobj);
 
 int ntshell_exit_code;
@@ -85,7 +86,7 @@ jmp_buf process_exit;
 
 void ntshell_task_init(ID portid)
 {
-	serial_ctl_por(portid, IOCTL_CRLF | IOCTL_FCSND | IOCTL_FCRCV);
+	stdio_open(portid);
 }
 
 /*
@@ -94,7 +95,14 @@ void ntshell_task_init(ID portid)
 void ntshell_task(intptr_t exinf)
 {
 	ntshell_state = 1;
-	ntshell_exit_code = ntopt_parse(command, usrcmd_ntopt_callback, NULL);
+
+	if (setjmp(process_exit) == 0) {
+		ntshell_exit_code = ntopt_parse(command, usrcmd_ntopt_callback, NULL);
+	}
+
+	fflush(stdout);
+	clean_fd();
+
 	ntshell_state = 2;
 }
 
@@ -137,8 +145,6 @@ static int usrcmd_ntopt_callback(long *args, void *extobj)
 
 	if ((found == 0) && (((const char *)args[1])[0] != '\0'))
 		printf("Unknown command found.\n");
-
-	clean_fd();
 
 	return result;
 }

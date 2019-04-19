@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: net_misc.c 1551 2018-06-14 08:29:29Z coas-nagasima $
+ *  @(#) $Id: net_misc.c 1888 2019-04-19 09:55:29Z coas-nagasima $
  */
 
 #include <kernel.h>
@@ -94,7 +94,7 @@ net_misc_task (intptr_t exinf)
 	int timer;
 
 	get_tid(&nc->tskid);
-	printf("[NET MISC:%d,%d] started.", nc->tskid, (ID)exinf);
+	syslog(LOG_NOTICE, "[NET MISC:%d,%d] started.", nc->tskid, (ID)exinf);
 
 	/* 初期化 */
 	ct = dhcp4_cli_initialize(nc->tskid, UDP4_DHCP_CLI_CEPID);
@@ -102,7 +102,7 @@ net_misc_task (intptr_t exinf)
 
 	ret = get_tim(&time);
 	if (ret != E_OK) {
-		printf("[NET MISC,%d] get_tim error: %7lu,%s",
+		syslog(LOG_NOTICE, "[NET MISC,%d] get_tim error: %7lu,%s",
 			nc->cepid, time / SYSTIM_HZ, itron_strerror(ret));
 		return;
 	}
@@ -116,14 +116,14 @@ net_misc_task (intptr_t exinf)
 		/* 待ち */
 		error = tslp_tsk(timer);
 		if ((error != E_OK) && (error != E_TMOUT)) {
-			printf("[NET MISC,%d] tslp_tsk error: %s %d",
+			syslog(LOG_NOTICE, "[NET MISC,%d] tslp_tsk error: %s %d",
 				nc->cepid, itron_strerror(error), timer);
 			break;
 		}
 
 		ret = get_tim(&time);
 		if (ret != E_OK) {
-			printf("[NET MISC,%d] get_tim error: %s",
+			syslog(LOG_NOTICE, "[NET MISC,%d] get_tim error: %s",
 				nc->cepid, itron_strerror(ret));
 			break;
 		}

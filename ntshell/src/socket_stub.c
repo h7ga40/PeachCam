@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: socket_stub.c 1867 2019-04-05 01:24:01Z coas-nagasima $
+ *  @(#) $Id: socket_stub.c 1888 2019-04-19 09:55:29Z coas-nagasima $
  */
 #include "shellif.h"
 #include <kernel.h>
@@ -61,8 +61,6 @@
 #include <netinet/tcp.h>
 #include <netinet/tcp_var.h>
 #include <netapp/resolver.h>
-extern const ID tmax_tcp_cepid;
-#include "ff.h"
 #include "fdtable.h"
 #include "kernel_cfg.h"
 

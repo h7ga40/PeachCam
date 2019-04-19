@@ -57,6 +57,11 @@
 #define RZA1_CLK_P0			33333333UL		/* 33.33…MHz */
 
 /*
+ *  ボーレート設定
+ */
+#define UART_BAUDRATE		115200
+
+/*
  *  LEDの点灯／消灯
  */
 #define GR_PEACH_LED_RED	13

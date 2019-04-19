@@ -1,7 +1,7 @@
 /*
  *  TOPPERS ECHONET Lite Communication Middleware
  * 
- *  Copyright (C) 2017 Cores Co., Ltd. Japan
+ *  Copyright (C) 2019 Cores Co., Ltd. Japan
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
  *  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -32,55 +32,24 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: fdtable.h 1876 2019-04-11 00:43:01Z coas-nagasima $
+ *  @(#) $Id: siofd.h 1888 2019-04-19 09:55:29Z coas-nagasima $
  */
-#ifndef SOCKET_STUB_H
-#define SOCKET_STUB_H
 
-typedef const struct io_type_s IO_TYPE;
+/*
+ *	シリアルインタフェースドライバのファイルディスクリプタ実装部
+ */
 
-struct SHELL_FILE {
-	int fd;
-	IO_TYPE *type;
-	int handle;
-	int readevt_r;
-	int readevt_w;
-	int writeevt_r;
-	int writeevt_w;
-	int writable;
-	int errorevt_r;
-	int errorevt_w;
-	void *exinf;
-};
+int siofd_open(const char *path, int flags, ...);
 
-struct io_type_s {
-	int (*close)(struct SHELL_FILE *);
-	size_t (*read)(struct SHELL_FILE *, unsigned char *, size_t);
-	size_t (*write)(struct SHELL_FILE *, const unsigned char *, size_t);
-	off_t (*seek)(struct SHELL_FILE *, off_t, int);
-	int (*ioctl)(struct SHELL_FILE *, int, void *);
-	bool_t (*readable)(struct SHELL_FILE *);
-	void (*delete)(struct SHELL_FILE *);
-};
+int siofd_close(int fd);
 
-#ifndef bool
-#define bool int
-#endif
-#ifndef true
-#define true 1
-#endif
-#ifndef false
-#define false 0
-#endif
+ssize_t siofd_read(int fd, void *data, size_t len);
 
-struct SHELL_FILE *new_fp(IO_TYPE *type, int id, int writable);
-int delete_fd_by_id(IO_TYPE *type, int id);
-struct SHELL_FILE *fd_to_fp(int fd);
-struct SHELL_FILE *id_to_fd(IO_TYPE *type, int id);
+ssize_t siofd_write(int fd, const void *data, size_t len);
 
-int delete_fp(struct SHELL_FILE *fp);
-void clean_fd();
+int siofd_tcsetattr(int fd, int act, const struct termios *tio);
 
-void sys_tlsf_init(void);
+int siofd_tcgetattr(int fd, struct termios *tio);
 
-#endif // !SOCKET_STUB_H
+int siofd_fcntl(int fd, int cmd, ...);
+

@@ -223,22 +223,12 @@ void ntstdio_init(ntstdio_t *handle, unsigned int option, NTSTDIO_XI xi, NTSTDIO
 {
 	handle->xi = xi;
 	handle->xo = xo;
-	handle->outptr = 0;
-	handle->len = 0;
 	handle->pos = 0;
 	handle->option = option;
 }
 
 static void _putc(ntstdio_t *handle, char c)
 {
-	if (handle->outptr) {
-		if ((handle->pos + 1) >= handle->len)
-			return;
-		handle->outptr[handle->pos] = (unsigned char)c;
-		handle->pos++;
-		return;
-	}
-
 	if (handle->xo) {
 		handle->xo(handle, (unsigned char)c);
 	}
@@ -290,22 +280,40 @@ int ntstdio_printf(ntstdio_t *handle, const char *fmt, ...)
 	return result;
 }
 
+struct put_buf_t {
+	char *outptr;
+	int len;
+};
+
+static void put_buf(struct ntstdio_t *handle, unsigned char c)
+{
+	struct put_buf_t *put_buf = (struct put_buf_t *)handle->exinf;
+	if ((handle->pos + 1) >= put_buf->len)
+		return;
+	put_buf->outptr[handle->pos] = (char)c;
+	handle->pos++;
+}
+
 int ntstdio_snprintf(char *buf, int len, const char *fmt, ...)
 {
 	int result;
 	ntstdio_t handle;
+	struct put_buf_t exinf;
 	va_list arp;
 	/* Switch destination for memory */
+	handle.xo = put_buf;
 	handle.option = 0;
-	handle.outptr = buf;
-	handle.len = len;
 	handle.pos = 0;
+	handle.exinf = &exinf;
+	exinf.outptr = buf;
+	exinf.len = len;
+
 	va_start(arp, fmt);
 	result = xvprintf(&handle, fmt, arp);
 	va_end(arp);
 
 	/* Terminate output string with a \0 */
-	handle.outptr[handle.pos] = '\0';
+	buf[handle.pos] = '\0';
 	return result;
 }
 

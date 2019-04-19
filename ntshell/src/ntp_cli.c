@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: ntp_cli.c 1781 2019-02-01 00:02:42Z coas-nagasima $
+ *  @(#) $Id: ntp_cli.c 1888 2019-04-19 09:55:29Z coas-nagasima $
  */
 
 /* 
@@ -276,7 +276,7 @@ void ntp_cli_update_time(T_NTP_CLI_CONTEXT *nc)
 		nc->buf[0] = '\0';
 	}
 
-	printf("[NTP CLI,%d] recv time: %s .%09u\n",
+	syslog(LOG_NOTICE, "[NTP CLI,%d] recv time: %s .%09u",
 		nc->cepid, nc->buf, tp.tv_nsec);
 }
 
@@ -308,7 +308,7 @@ void ntp_cli_timeout(T_NTP_CLI_CONTEXT *nc)
 #if defined(SUPPORT_INET6) && defined(SUPPORT_INET4)
 		line = lookup_ipaddr(&nc->ipaddr6, NTP_SRV_URL, API_PROTO_IPV4);
 		if (line == NULL || !in6_is_addr_ipv4mapped(&nc->ipaddr6)) {
-			printf("[NTP CLI,%d] sleep %d.%03u[s], unknown host.",
+			syslog(LOG_NOTICE, "[NTP CLI,%d] sleep %d.%03u[s], unknown host.",
 				nc->cepid, SLP_ITV / SYSTIM_HZ, SLP_ITV % SYSTIM_HZ);
 			nc->timer = SLP_ITV;
 			break;
@@ -316,7 +316,7 @@ void ntp_cli_timeout(T_NTP_CLI_CONTEXT *nc)
 		nc->snd_rmt.ipaddr = ntohl(nc->ipaddr6.s6_addr32[3]);
 #else	/* of #if defined(SUPPORT_INET6) && defined(SUPPORT_INET4) */
 		if ((line = lookup_ipaddr(&nc->snd_rmt.ipaddr, NTP_SRV_URL, DEFAULT_API_PROTO)) == NULL) {
-			printf("[NTP CLI,%d] sleep %d.%03u[s], unknown host.",
+			syslog(LOG_NOTICE, "[NTP CLI,%d] sleep %d.%03u[s], unknown host.",
 				nc->cepid, SLP_ITV / SYSTIM_HZ, SLP_ITV % SYSTIM_HZ);
 			nc->timer = SLP_ITV;
 			break;
@@ -420,12 +420,12 @@ ER ntp_cli_time_synchronization(T_NTP_CLI_CONTEXT *nc, ntp_mode_t mode)
 	ntp->key_identifier[3] = 0x00;
 
 	if ((error = udp_snd_dat(nc->cepid, &nc->snd_rmt, ntp, len, TMO_NBLK)) != E_WBLK) {
-		printf("[NTP CLI,%d] udp_snd_dat error: %s",
+		syslog(LOG_NOTICE, "[NTP CLI,%d] udp_snd_dat error: %s",
 			nc->cepid, itron_strerror(error));
 		return error;
 	}
 	else
-		syslog(LOG_DEBUG, "[NTP CLI,%d] udp_snd_dat: to: %s.%d\n",
+		syslog(LOG_DEBUG, "[NTP CLI,%d] udp_snd_dat: to: %s.%d",
 			nc->cepid, ip2str(NULL, &nc->snd_rmt.ipaddr), nc->snd_rmt.portno);
 
 	return E_OK;
@@ -438,7 +438,7 @@ void ntp_cli_read_time(T_NTP_CLI_CONTEXT *nc, struct timespec *tp)
 
 	ret = get_tim(&time);
 	if (ret != E_OK) {
-		printf("[NTP CLI,%d] get_tim error: %s",
+		syslog(LOG_NOTICE, "[NTP CLI,%d] get_tim error: %s",
 			nc->cepid, itron_strerror(ret));
 		tp->tv_sec = 0;
 		tp->tv_nsec = 0;
@@ -458,7 +458,7 @@ void ntp_cli_write_time(T_NTP_CLI_CONTEXT *nc, struct timespec *tp)
 
 	ret = set_tim(time);
 	if (ret != E_OK) {
-		printf("[NTP CLI,%d] set_tim error: %s",
+		syslog(LOG_NOTICE, "[NTP CLI,%d] set_tim error: %s",
 			nc->cepid, itron_strerror(ret));
 	}
 }
@@ -476,14 +476,14 @@ callback_nblk_ntp_cli (ID cepid, FN fncd, void *p_parblk)
 	len = *(ER_UINT*)p_parblk;
 	if (len < 0 && len != E_RLWAI) {
 		/* E_RLWAI 以外で、0 以下の場合は、エラーを意味している。*/
-		printf("[NTP CLI,%d] callback error: %s, fncd: %s", nc->cepid,
+		syslog(LOG_NOTICE, "[NTP CLI,%d] callback error: %s, fncd: %s", nc->cepid,
 			itron_strerror(len), in_strtfn(fncd));
 	}
 	else {
 		if (fncd == TEV_UDP_RCV_DAT) {
 			if ((len = udp_rcv_dat(nc->cepid, &nc->rcv_rmt, &nc->ntp_msg, len, TMO_POL)) < 0)
 			{
-				printf("[NTP CLI,%d] udp_rcv_dat error: %s", nc->cepid,
+				syslog(LOG_NOTICE, "[NTP CLI,%d] udp_rcv_dat error: %s", nc->cepid,
 					itron_strerror(len));
 			}
 			else
@@ -515,14 +515,14 @@ ntp_cli_task (intptr_t exinf)
 	int timer;
 
 	get_tid(&nc->tskid);
-	printf("[NTP CLI:%d,%d] started.", nc->tskid, (ID)exinf);
+	syslog(LOG_NOTICE, "[NTP CLI:%d,%d] started.", nc->tskid, (ID)exinf);
 
 	/* 初期化 */
 	ntp_cli_initialize(nc, (ID)exinf);
 
 	ret = get_tim(&time);
 	if (ret != E_OK) {
-		printf("[NTP CLI,%d] get_tim error: %7lu,%s",
+		syslog(LOG_NOTICE, "[NTP CLI,%d] get_tim error: %7lu,%s",
 			nc->cepid, time / SYSTIM_HZ, itron_strerror(ret));
 		return;
 	}
@@ -536,14 +536,14 @@ ntp_cli_task (intptr_t exinf)
 		/* 待ち */
 		error = tslp_tsk(timer);
 		if ((error != E_OK) && (error != E_TMOUT)) {
-			printf("[NTP CLI,%d] tslp_tsk error: %s %d",
+			syslog(LOG_NOTICE, "[NTP CLI,%d] tslp_tsk error: %s %d",
 				nc->cepid, itron_strerror(error), timer);
 			break;
 		}
 
 		ret = get_tim(&time);
 		if (ret != E_OK) {
-			printf("[NTP CLI,%d] get_tim error: %s",
+			syslog(LOG_NOTICE, "[NTP CLI,%d] get_tim error: %s",
 				nc->cepid, itron_strerror(ret));
 			break;
 		}
