@@ -159,7 +159,6 @@ void LeptonTask::OnStart()
 	ThisThread::sleep_for(185);
 
 	printf("beginTransmission\n");
-
 	LEP_RESULT ret = LEP_OpenPort(&_wire, LEP_CCI_TWI, 400, &_port);
 	if (ret != LEP_OK) {
 		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
@@ -199,8 +198,8 @@ void LeptonTask::OnStart()
 	}
 
 	LEP_SYS_UPTIME_NUMBER_T uptime;
-	ret = LEP_GetSysCameraUpTime(&_port, &uptime);
 	printf("SYS camera uptime");
+	ret = LEP_GetSysCameraUpTime(&_port, &uptime);
 	if (ret == LEP_OK) {
 		printf(" %lu\n", uptime);
 	}
@@ -209,9 +208,10 @@ void LeptonTask::OnStart()
 	}
 
 	LEP_OEM_SW_VERSION_T oemSoftwareVersion;
+	printf("FLiR OEM software version");
 	ret = LEP_GetOemSoftwareVersion(&_port, &oemSoftwareVersion);
 	if (ret == LEP_OK) {
-		printf("FLiR OEM software version GPP:%u.%u.%03u DSP:%u.%u.%03u\n",
+		printf(" GPP:%u.%u.%03u DSP:%u.%u.%03u\n",
 			oemSoftwareVersion.gpp_major,
 			oemSoftwareVersion.gpp_minor,
 			oemSoftwareVersion.gpp_build,
@@ -219,11 +219,15 @@ void LeptonTask::OnStart()
 			oemSoftwareVersion.dsp_minor,
 			oemSoftwareVersion.dsp_build);
 	}
+	else {
+		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
+	}
 
 	LEP_OEM_PART_NUMBER_T partNumber;
+	printf("FLiR OEM part number");
 	ret = LEP_GetOemFlirPartNumber(&_port, &partNumber);
 	if (ret == LEP_OK) {
-		printf("FLiR OEM part number %s", partNumber.value);
+		printf(" %s", partNumber.value);
 		if (strcmp(partNumber.value, "500-0643-00") == 0)
 			printf("50 deg (l2)\n");
 		else if (strcmp(partNumber.value, "500-0659-01") == 0)
@@ -237,14 +241,18 @@ void LeptonTask::OnStart()
 		else
 			printf("unknown\n\n");
 	}
+	else {
+		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
+	}
 
+	printf("Get spotmeter ROI");
 	ret = LEP_GetRadSpotmeterRoi(&_port, &_spotmeterRoi);
 	if (ret == LEP_OK) {
-		printf("Spotmeter ROI (%d, %d) - (%d, %d)\n", _spotmeterRoi.startCol,
+		printf(" (%d, %d) - (%d, %d)\n", _spotmeterRoi.startCol,
 			_spotmeterRoi.startRow, _spotmeterRoi.endCol, _spotmeterRoi.endRow);
 	}
 	else {
-		printf("Get spotmeter ROI %s %d\n", GetLeptonErrorString(ret), ret);
+		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
 	}
 
 	LowPower();
@@ -256,30 +264,44 @@ void LeptonTask::OnStart()
 	}
 
 	EnableTelemetry(_config->telemetry);
-
-	PowerOn();
 }
 
 void LeptonTask::EnableRadiometry(bool enable)
 {
 	LEP_RAD_RADIOMETRY_FILTER_T radRadiometryFilter;
+	printf("Radiometry filter set");
 	LEP_RESULT ret = LEP_SetRadRadometryFilter(&_port, enable ? LEP_RAD_ENABLE : LEP_RAD_DISABLE);
-	if (ret != LEP_OK) {
-		printf("Radiometry filter set %s %d\n", GetLeptonErrorString(ret), ret);
+	if (ret == LEP_OK) {
+		printf(" OK\n");
 	}
+	else {
+		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
+	}
+	printf("Radiometry filter");
 	ret = LEP_GetRadRadometryFilter(&_port, &radRadiometryFilter);
 	if (ret == LEP_OK) {
-		printf("Radiometry filter %s\n", radRadiometryFilter == LEP_RAD_ENABLE ? "enabled" : "disabled");
+		printf(" %s\n", radRadiometryFilter == LEP_RAD_ENABLE ? "enabled" : "disabled");
+	}
+	else {
+		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
 	}
 	if (enable) {
 		LEP_RAD_ENABLE_E tLinear;
+		printf("Set TLinear enable state");
 		ret = LEP_SetRadTLinearEnableState(&_port, LEP_RAD_ENABLE);
-		if (ret != LEP_OK) {
-			printf("TLinear enable %s %d\n", GetLeptonErrorString(ret), ret);
+		if (ret == LEP_OK) {
+			printf(" OK\n");
 		}
+		else {
+			printf(" %s %d\n", GetLeptonErrorString(ret), ret);
+		}
+		printf("Get TLinear enable state");
 		ret = LEP_GetRadTLinearEnableState(&_port, &tLinear);
 		if (ret == LEP_OK) {
-			printf("TLinear enable %s\n", tLinear == LEP_RAD_ENABLE ? "enabled" : "disabled");
+			printf(" %s\n", tLinear == LEP_RAD_ENABLE ? "enabled" : "disabled");
+		}
+		else {
+			printf(" %s %d\n", GetLeptonErrorString(ret), ret);
 		}
 	}
 }
@@ -288,11 +310,11 @@ void LeptonTask::RunFFCNormalization()
 {
 	printf("Flat-Field Correction normalization");
 	LEP_RESULT ret = LEP_RunSysFFCNormalization(&_port);
-	if (ret != LEP_OK) {
-		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
+	if (ret == LEP_OK) {
+		printf(" OK\n");
 	}
 	else {
-		printf("\n");
+		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
 	}
 }
 
@@ -301,13 +323,13 @@ void LeptonTask::EnableTelemetry(bool enable)
 	LEP_RESULT ret;
 
 	if (enable) {
-		printf("SYS Telemetry Location");
+		printf("SYS Telemetry Location Footer");
 		ret = LEP_SetSysTelemetryLocation(&_port, LEP_TELEMETRY_LOCATION_FOOTER);
-		if (ret != LEP_OK) {
-			printf(" %s %d\n", GetLeptonErrorString(ret), ret);
+		if (ret == LEP_OK) {
+			printf(" \n");
 		}
 		else {
-			printf(" Footer\n");
+			printf(" %s %d\n", GetLeptonErrorString(ret), ret);
 		}
 	}
 
@@ -324,15 +346,15 @@ void LeptonTask::EnableTelemetry(bool enable)
 	}
 
 	LEP_SYS_TELEMETRY_ENABLE_STATE_E telemetory = LEP_TELEMETRY_DISABLED;
+	printf("Packet Per Frame");
 	LEP_GetSysTelemetryEnableState(&_port, &telemetory);
-	if (telemetory != 0) {
+	if (telemetory != LEP_TELEMETRY_DISABLED) {
 		_packets_per_frame = 63;
 	}
 	else {
 		_packets_per_frame = 60;
 	}
-
-	printf("Packet Per Frame %d\n", _packets_per_frame);
+	printf(" %d\n", _packets_per_frame);
 }
 
 void LeptonTask::GetSpotmeterObj()
@@ -340,22 +362,23 @@ void LeptonTask::GetSpotmeterObj()
 	LEP_RESULT ret;
 	LEP_RAD_SPOTMETER_OBJ_KELVIN_T spotmeterObj;
 
+	printf("Get spotmeter value");
 	ret = LEP_GetRadSpotmeterObjInKelvinX100(&_port, &spotmeterObj);
 	if (ret == LEP_OK) {
 		int temp1 = spotmeterObj.radSpotmeterMaxValue - 27315;
 		int temp2 = spotmeterObj.radSpotmeterMinValue - 27315;
-		printf("Spotmeter max:%d.%02u min:%d.%02u\n",
+		printf("\n max:%d.%02u min:%d.%02u\n",
 			temp1 / 100, (temp1 > 0) ? (temp1 % 100) : (100 - temp1 % 100),
 			temp2 / 100, (temp2 > 0) ? (temp2 % 100) : (100 - temp2 % 100));
 
 		temp1 = spotmeterObj.radSpotmeterPopulation - 27315;
 		temp2 = spotmeterObj.radSpotmeterValue - 27315;
-		printf("Spotmeter pop:%d.%02u val:%d.%02u\n",
+		printf("\n pop:%d.%02u val:%d.%02u\n",
 			temp1 / 100, (temp1 > 0) ? (temp1 % 100) : (100 - temp1 % 100),
 			temp2 / 100, (temp2 > 0) ? (temp2 % 100) : (100 - temp2 % 100));
 	}
 	else {
-		printf("Get spotmeter value %s %d\n", GetLeptonErrorString(ret), ret);
+		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
 	}
 }
 
@@ -363,12 +386,14 @@ void LeptonTask::SetSpotmeterRoi(LEP_RAD_ROI_T newRoi)
 {
 	LEP_RESULT ret;
 
+	printf("Set spotmeter ROI");
 	ret = LEP_SetRadSpotmeterRoi(&_port, newRoi);
 	if (ret == LEP_OK) {
 		_spotmeterRoi = newRoi;
+		printf(" OK\n");
 	}
 	else {
-		printf("Set spotmeter ROI %s %d\n", GetLeptonErrorString(ret), ret);
+		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
 	}
 }
 
@@ -376,9 +401,13 @@ void LeptonTask::LowPower()
 {
 	LEP_RESULT ret;
 
+	printf("Set low power mode 2");
 	ret = LEP_RunOemLowPowerMode2(&_port);
-	if (ret != LEP_OK) {
-		printf("Set low power mode 2 %s %d\n", GetLeptonErrorString(ret), ret);
+	if (ret == LEP_OK) {
+		printf(" OK\n");
+	}
+	else {
+		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
 	}
 }
 
@@ -386,9 +415,13 @@ void LeptonTask::PowerOn()
 {
 	LEP_RESULT ret;
 
+	printf("Set power on");
 	ret = LEP_RunOemPowerOn(&_port);
-	if (ret != LEP_OK) {
-		printf("Set power on %s %d\n", GetLeptonErrorString(ret), ret);
+	if (ret == LEP_OK) {
+		printf(" OK\n");
+	}
+	else {
+		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
 	}
 }
 
@@ -396,12 +429,12 @@ void LeptonTask::ProcessEvent(InterTaskSignals::T signals)
 {
 	if ((signals & InterTaskSignals::PowerOn) != 0) {
 		_ss = 0;
-		_state = State::Resets;
-		_timer = 750;
+		_state = State::PowerOn;
+		_timer = 0;
 	}
 	if ((signals & InterTaskSignals::PowerOff) != 0) {
 		_state = State::PowerOff;
-		_timer = -1;
+		_timer = 0;
 	}
 }
 
@@ -410,16 +443,24 @@ void LeptonTask::Process()
 	uint8_t *result = _frame_packet;
 	uint16_t *frameBuffer;
 	uint16_t value, minValue, maxValue;
-	float diff, scale;
-	int packet_id;
+	float scale;
+	int diff, packet_id;
 	uint16_t *values;
 
 	if (_timer != 0)
 		return;
 
 	switch (_state) {
+	case State::PowerOn:
+		PowerOn();
+		_ss = 0;
+		printf("reset\n");
+		_state = State::Resets;
+		_timer = 750;
+		break;
 	case State::Resets:
 		_ss = 1;
+		resets = 0;
 		_state = State::Capture;
 		_timer = 1;
 		break;
@@ -444,8 +485,17 @@ void LeptonTask::Process()
 					row++;
 					continue;
 				}
-				_state = State::Capture;
-				_timer = 0;
+				resets++;
+				if (resets >= 100) {
+					_ss = 0;
+					printf("reset\n");
+					_state = State::Resets;
+					_timer = 750;
+				}
+				else {
+					_state = State::Viewing;
+					_timer = 0;
+				}
 				return;
 			}
 
@@ -553,7 +603,7 @@ void LeptonTask::Process()
 			diff = 256;
 			minValue = (maxValue + minValue) / 2 - 128;
 		}
-		scale = 255.9 / diff;
+		scale = 255.9f / diff;
 
 		values = &_image[BITMAP_HEADER_SIZE / 2];
 		for (int row = 0; row < PACKETS_PER_FRAME; row++) {
@@ -565,19 +615,19 @@ void LeptonTask::Process()
 
 				switch (_config->color) {
 				case 0:
-					index = (value - minValue) * scale;
+					index = (uint8_t)((value - minValue) * scale);
 					colormap[0] = colormap_rainbow[3 * index];
 					colormap[1] = colormap_rainbow[3 * index + 1];
 					colormap[2] = colormap_rainbow[3 * index + 2];
 					break;
 				case 1:
-					index = (value - minValue) * scale;
+					index = (uint8_t)((value - minValue) * scale);
 					colormap[0] = colormap_grayscale[3 * index];
 					colormap[1] = colormap_grayscale[3 * index + 1];
 					colormap[2] = colormap_grayscale[3 * index + 2];
 					break;
 				case 2:
-					index = (value - minValue) * scale;
+					index = (uint8_t)((value - minValue) * scale);
 					colormap[0] = colormap_ironblack[3 * index];
 					colormap[1] = colormap_ironblack[3 * index + 1];
 					colormap[2] = colormap_ironblack[3 * index + 2];
@@ -646,9 +696,9 @@ void LeptonTask::Process()
 		}
 
 		// https://lepton.flir.com/application-notes/lepton-with-radiometry/
-		if (resets == 750) {
-			resets = 0;
+		if (resets >= 750) {
 			_ss = 0;
+			printf("reset\n");
 			_state = State::Resets;
 			_timer = 750;
 		}
@@ -658,6 +708,7 @@ void LeptonTask::Process()
 		}
 		break;
 	default:
+		LowPower();
 		_state = State::PowerOff;
 		_timer = -1;
 		break;

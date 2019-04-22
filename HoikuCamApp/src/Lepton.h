@@ -113,6 +113,7 @@ public:
 	public:
 		enum T {
 			PowerOff,
+			PowerOn,
 			Resets,
 			Capture,
 			UpdateParam,
