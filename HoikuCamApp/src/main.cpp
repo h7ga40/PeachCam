@@ -481,19 +481,19 @@ int main()
 			lcd_drawString(textbuf, 72, 172, 0xFCCC, 0x0000);
 #endif
 			int auxtemp = lepton->GetFpaTemperature() - 27315;
-			snprintf(textbuf, sizeof(textbuf), "FPA:%4d.%02u℃", auxtemp / 100, (auxtemp > 0) ? (auxtemp % 100) : (100 - auxtemp % 100));
+			snprintf(textbuf, sizeof(textbuf), "FPA:%4d.%02u℃", auxtemp / 100, (auxtemp > 0) ? (auxtemp % 100) : -(auxtemp % 100));
 			lcd_drawString(textbuf, 400, 160, 0xFCCC, 0x0000);
 
 			int fpatemp = lepton->GetAuxTemperature() - 27315;
-			snprintf(textbuf, sizeof(textbuf), "AUX:%4d.%02u℃", fpatemp / 100, (fpatemp > 0) ? (fpatemp % 100) : (100 - fpatemp % 100));
+			snprintf(textbuf, sizeof(textbuf), "AUX:%4d.%02u℃", fpatemp / 100, (fpatemp > 0) ? (fpatemp % 100) : -(fpatemp % 100));
 			lcd_drawString(textbuf, 400, 172, 0xFCCC, 0x0000);
 
 			int minValue = (int)(2.6 * (lepton->GetMinValue() - 8192)) + config.lepton.offset - 27315;
-			snprintf(textbuf, sizeof(textbuf), "min:%4d.%02u℃", minValue / 100, (minValue > 0) ? (minValue % 100) : (100 + minValue % 100));
+			snprintf(textbuf, sizeof(textbuf), "min:%4d.%02u℃", minValue / 100, (minValue > 0) ? (minValue % 100) : -(minValue % 100));
 			lcd_drawString(textbuf, 400, 184, 0xFCCC, 0x0000);
 
 			int maxValue = (int)(2.6 * (lepton->GetMaxValue() - 8192)) + config.lepton.offset - 27315;
-			snprintf(textbuf, sizeof(textbuf), "max:%4d.%02u℃", maxValue / 100, (maxValue > 0) ? (maxValue % 100) : (100 + maxValue % 100));
+			snprintf(textbuf, sizeof(textbuf), "max:%4d.%02u℃", maxValue / 100, (maxValue > 0) ? (maxValue % 100) : -(maxValue % 100));
 			lcd_drawString(textbuf, 400, 196, 0xFCCC, 0x0000);
 		}
 		/* Get coordinates */

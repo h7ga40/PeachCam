@@ -56,7 +56,8 @@ LeptonTask::LeptonTask(TaskThread *taskThread) :
 	_runFFCNormReq(0),
 	_telemetryReq(0),
 	_spotmeterReq(0),
-	_spotmeterRoi()
+	_spotmeterRoi(),
+	_reqSpotmeterRoi()
 {
 	memcpy(_image, BMPHeader, BITMAP_HEADER_SIZE);
 }
