@@ -50,7 +50,7 @@
 #include "kernel_cfg.h"
 #include "t_syslog.h"
 
-int _sta_ker()
+int _sta_ker(void)
 {
 	static const char *const args[] = {
 		(char *)1,
@@ -64,6 +64,12 @@ int _sta_ker()
 	};
 	musl_start(args);
 	return 0;
+}
+
+__attribute__((weak))
+int main(void)
+{
+	return _sta_ker();
 }
 
 void wait_us(int us);
