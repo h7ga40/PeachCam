@@ -29,7 +29,7 @@ ifeq ($(EXECUTE_ON),ROM)
 	SYSSVC_COBJS := $(SYSSVC_COBJS)
 endif
 
-CDEFS := $(CDEFS) -DUSE_ARM_FPU
+CDEFS := $(CDEFS) #-DUSE_ARM_FPU
 COPTS := $(COPTS) -mfloat-abi=hard
 
 #

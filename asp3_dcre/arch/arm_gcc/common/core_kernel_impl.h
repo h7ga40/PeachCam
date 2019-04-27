@@ -56,9 +56,9 @@
 /*
  *  ターゲット依存のタスク属性（エラーチェック用）
  */
-#ifdef USE_ARM_FPU
+/*#ifdef USE_ARM_FPU*/
 #define TARGET_TSKATR		(TA_FPU)
-#endif /* USE_ARM_FPU */
+/*#endif /* USE_ARM_FPU */
 
 /*
  *  エラーチェック方法の指定
