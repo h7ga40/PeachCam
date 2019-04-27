@@ -8,7 +8,7 @@ extern uint8_t heart_mark;
 TriggerButtonTask::TriggerButtonTask(SensorTask *owner) :
 	Task(10),
 	_owner(owner),
-	button(D6),
+	button(BUTTON1),
 	_state((button != 0) ? State::Down : State::Up),
 	_count(0)
 {
@@ -300,6 +300,7 @@ void HeartRateTask::Process()
 
 SensorTask::SensorTask(GlobalState *globalState) :
 	TaskThread(&_task),
+	_tasks{ &triggerButton, &gripButton, &powerOffTask, &heartRateTask },
 	_task(_tasks, sizeof(_tasks) / sizeof(_tasks[0])),
 	_globalState(globalState),
 	triggerButton(this),
@@ -307,10 +308,6 @@ SensorTask::SensorTask(GlobalState *globalState) :
 	powerOffTask(this),
 	heartRateTask(this)
 {
-	_tasks[0] = &triggerButton;
-	_tasks[1] = &gripButton;
-	_tasks[2] = &powerOffTask;
-	_tasks[3] = &heartRateTask;
 }
 
 SensorTask::~SensorTask()

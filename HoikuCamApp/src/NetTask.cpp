@@ -381,7 +381,8 @@ void WifiTask::Process()
 }
 
 NetTask::NetTask(GlobalState *globalState, ESP32Interface *wifi) :
-	TaskThread(&_task, osPriorityNormal, (1024 * 8)),
+	TaskThread(&_task, osPriorityNormal, (1024 * 8), NULL, "NetTask"),
+	_tasks{ &_wifiTask, &_ntpTask, &_uploadTask, &_googleDriveTask },
 	_task(_tasks, sizeof(_tasks) / sizeof(_tasks[0])),
 	_globalState(globalState),
 	_wifi(wifi),
@@ -391,10 +392,6 @@ NetTask::NetTask(GlobalState *globalState, ESP32Interface *wifi) :
 	_googleDriveTask(this),
 	upload_file(NULL)
 {
-	_tasks[0] = &_wifiTask;
-	_tasks[1] = &_ntpTask;
-	_tasks[2] = &_uploadTask;
-	_tasks[3] = &_googleDriveTask;
 }
 
 NetTask::~NetTask()

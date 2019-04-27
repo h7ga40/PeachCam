@@ -543,7 +543,7 @@ void MediaTask::UpdateRequest()
 }
 
 FaceDetectTask::FaceDetectTask(GlobalState *globalState) :
-	TaskThread(this, osPriorityBelowNormal, (1024 * 33)),
+	TaskThread(this, osPriorityBelowNormal, (1024 * 33), NULL, "FaceDetectTask"),
 	_globalState(globalState),
 	_state(State::PowerOff),
 	_timer(0)
