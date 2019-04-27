@@ -44,6 +44,8 @@ enum parse_state_t {
 	psLeptonFFCNorm,
 	psLeptonTelemetry,
 	psLeptonOffset,
+	psLeptonSlope,
+	psLeptonReference,
 	psLeptonColor,
 	psError
 };
@@ -132,6 +134,16 @@ start(void *data, const XML_Char *el, const XML_Char **attr)
 			cd->pos = 0;
 			cd->state = psLeptonOffset;
 		}
+		else if (strcmp(el, "slope") == 0) {
+			cd->temp[0] = '\0';
+			cd->pos = 0;
+			cd->state = psLeptonSlope;
+		}
+		else if (strcmp(el, "reference") == 0) {
+			cd->temp[0] = '\0';
+			cd->pos = 0;
+			cd->state = psLeptonReference;
+		}
 		else if (strcmp(el, "color") == 0) {
 			cd->temp[0] = '\0';
 			cd->pos = 0;
@@ -205,6 +217,18 @@ end(void *data, const XML_Char *el)
 	case psLeptonOffset:
 		if (strcmp(el, "offset") == 0) {
 			cd->lepton.offset = atoi(cd->temp);
+			cd->state = psLepton;
+		}
+		break;
+	case psLeptonSlope:
+		if (strcmp(el, "slope") == 0) {
+			cd->lepton.slope = atoi(cd->temp);
+			cd->state = psLepton;
+		}
+		break;
+	case psLeptonReference:
+		if (strcmp(el, "reference") == 0) {
+			cd->lepton.reference = atoi(cd->temp);
 			cd->state = psLepton;
 		}
 		break;
@@ -302,6 +326,8 @@ text(void *data, const XML_Char *s, int len)
 			cd->lepton.telemetry = 1;
 		break;
 	case psLeptonOffset:
+	case psLeptonSlope:
+	case psLeptonReference:
 	case psLeptonColor:
 		maxlen = sizeof(cd->temp) - 1;
 		l = cd->pos + len;
@@ -480,19 +506,23 @@ int main()
 			snprintf(textbuf, sizeof(textbuf), "TmC:%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X%04X", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15]);
 			lcd_drawString(textbuf, 72, 172, 0xFCCC, 0x0000);
 #endif
-			int auxtemp = lepton->GetFpaTemperature() - 27315;
-			snprintf(textbuf, sizeof(textbuf), "FPA:%4d.%02u℃", auxtemp / 100, (auxtemp > 0) ? (auxtemp % 100) : -(auxtemp % 100));
+			int fpatemp = lepton->GetFpaTemperature() - 27315;
+			snprintf(textbuf, sizeof(textbuf), "FPA:%4d.%02u℃", fpatemp / 100, (fpatemp > 0) ? (fpatemp % 100) : -(fpatemp % 100));
 			lcd_drawString(textbuf, 400, 160, 0xFCCC, 0x0000);
 
-			int fpatemp = lepton->GetAuxTemperature() - 27315;
-			snprintf(textbuf, sizeof(textbuf), "AUX:%4d.%02u℃", fpatemp / 100, (fpatemp > 0) ? (fpatemp % 100) : -(fpatemp % 100));
+			int auxtemp = lepton->GetAuxTemperature() - 27315;
+			snprintf(textbuf, sizeof(textbuf), "AUX:%4d.%02u℃", auxtemp / 100, (auxtemp > 0) ? (auxtemp % 100) : -(auxtemp % 100));
 			lcd_drawString(textbuf, 400, 172, 0xFCCC, 0x0000);
 
-			int minValue = (int)(2.6 * (lepton->GetMinValue() - 8192)) + config.lepton.offset - 27315;
+			int reference = fpatemp;
+			if (config.lepton.reference != 0)
+				reference = auxtemp;
+
+			int minValue = (int)((config.lepton.slope / 1000.0) * (lepton->GetMinValue() - 8192)) + config.lepton.offset + reference;
 			snprintf(textbuf, sizeof(textbuf), "min:%4d.%02u℃", minValue / 100, (minValue > 0) ? (minValue % 100) : -(minValue % 100));
 			lcd_drawString(textbuf, 400, 184, 0xFCCC, 0x0000);
 
-			int maxValue = (int)(2.6 * (lepton->GetMaxValue() - 8192)) + config.lepton.offset - 27315;
+			int maxValue = (int)((config.lepton.slope / 1000.0) * (lepton->GetMaxValue() - 8192)) + config.lepton.offset + reference;
 			snprintf(textbuf, sizeof(textbuf), "max:%4d.%02u℃", maxValue / 100, (maxValue > 0) ? (maxValue % 100) : -(maxValue % 100));
 			lcd_drawString(textbuf, 400, 196, 0xFCCC, 0x0000);
 		}

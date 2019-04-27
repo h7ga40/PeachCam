@@ -93,6 +93,8 @@ struct lepton_config_t {
 	int ffcnorm;
 	int telemetry;
 	int offset;
+	int slope;
+	int reference;
 	int color;
 };
 
@@ -118,6 +120,7 @@ public:
 			Capture,
 			UpdateParam,
 			Viewing,
+			GoPowerOff,
 		};
 	};
 public:
@@ -131,9 +134,10 @@ private:
 	mbed::I2C _wire;
 	mbed::DigitalOut _ss;
 	LEP_CAMERA_PORT_DESC_T _port;
-	int resets;
+	int _resets;
 	uint16_t _minValue, _maxValue;
 	int _packets_per_frame;
+	int _async;
 	uint8_t _frame_packet[PACKET_SIZE];
 	uint16_t _image[IMAGE_SIZE];
 	TLeptonTelemetryA _telemetryA;
