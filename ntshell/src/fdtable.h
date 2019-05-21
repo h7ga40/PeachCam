@@ -60,6 +60,7 @@ struct io_type_s {
 	off_t (*seek)(struct SHELL_FILE *, off_t, int);
 	int (*ioctl)(struct SHELL_FILE *, int, void *);
 	bool_t (*readable)(struct SHELL_FILE *);
+	bool_t (*writable)(struct SHELL_FILE *);
 	void (*delete)(struct SHELL_FILE *);
 };
 
@@ -80,7 +81,5 @@ struct SHELL_FILE *id_to_fd(IO_TYPE *type, int id);
 
 int delete_fp(struct SHELL_FILE *fp);
 void clean_fd();
-
-void sys_tlsf_init(void);
 
 #endif // !SOCKET_STUB_H

@@ -290,11 +290,20 @@ int shell_sigprocmask(int how, const sigset_t *restrict set, sigset_t *restrict 
 	return 0;
 }
 
-struct sigaction sigtable[7];
+// musl-1.1.18\src\internal\ksigaction.h
+struct k_sigaction {
+	void(*handler)(int);
+	unsigned long flags;
+	void(*restorer)(void);
+	unsigned mask[2];
+};
 
-int shell_sigaction(int sig, const struct sigaction *restrict sa, struct sigaction *restrict old)
+struct k_sigaction sigtable[7];
+
+int shell_sigaction(int sig, const struct k_sigaction *__restrict sa,
+	struct k_sigaction *__restrict old, size_t size)
 {
-	struct sigaction *sat;
+	struct k_sigaction *sat;
 
 	switch(sig){
 	case SIGALRM:
@@ -323,9 +332,9 @@ int shell_sigaction(int sig, const struct sigaction *restrict sa, struct sigacti
 	}
 
 	if (old != NULL)
-		memcpy(old, sat, sizeof(struct sigaction));
+		memcpy(old, sat, offsetof(struct k_sigaction, mask) + size);
 
-	memcpy(sat, sa, sizeof(struct sigaction));
+	memcpy(sat, sa, offsetof(struct k_sigaction, mask) + size);
 
 	return 0;
 }
@@ -373,3 +382,35 @@ int shell_gettimeofday(struct timeval *tv, void *tzvp)
 	return 0;
 }
 
+int shell_nanosleep(const struct timespec *req, struct timespec *rem)
+{
+	ER ret;
+	TMO tmo;
+	SYSTIM prev, now, diff;
+
+	if ((req == NULL) || (req->tv_nsec < 0) || (req->tv_nsec >= 1000000000))
+		return -EINVAL;
+
+	get_tim(&prev);
+
+	tmo = req->tv_sec * 1000000 + req->tv_nsec / 1000;
+	ret = tslp_tsk(tmo);
+	if (ret == E_OK) {
+		if (rem != NULL) {
+			get_tim(&now);
+			diff = now - prev;
+			rem->tv_sec = diff / 1000000ll;
+			rem->tv_nsec = (diff - (rem->tv_sec * 1000000ll)) * 1000ll;
+		}
+		return 0;
+	}
+	else if (ret == E_TMOUT) {
+		if (rem != NULL) {
+			rem->tv_sec = 0;
+			rem->tv_nsec = 0;
+		}
+		return 0;
+	}
+
+	return -EFAULT;
+}

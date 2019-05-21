@@ -307,18 +307,17 @@ UDP_CRE_CEP (ID cepid, T_UDPN_CCEP *pk_ccep)
 			error = UDP_ALLOC_AUTO_PORT(cep);
 		else 
 			error = UDP_ALLOC_PORT(cep, pk_ccep->myaddr.portno);
-		
-                if (error == E_OK) {
 
-			/* UDP 通信端点生成情報をコピーする。*/
-			cep->cepatr        = pk_ccep->cepatr;			/* 通信端点属性		*/
-			cep->myaddr.ipaddr = pk_ccep->myaddr.ipaddr;		/* 自分のアドレス	*/
-			cep->callback      = (void*)pk_ccep->callback;		/* コールバック		*/
+			if (error == E_OK) {
+				/* UDP 通信端点生成情報をコピーする。*/
+				cep->cepatr        = pk_ccep->cepatr;			/* 通信端点属性		*/
+				cep->myaddr.ipaddr = pk_ccep->myaddr.ipaddr;		/* 自分のアドレス	*/
+				cep->callback      = (void*)pk_ccep->callback;		/* コールバック		*/
 
-			/* UDP 通信端点を生成済みにする。*/
-			cep->flags |= UDP_CEP_FLG_VALID;
+				/* UDP 通信端点を生成済みにする。*/
+				cep->flags |= UDP_CEP_FLG_VALID;
+				}
 			}
-		}
 
 	/* 通信端点のロックを解除する。*/
 	syscall(sig_sem(cep->semid_lock));

@@ -52,6 +52,7 @@
 #include <errno.h>
 #include "util/ntstdio.h"
 #include "hal/serial_api.h"
+#include "target_rename.h"
 #include "target_kernel_impl.h"
 #include "syssvc/siofd.h"
 
@@ -78,12 +79,13 @@ static size_t sio_write(struct SHELL_FILE *fp, const unsigned char *data, size_t
 static off_t sio_seek(struct SHELL_FILE *fp, off_t ofs, int org);
 static int sio_ioctl(struct SHELL_FILE *fp, int req, void *arg);
 static bool_t sio_readable(struct SHELL_FILE *fp);
+static bool_t sio_writable(struct SHELL_FILE *fp);
 static void sio_delete(struct SHELL_FILE *fp);
 
-IO_TYPE IO_TYPE_STDIN = { stdio_close, sio_read, stdio_write, sio_seek, sio_ioctl, sio_readable, stdio_delete };
-IO_TYPE IO_TYPE_STDOUT = { stdio_close, stdio_read, sio_write, sio_seek, sio_ioctl, sio_readable, stdio_delete };
-IO_TYPE IO_TYPE_STDERR = { stdio_close, stdio_read, sio_write, sio_seek, sio_ioctl, sio_readable, stdio_delete };
-IO_TYPE IO_TYPE_SIO = { sio_close, sio_read, sio_write, sio_seek, sio_ioctl, sio_readable, sio_delete };
+IO_TYPE IO_TYPE_STDIN = { stdio_close, sio_read, stdio_write, sio_seek, sio_ioctl, sio_readable, sio_writable, stdio_delete };
+IO_TYPE IO_TYPE_STDOUT = { stdio_close, stdio_read, sio_write, sio_seek, sio_ioctl, sio_readable, sio_writable, stdio_delete };
+IO_TYPE IO_TYPE_STDERR = { stdio_close, stdio_read, sio_write, sio_seek, sio_ioctl, sio_readable, sio_writable, stdio_delete };
+IO_TYPE IO_TYPE_SIO = { sio_close, sio_read, sio_write, sio_seek, sio_ioctl, sio_readable, sio_writable, sio_delete };
 
 #define STDIO_UART_BUF_SZ 256
 
@@ -294,6 +296,11 @@ bool_t sio_readable(struct SHELL_FILE *fp)
 	return fp->readevt_w != fp->readevt_r;
 }
 
+bool_t sio_writable(struct SHELL_FILE *fp)
+{
+	return fp->writable && (fp->writeevt_w == fp->writeevt_r);
+}
+
 void sio_delete(struct SHELL_FILE *fp)
 {
 	free((stdio_sio_t *)((struct ntstdio_t *)fp->exinf)->exinf);
@@ -308,12 +315,18 @@ static unsigned char ntstdio_xi(struct ntstdio_t *handle, struct SHELL_FILE *fp)
 	ER ret;
 	unsigned char c;
 
+	bool_t lock = sense_lock();
+	if (lock)
+		unl_cpu();
+
 	while (uart->rx_pos_w == uart->rx_pos_r) {
 		FLGPTN flgptn = 0, waitptn = 0;
 		FD_SET(fp->fd, (fd_set *)&waitptn);
 
 		ret = wai_flg(FLG_SELECT_WAIT, waitptn, TWF_ORW, &flgptn);
 		if (ret != E_OK) {
+			if (lock)
+				loc_cpu();
 			syslog(LOG_ERROR, "wai_flg => %d", ret);
 			return 0;
 		}
@@ -324,11 +337,14 @@ static unsigned char ntstdio_xi(struct ntstdio_t *handle, struct SHELL_FILE *fp)
 		}
 	}
 
+	if (lock)
+		unl_cpu();
+
+	if (fp->readevt_w != fp->readevt_r) fp->readevt_r++;
+
 	c = uart->rx_buf[uart->rx_pos_r++];
 	if (uart->rx_pos_r >= sizeof(uart->rx_buf))
 		uart->rx_pos_r = 0;
-
-	if (fp->readevt_w != fp->readevt_r) fp->readevt_r++;
 
 	return c;
 }
@@ -373,6 +389,15 @@ static void ntstdio_xo(struct ntstdio_t *handle, struct SHELL_FILE *fp, unsigned
 	serial_t *serial = (serial_t *)&uart->serial;
 	ER ret;
 
+	// タスクコンテキストでない場合
+	if (sense_context()) {
+		// 送信可能になるまで待ち
+		while (!serial_writable(serial));
+		// 送信する
+		serial_putc(serial, c);
+		return;
+	}
+
 	// 送信バッファが空で
 	if (uart->tx_pos_w == uart->tx_pos_r) {
 		// 送信可能なら
@@ -387,8 +412,6 @@ static void ntstdio_xo(struct ntstdio_t *handle, struct SHELL_FILE *fp, unsigned
 	uart->tx_buf[uart->tx_pos_w++] = c;
 	if (uart->tx_pos_w >= sizeof(uart->tx_buf))
 		uart->tx_pos_w = 0;
-
-	if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
 
 	// 送信可能になったら割り込みをもらうよう設定
 	serial_irq_set(serial, TxIrq, true);
@@ -411,7 +434,9 @@ static void ntstdio_xo(struct ntstdio_t *handle, struct SHELL_FILE *fp, unsigned
 		if (ret != E_OK) {
 			syslog(LOG_ERROR, "clr_flg => %d", ret);
 		}
-	} while (fp->writeevt_w != fp->writeevt_r);
+	} while (fp->writeevt_w == fp->writeevt_r);
+
+	fp->writeevt_r++;
 
 	if (lock)
 		loc_cpu();
@@ -425,7 +450,7 @@ static void serial_tx_irq_handler(int fd)
 	ER ret;
 	unsigned char c;
 
-	if (fp->writeevt_w != fp->writeevt_r) fp->writeevt_r++;
+	if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_w++;
 
 	FLGPTN flgptn = 0;
 	FD_SET(fd, (fd_set *)&flgptn);

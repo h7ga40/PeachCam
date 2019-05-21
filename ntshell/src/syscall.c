@@ -335,8 +335,8 @@ long SYS_rmdir(long a) {
 	return shell_rmdir((const char *)a);
 }
 
-long SYS_rt_sigaction(long a, long b, long c) {
-	return shell_sigaction((int)a, (const struct sigaction *)b, (struct sigaction *)c);
+long SYS_rt_sigaction(long a, long b, long c, long d) {
+	return shell_sigaction((int)a, (const struct k_sigaction *)b, (struct k_sigaction *)c, (size_t)d);
 }
 
 long SYS_rt_sigprocmask(long a, long b, long c) {
@@ -426,6 +426,11 @@ long SYS_write(long a, long b, long c) {
 
 long SYS_writev(long a, long b, long c) {
 	return shell_writev((int)a, (const struct iovec *)b, (size_t)c);
+}
+
+long SYS_nanosleep(long a, long b)
+{
+	return shell_nanosleep((const struct timespec *)a, (struct timespec *)b);
 }
 
 long SYS_dup(long a) {
@@ -531,11 +536,6 @@ long SYS_setuid32()
 long SYS_tgkill()
 {
 	return no_implement("tgkill\n");
-}
-
-long SYS_nanosleep(long a, long b) {
-	//int nanosleep(const struct timespec *req, struct timespec *rem)
-	return no_implement("nanosleep\n");
 }
 
 long SYS_prlimit64(long a, long b, long c, long d) {

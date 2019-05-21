@@ -131,6 +131,7 @@ extern "C" {
 
 // time.h
 #define CLOCK_REALTIME 0
+int shell_nanosleep(const struct timespec *req, struct timespec *rem);
 
 // dirent.h
 typedef struct __dirstream FATFS_DIR;
@@ -176,7 +177,9 @@ pid_t shell_getpid(void);
 int shell_access(const char *path, int mode);
 // signal.h
 int shell_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict old);
-int shell_sigaction(int sig, const struct sigaction *__restrict sa, struct sigaction *__restrict old);
+struct k_sigaction;
+int shell_sigaction(int sig, const struct k_sigaction *__restrict sa,
+	struct k_sigaction *__restrict old, size_t size);
 // socket.h
 int shell_socket(int, int, int);
 int shell_connect(int, const struct sockaddr *, socklen_t);

@@ -262,13 +262,13 @@ static T_NET_BUF_ENTRY net_buf_table[] = {
 #if defined(_IP4_CFG) && !defined(_IP6_CFG)
 
 #if defined(NUM_MPF_NET_BUF_CSEG) && NUM_MPF_NET_BUF_CSEG > 0
-	{
-		MPF_NET_BUF_CSEG,
-		IF_HDR_SIZE + IP_HDR_SIZE + TCP_HDR_SIZE,
+		{
+			MPF_NET_BUF_CSEG,
+			IF_HDR_SIZE + IP_HDR_SIZE + TCP_HDR_SIZE,
 
 #if NET_COUNT_ENABLE & PROTO_FLG_NET_BUF
 
-		NUM_MPF_NET_BUF_CSEG,
+			NUM_MPF_NET_BUF_CSEG,
 
 #endif	/* of #if NET_COUNT_ENABLE & PROTO_FLG_NET_BUF */
 

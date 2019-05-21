@@ -130,6 +130,7 @@ extern ER	udp_can_cep (ID cepid, FN fncd);
 
 extern ER_UINT	udp6_snd_dat (ID cepid, T_IPV6EP *p_dstaddr, void *data, int_t len, TMO tmout);
 extern ER_UINT	udp6_rcv_dat (ID cepid, T_IPV6EP *p_dstaddr, void *data, int_t len, TMO tmout);
+extern ER	udp6_can_cep(ID cepid, FN fncd);
 
 /* 【拡張機能】 */
 
@@ -138,6 +139,9 @@ extern ER	udp_set_opt (ID cepid, int_t optname, void *optval, int_t optlen);
 extern ER	udp_get_opt (ID cepid, int_t optname, void *optval, int_t optlen);
 extern ER	udp_cre_cep (ID cepid, T_UDP_CCEP *pk_ccep);
 
+extern ER	udp6_del_cep(ID cepid);
+extern ER	udp6_set_opt(ID cepid, int_t optname, void *optval, int_t optlen);
+extern ER	udp6_get_opt(ID cepid, int_t optname, void *optval, int_t optlen);
 extern ER	udp6_cre_cep (ID cepid, T_UDP6_CCEP *pk_ccep);
 
 #endif	/* of #ifndef _IN_ITRON_H_ */

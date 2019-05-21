@@ -89,6 +89,7 @@ static size_t file_write(struct SHELL_FILE *fp, const unsigned char *data, size_
 static off_t file_seek(struct SHELL_FILE *fp, off_t ofs, int org);
 static int file_ioctl(struct SHELL_FILE *fp, int req, void *arg);
 static bool_t file_readable(struct SHELL_FILE *fp);
+static bool_t file_writable(struct SHELL_FILE *fp);
 static void file_delete(struct SHELL_FILE *fp);
 
 static int dir_close(struct SHELL_FILE *fp);
@@ -97,10 +98,11 @@ static size_t dir_write(struct SHELL_FILE *fp, const unsigned char *data, size_t
 static off_t dir_seek(struct SHELL_FILE *fp, off_t ofs, int org);
 static int dir_ioctl(struct SHELL_FILE *fp, int req, void *arg);
 static bool_t dir_readable(struct SHELL_FILE *fp);
+static bool_t dir_writable(struct SHELL_FILE *fp);
 static void dir_delete(struct SHELL_FILE *fp);
 
-IO_TYPE IO_TYPE_FILE = { file_close, file_read, file_write, file_seek, file_ioctl, file_readable, file_delete };
-IO_TYPE IO_TYPE_DIR = { dir_close, dir_read, dir_write, dir_seek, dir_ioctl, dir_readable, dir_delete };
+IO_TYPE IO_TYPE_FILE = { file_close, file_read, file_write, file_seek, file_ioctl, file_readable, file_writable, file_delete };
+IO_TYPE IO_TYPE_DIR = { dir_close, dir_read, dir_write, dir_seek, dir_ioctl, dir_readable, dir_writable, dir_delete };
 
 int shell_open(const char *path, int flags, void *arg)
 {
@@ -118,6 +120,7 @@ int shell_open(const char *path, int flags, void *arg)
 		FATFS_DIR *dir = &((struct SHELL_DIR *)fp->exinf)->dir;
 		FRESULT res;
 		if ((res = f_opendir(dir, path)) != FR_OK) {
+			delete_fp(fp);
 			return fresult2errno(res);
 		}
 		return 0;
@@ -169,6 +172,7 @@ int shell_open(const char *path, int flags, void *arg)
 		return fp->fd;
 	}
 
+	delete_fp(fp);
 	return fresult2errno(res);
 }
 
@@ -241,6 +245,11 @@ int file_ioctl(struct SHELL_FILE *fp, int req, void *arg)
 bool_t file_readable(struct SHELL_FILE *fp)
 {
 	return fp->readevt_w != fp->readevt_r;
+}
+
+bool_t file_writable(struct SHELL_FILE *fp)
+{
+	return fp->writable && (fp->writeevt_w == fp->writeevt_r);
 }
 
 void file_delete(struct SHELL_FILE *fp)
@@ -610,6 +619,11 @@ int dir_ioctl(struct SHELL_FILE *fp, int req, void *arg)
 bool_t dir_readable(struct SHELL_FILE *fp)
 {
 	return fp->readevt_w != fp->readevt_r;
+}
+
+bool_t dir_writable(struct SHELL_FILE *fp)
+{
+	return false;
 }
 
 void dir_delete(struct SHELL_FILE *fp)

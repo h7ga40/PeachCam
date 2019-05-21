@@ -92,6 +92,17 @@ struct SHELL_FILE *new_fp(IO_TYPE *type, int id, int writable)
 		syslog(LOG_ERROR, "sig_sem => %d", ret);
 	}
 
+	if (fp != NULL) {
+		FLGPTN flgptn = 0;
+
+		FD_SET(fp->fd, (fd_set *)&flgptn);
+
+		ret = clr_flg(FLG_SELECT_WAIT, ~flgptn);
+		if (ret != E_OK) {
+			syslog(LOG_ERROR, "clr_flg => %d", ret);
+		}
+	}
+
 	return fp;
 }
 
@@ -289,12 +300,13 @@ ER shell_get_evts(struct fd_events *evts, TMO tmout)
 {
 	int count = 0;
 	SYSTIM prev, now;
+	FLGPTN flgptn;
 
 	get_tim(&prev);
 
 	for (;;) {
 		ER ret;
-		FLGPTN waitptn, flgptn, readfds = 0, writefds = 0;
+		FLGPTN waitptn, readfds = 0, writefds = 0;
 		struct SHELL_FILE *fp = NULL;
 
 #ifndef NTSHELL_NO_SOCKET
@@ -305,7 +317,6 @@ ER shell_get_evts(struct fd_events *evts, TMO tmout)
 		for (int fd = 0; fd < fd_table_count; fd++) {
 			fp = &fd_table[fd];
 
-#ifndef NTSHELL_NO_SOCKET
 			if (FD_ISSET(fd, &evts->readfds)) {
 				if (fp->type->readable(fp)) {
 					FD_SET(fd, (fd_set *)&readfds);
@@ -316,9 +327,9 @@ ER shell_get_evts(struct fd_events *evts, TMO tmout)
 					FD_SET(fd, (fd_set *)&waitptn);
 				}
 			}
-#endif
+
 			if (FD_ISSET(fd, &evts->writefds)) {
-				if (fp->writeevt_w == fp->writeevt_r) {
+				if (fp->type->writable(fp)) {
 					FD_SET(fd, (fd_set *)&writefds);
 					count++;
 					if (fp->writeevt_w == fp->writeevt_r) fp->writeevt_r--;
@@ -348,53 +359,52 @@ ER shell_get_evts(struct fd_events *evts, TMO tmout)
 				syslog(LOG_ERROR, "twai_flg => %d", ret);
 				return ret;
 			}
-
-			if (flgptn == 0)
-				return E_TMOUT;
 		}
-		flgptn &= waitptn;
 
-		/* 受け取ったフラグのみクリア */
-		ret = clr_flg(FLG_SELECT_WAIT, ~flgptn);
-		if (ret != E_OK) {
-			syslog(LOG_ERROR, "clr_flg => %d", ret);
+		if (flgptn != 0) {
+			flgptn &= waitptn;
+
+			/* 受け取ったフラグのみクリア */
+			ret = clr_flg(FLG_SELECT_WAIT, ~flgptn);
+			if (ret != E_OK) {
+				syslog(LOG_ERROR, "clr_flg => %d", ret);
+			}
 		}
 
 		count = 0;
 		for (int fd = 0; fd < fd_table_count; fd++) {
-			if (!FD_ISSET(fd, (fd_set *)&waitptn))
-				continue;
-
 			fp = &fd_table[fd];
 
 			if (fp->readevt_w != fp->readevt_r) {
 				fp->readevt_r++;
-				FD_SET(fd, &evts->readfds);
+				if (FD_ISSET(fd, (fd_set *)&waitptn))
+					FD_SET(fd, &evts->readfds);
 				count++;
 			}
 			if (fp->writeevt_w != fp->writeevt_r) {
 				fp->writeevt_r++;
-				fp->writable = 1;
-			}
-			if (fp->writable) {
-				FD_SET(fd, &evts->writefds);
+				if (FD_ISSET(fd, (fd_set *)&waitptn))
+					FD_SET(fd, &evts->writefds);
 				count++;
 			}
 			if (fp->errorevt_w != fp->errorevt_r) {
 				fp->errorevt_r++;
-				FD_SET(fd, &evts->errorfds);
+				if (FD_ISSET(fd, (fd_set *)&waitptn))
+					FD_SET(fd, &evts->errorfds);
 				count++;
 			}
 		}
 
-		if (count > 0)
+		if ((flgptn == 0) || (count > 0))
 			break;
 
 		get_tim(&now);
 
 		SYSTIM elapse = now - prev;
-		if (elapse > tmout)
-			return E_TMOUT;
+		if (elapse > tmout) {
+			flgptn = 0;
+			break;
+		}
 
 		prev = now;
 		tmout -= elapse;
@@ -402,7 +412,7 @@ ER shell_get_evts(struct fd_events *evts, TMO tmout)
 
 	evts->count = count;
 
-	return E_OK;
+	return (flgptn == 0) ? E_TMOUT : E_OK;
 }
 
 void clean_fd()

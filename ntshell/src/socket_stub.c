@@ -148,10 +148,6 @@ typedef struct socket_t {
 #define tcp6_get_opt tcp_get_opt
 #define tcp6_set_opt tcp_set_opt
 
-#define udp6_del_cep udp_del_cep
-#define udp6_get_opt udp_get_opt
-#define udp6_set_opt udp_set_opt
-
 #ifndef SUPPORT_INET6
 
 ER	tcp6_cre_rep (ID repid, T_TCP6_CREP *pk_crep) { return E_SYS; }
@@ -159,8 +155,11 @@ ER	tcp6_acp_cep (ID cepid, ID repid, T_IPV6EP *p_dstaddr, TMO tmout) { return E_
 ER	tcp6_con_cep (ID cepid, T_IPV6EP *p_myaddr, T_IPV6EP *p_dstaddr, TMO tmout) { return E_SYS; }
 
 ER	udp6_cre_cep (ID cepid, T_UDP6_CCEP *pk_ccep) { return E_SYS; }
+ER	udp6_del_cep (ID cepid) { return E_SYS; }
 ER_UINT	udp6_snd_dat (ID cepid, T_IPV6EP *p_dstaddr, void *data, int_t len, TMO tmout) { return E_SYS; }
 ER_UINT	udp6_rcv_dat (ID cepid, T_IPV6EP *p_dstaddr, void *data, int_t len, TMO tmout) { return E_SYS; }
+ER	udp6_set_opt (ID cepid, int_t optname, void *optval, int_t optlen) { return E_SYS; }
+ER	udp6_get_opt (ID cepid, int_t optname, void *optval, int_t optlen) { return E_SYS; }
 
 const T_IN6_ADDR *in6_get_ifaddr (int_t index) { return NULL; }
 
@@ -177,6 +176,7 @@ static size_t tcp_fd_write(struct SHELL_FILE *fp, const unsigned char *data, siz
 static off_t tcp_fd_seek(struct SHELL_FILE *fp, off_t ofs, int org);
 static int tcp_fd_ioctl(struct SHELL_FILE *fp, int req, void *arg);
 static bool_t tcp_fd_readable(struct SHELL_FILE *fp);
+static bool_t tcp_fd_writable(struct SHELL_FILE *fp);
 static void tcp_fd_delete(struct SHELL_FILE *fp);
 
 static int udp_fd_close(struct SHELL_FILE *fp);
@@ -185,10 +185,11 @@ static size_t udp_fd_write(struct SHELL_FILE *fp, const unsigned char *data, siz
 static off_t udp_fd_seek(struct SHELL_FILE *fp, off_t ofs, int org);
 static int udp_fd_ioctl(struct SHELL_FILE *fp, int req, void *arg);
 static bool_t udp_fd_readable(struct SHELL_FILE *fp);
+static bool_t udp_fd_writable(struct SHELL_FILE *fp);
 static void udp_fd_delete(struct SHELL_FILE *fp);
 
-IO_TYPE IO_TYPE_TCP = { tcp_fd_close, tcp_fd_read, tcp_fd_write, tcp_fd_seek, tcp_fd_ioctl, tcp_fd_readable, tcp_fd_delete };
-IO_TYPE IO_TYPE_UDP = { udp_fd_close, udp_fd_read, udp_fd_write, udp_fd_seek, udp_fd_ioctl, udp_fd_readable, udp_fd_delete };
+IO_TYPE IO_TYPE_TCP = { tcp_fd_close, tcp_fd_read, tcp_fd_write, tcp_fd_seek, tcp_fd_ioctl, tcp_fd_readable, tcp_fd_writable, tcp_fd_delete };
+IO_TYPE IO_TYPE_UDP = { udp_fd_close, udp_fd_read, udp_fd_write, udp_fd_seek, udp_fd_ioctl, udp_fd_readable, udp_fd_writable, udp_fd_delete };
 
 typedef struct id_table_t {
 	int used;
@@ -251,6 +252,17 @@ id_table_t udp6_cepid_table[] = {
 #define udp6_cepid_table_count 0
 
 #endif
+
+void addrcpy(void *_dst, const void *_src, int len)
+{
+#if _NET_CFG_BYTE_ORDER == _NET_CFG_BIG_ENDIAN
+	memcpy(_dst, _src, len);
+#else
+	uint8_t *dst = (uint8_t *)_dst, *src = &((uint8_t *)_src)[len];
+	while (src != _src)
+		*dst++ = *--src;
+#endif
+}
 
 ID new_id(id_table_t *table, int count)
 {
@@ -413,14 +425,14 @@ int shell_bind(int fd, const struct sockaddr *addr, socklen_t len)
 			break;
 		}
 		case SOCK_DGRAM: {
-			ID cepid = new_id(udp_cepid_table, udp_cepid_table_count);
+			ID cepid = new_id(udp6_cepid_table, udp6_cepid_table_count);
 			if (cepid < 0)
 				return -ENOMEM;
 
-			T_UDP6_CCEP ccep = { 0, {ntohl(addr_in6->sin6_addr.__in6_union.__s6_addr), ntohs(addr_in6->sin6_port)}, (FP)socket_udp6_callback };
+			T_UDP6_CCEP ccep = { 0, { { ntohl(addr_in6->sin6_addr.__in6_union.__s6_addr) }, ntohs(addr_in6->sin6_port)}, (FP)socket_udp6_callback };
 			ret = udp6_cre_cep(cepid, &ccep);
 			if (ret != E_OK) {
-				delete_id(udp_cepid_table, udp_cepid_table_count, cepid);
+				delete_id(udp6_cepid_table, udp6_cepid_table_count, cepid);
 				return -ENOMEM;
 			}
 			fp->handle = cepid;
@@ -473,7 +485,7 @@ int shell_listen(int fd, int backlog)
 			return -ENOMEM;
 
 		struct sockaddr_in6 *laddr = &socket->laddr6;
-		T_TCP6_CREP crep = { 0, {ntohl(laddr->sin6_addr.__in6_union.__s6_addr), ntohs(laddr->sin6_port)} };
+		T_TCP6_CREP crep = { 0, { { ntohl(laddr->sin6_addr.__in6_union.__s6_addr) }, ntohs(laddr->sin6_port)} };
 		ret = tcp6_cre_rep(repid, &crep);
 		if (ret != E_OK) {
 			delete_id(tcp6_repid_table, tcp6_repid_table_count, repid);
@@ -489,7 +501,7 @@ int shell_listen(int fd, int backlog)
 	return 0;
 }
 
-int shell_connect(int fd, const struct sockaddr *addr, socklen_t len)
+int shell_connect(int fd, const struct sockaddr *addr, socklen_t alen)
 {
 	SOCKET *fp = fd_to_fp(fd);
 	if (fp == NULL)
@@ -501,7 +513,7 @@ int shell_connect(int fd, const struct sockaddr *addr, socklen_t len)
 	ER ret;
 	switch (socket->family) {
 	case AF_INET: {
-		if (len < 8) {
+		if (alen < sizeof(struct sockaddr_in)) {
 			return -EINVAL;
 		}
 		if (socket->cepid == 0) {
@@ -521,22 +533,25 @@ int shell_connect(int fd, const struct sockaddr *addr, socklen_t len)
 				return -ENOMEM;
 			}
 			fp->handle = cepid;
+			fp->writable = 1;
 			socket->cepid = cepid;
 		}
 		struct sockaddr_in *laddr = &socket->laddr4;
 		struct sockaddr_in *raddr = &socket->raddr4;
-		memset(raddr, 0, sizeof(*raddr));
-		memcpy(raddr, addr, len);
+		memcpy(raddr, addr, sizeof(struct sockaddr_in));
 		T_IPV4EP lep = { ntohl(laddr->sin_addr.s_addr), ntohs(laddr->sin_port) };
 		T_IPV4EP rep = { ntohl(raddr->sin_addr.s_addr), ntohs(raddr->sin_port) };
 		ret = tcp_con_cep(socket->cepid, &lep, &rep, SOCKET_TIMEOUT);
-		if (ret < 0) {
+		if (ret == E_TMOUT) {
+			return -ETIMEDOUT;
+		}
+		else if (ret < 0) {
 			return -EHOSTUNREACH;
 		}
 		break;
 	}
 	case AF_INET6: {
-		if (len < 20) {
+		if (alen < sizeof(struct sockaddr_in6)) {
 			return -EINVAL;
 		}
 		if (socket->cepid == 0) {
@@ -556,16 +571,23 @@ int shell_connect(int fd, const struct sockaddr *addr, socklen_t len)
 				return -ENOMEM;
 			}
 			fp->handle = cepid;
+			fp->writable = 1;
 			socket->cepid = cepid;
 		}
 		struct sockaddr_in6 *laddr = &socket->laddr6;
 		struct sockaddr_in6 *raddr = &socket->raddr6;
-		memset(raddr, 0, sizeof(*raddr));
-		memcpy(raddr, addr, len);
-		T_IPV6EP lep = { ntohl(laddr->sin6_addr.__in6_union.__s6_addr), ntohs(laddr->sin6_port) };
-		T_IPV6EP rep = { ntohl(raddr->sin6_addr.__in6_union.__s6_addr), ntohs(raddr->sin6_port) };
+		memcpy(raddr, addr, sizeof(struct sockaddr_in6));
+		T_IPV6EP lep;
+		addrcpy(&lep.ipaddr, &laddr->sin6_addr, 16);
+		lep.portno = ntohs(laddr->sin6_port);
+		T_IPV6EP rep;
+		addrcpy(&rep.ipaddr, &raddr->sin6_addr, 16);
+		rep.portno = ntohs(raddr->sin6_port);
 		ret = tcp6_con_cep(socket->cepid, &lep, &rep, SOCKET_TIMEOUT);
-		if (ret < 0) {
+		if (ret == E_TMOUT) {
+			return -ETIMEDOUT;
+		}
+		else if (ret < 0) {
 			return -EHOSTUNREACH;
 		}
 		break;
@@ -574,10 +596,12 @@ int shell_connect(int fd, const struct sockaddr *addr, socklen_t len)
 		return -ENOPROTOOPT;
 	}
 
+	if (fp->writeevt_w != fp->writeevt_r) fp->writeevt_r++;
+
 	return 0;
 }
 
-int shell_accept(int fd, struct sockaddr *__restrict addr, socklen_t *__restrict len)
+int shell_accept(int fd, struct sockaddr *__restrict addr, socklen_t *__restrict alen)
 {
 	SOCKET *lfp = fd_to_fp(fd);
 	if (lfp == NULL)
@@ -616,11 +640,13 @@ int shell_accept(int fd, struct sockaddr *__restrict addr, socklen_t *__restrict
 				return -ENOMEM;
 			}
 			fp->handle = cepid;
+			fp->writable = 1;
 			socket->cepid = cepid;
 		}
 		else {
 			cepid = ((socket_t *)lfp->exinf)->cepid;
 			fp->handle = cepid;
+			fp->writable = 1;
 			lfp->handle = tmax_tcp_cepid + ((socket_t *)lfp->exinf)->repid;
 			((socket_t *)lfp->exinf)->cepid = 0;
 			((socket_t *)lfp->exinf)->buf_size = 0;
@@ -632,21 +658,21 @@ int shell_accept(int fd, struct sockaddr *__restrict addr, socklen_t *__restrict
 			return -ENOMEM;
 		}
 		struct sockaddr_in *raddr = &socket->raddr4;
-		memset(raddr, 0, sizeof(*raddr));
+		memset(raddr, 0, sizeof(struct sockaddr_in));
 		raddr->sin_family = AF_INET;
 		raddr->sin_port = htons(rep.portno);
 		raddr->sin_addr.s_addr = htonl(rep.ipaddr);
 
-		if (addr != NULL && len != NULL) {
-			int sz = *len;
-			if (sz < 8) {
+		if (addr != NULL && alen != NULL) {
+			int sz = *alen;
+			if (sz < sizeof(struct sockaddr_in)) {
 				return -EINVAL;
 			}
 			struct sockaddr_in *raddr = &socket->raddr4;
-			if (sz > sizeof(*raddr))
-				sz = sizeof(*raddr);
+			if (sz > sizeof(struct sockaddr_in))
+				sz = sizeof(struct sockaddr_in);
 			memcpy(addr, raddr, sz);
-			*len = sizeof(*raddr);
+			*alen = sz;
 		}
 		break;
 	}
@@ -669,48 +695,47 @@ int shell_accept(int fd, struct sockaddr *__restrict addr, socklen_t *__restrict
 				return -ENOMEM;
 			}
 			fp->handle = cepid;
+			fp->writable = 1;
 			socket->cepid = cepid;
 		}
 		else {
 			cepid = ((socket_t *)lfp->exinf)->cepid;
 			fp->handle = cepid;
+			fp->writable = 1;
 			lfp->handle = tmax_tcp6_cepid + ((socket_t *)lfp->exinf)->repid;
 			((socket_t *)lfp->exinf)->cepid = 0;
 			((socket_t *)lfp->exinf)->buf_size = 0;
 			((socket_t *)lfp->exinf)->buf = 0;
 		}
-		T_IPV6EP rep = { 0, 0 };
+		T_IPV6EP rep = { { 0 }, 0 };
 		ret = tcp6_acp_cep(socket->cepid, socket->repid, &rep, TMO_FEVR);
 		if (ret < 0) {
 			return -ENOMEM;
 		}
 		struct sockaddr_in6 *raddr = &socket->raddr6;
-		memset(raddr, 0, sizeof(*raddr));
+		memset(raddr, 0, sizeof(struct sockaddr_in6));
 		raddr->sin6_family = AF_INET;
 		raddr->sin6_port = htons(rep.portno);
-#if _NET_CFG_BYTE_ORDER == _NET_CFG_BIG_ENDIAN
-		memcpy(raddr->sin6_addr.__in6_union.__s6_addr, rep.ipaddr.__u6_addr.__u6_addr8, 16);
-#else
-		for (int i = 0; i < 16; i++)
-			raddr->sin6_addr.__in6_union.__s6_addr[i] = rep.ipaddr.__u6_addr.__u6_addr8[i];
-#endif
+		addrcpy(&raddr->sin6_addr, &rep.ipaddr, 16);
 
-		if (addr != NULL && len != NULL) {
-			int sz = *len;
-			if (sz < 8) {
+		if (addr != NULL && alen != NULL) {
+			int sz = *alen;
+			if (sz < sizeof(struct sockaddr_in6)) {
 				return -EINVAL;
 			}
 			struct sockaddr_in6 *raddr = &socket->raddr6;
-			if (sz > sizeof(*raddr))
-				sz = sizeof(*raddr);
+			if (sz > sizeof(struct sockaddr_in6))
+				sz = sizeof(struct sockaddr_in6);
 			memcpy(addr, raddr, sz);
-			*len = sizeof(*raddr);
+			*alen = sz;
 		}
 		break;
 	}
 	default:
 		return -ENOPROTOOPT;
 	}
+
+	if (fp->writeevt_w != fp->writeevt_r) fp->writeevt_r++;
 
 	return fp->fd;
 }
@@ -739,34 +764,32 @@ ssize_t shell_sendto(int fd, const void *buf, size_t len, int flags, const struc
 				}
 			}
 			else {
+				int temp = len;
 				for (;;) {
 					ret = tcp_snd_dat(socket->cepid, (void *)buf, len, SOCKET_TIMEOUT);
 					if (ret < 0) {
-						if (ret == E_TMOUT)
-							return -ETIME;
-						return -ECOMM;
+						return (ret == E_TMOUT) ? -EAGAIN : -ECOMM;
 					}
 					len -= ret;
 					if (len <= 0)
 						break;
 					buf = (const void *)&((uint8_t *)buf)[ret];
 				} 
+				ret = temp;
 			}
 			break;
 		}
 		case SOCK_DGRAM: {
-			int sz = alen;
-			if ((addr == NULL) || (sz < 8)) {
+			if ((addr == NULL) || (alen < sizeof(struct sockaddr_in))) {
 				return -EINVAL;
 			}
 			struct sockaddr_in *raddr = &socket->raddr4;
-			memset(raddr, 0, sizeof(*raddr));
-			memcpy(raddr, addr, sz);
+			memcpy(raddr, addr, sizeof(struct sockaddr_in));
 			T_IPV4EP rep = { ntohl(raddr->sin_addr.s_addr), ntohs(raddr->sin_port) };
 			ret = udp_snd_dat(socket->cepid, &rep, (void *)buf, len,
 				(socket->flags & O_NONBLOCK) ? TMO_POL : SOCKET_TIMEOUT);
 			if (ret < 0) {
-				return (ret == E_TMOUT) ? -ETIME : -ECOMM;
+				return (ret == E_TMOUT) ? -EAGAIN : -ECOMM;
 			}
 			break;
 		}
@@ -787,34 +810,34 @@ ssize_t shell_sendto(int fd, const void *buf, size_t len, int flags, const struc
 				}
 			}
 			else {
+				int temp = len;
 				for (;;) {
 					ret = tcp6_snd_dat(socket->cepid, (void *)buf, len, SOCKET_TIMEOUT);
 					if (ret < 0) {
-						if (ret == E_TMOUT)
-							return -ETIME;
-						return -ECOMM;
+						return (ret == E_TMOUT) ? -EAGAIN : -ECOMM;
 					}
 					len -= ret;
 					if (len <= 0)
 						break;
 					buf = (const void *)&((uint8_t *)buf)[ret];
-				} 
+				}
+				ret = temp;
 			}
 			break;
 		}
 		case SOCK_DGRAM: {
-			int sz = alen;
-			if ((addr == NULL) || (sz < 8)) {
+			if ((addr == NULL) || (alen < sizeof(struct sockaddr_in6))) {
 				return -EINVAL;
 			}
 			struct sockaddr_in6 *raddr = &socket->raddr6;
-			memset(raddr, 0, sizeof(*raddr));
-			memcpy(raddr, addr, sz);
-			T_IPV6EP rep = { ntohl(raddr->sin6_addr.__in6_union.__s6_addr), ntohs(raddr->sin6_port) };
+			memcpy(raddr, addr, sizeof(struct sockaddr_in6));
+			T_IPV6EP rep;
+			addrcpy(&rep.ipaddr, &raddr->sin6_addr, 16);
+			rep.portno = ntohs(raddr->sin6_port);
 			ret = udp6_snd_dat(socket->cepid, &rep, (void *)buf, len,
 				(socket->flags & O_NONBLOCK) ? TMO_POL : SOCKET_TIMEOUT);
 			if (ret < 0) {
-				return (ret == E_TMOUT) ? -ETIME : -ECOMM;
+				return (ret == E_TMOUT) ? -EAGAIN : -ECOMM;
 			}
 			break;
 		}
@@ -824,6 +847,8 @@ ssize_t shell_sendto(int fd, const void *buf, size_t len, int flags, const struc
 	default:
 		return -ENOPROTOOPT;
 	}
+
+	if (fp->writeevt_w != fp->writeevt_r) fp->writeevt_r++;
 
 	return ret;
 }
@@ -866,10 +891,12 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 					if (ret < 0) {
 						syslog(LOG_ERROR, "sig_sem => %d", ret);
 					}
-					ret = tcp_rcv_buf(socket->cepid, &socket->input, TMO_FEVR);
+					ret = tcp_rcv_buf(socket->cepid, &socket->input,
+						(socket->flags & O_NONBLOCK) ? TMO_POL : SOCKET_TIMEOUT);
 					if (ret < 0) {
-						syslog(LOG_ERROR, "tcp_rcv_buf => %d", ret);
-						return -ECOMM;
+						if ((socket->flags & O_NONBLOCK) == 0)
+							syslog(LOG_ERROR, "tcp_rcv_buf => %d", ret);
+						return (ret == E_TMOUT) ? -EAGAIN : -ECOMM;
 					}
 					rsz = ret;
 				}
@@ -924,7 +951,7 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 				if (ret < 0) {
 					if ((socket->flags & O_NONBLOCK) == 0)
 						syslog(LOG_ERROR, "udp_rcv_buf => %d", ret);
-					return (ret == E_TMOUT) ? -ETIME : -ECOMM;
+					return (ret == E_TMOUT) ? -EAGAIN : -ECOMM;
 				}
 				rsz = ret;
 				if ((addr != NULL) && (alen != NULL)) {
@@ -933,12 +960,12 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 						syslog(LOG_ERROR, "wai_sem => %d", ret);
 					}
 					int sz = *alen;
-					memset(raddr, 0, sizeof(socket->raddr4));
+					memset(raddr, 0, sizeof(struct sockaddr_in));
 					raddr->sin_family = AF_INET;
 					raddr->sin_port = htons(rep.portno);
 					raddr->sin_addr.s_addr = htonl(rep.ipaddr);
-					if (sz > sizeof(socket->raddr4))
-						sz = sizeof(socket->raddr4);
+					if (sz > sizeof(struct sockaddr_in))
+						sz = sizeof(struct sockaddr_in);
 					memcpy(addr, raddr, sz);
 					*alen = sz;
 					ret = sig_sem(SEM_FILEDESC);
@@ -955,8 +982,8 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 				socket->buf = NULL;
 				if ((addr != NULL) && (alen != NULL)) {
 					int sz = *alen;
-					if (sz > sizeof(socket->raddr4))
-						sz = sizeof(socket->raddr4);
+					if (sz > sizeof(struct sockaddr_in))
+						sz = sizeof(struct sockaddr_in);
 					memcpy(addr, raddr, sz);
 					*alen = sz;
 				}
@@ -1000,10 +1027,12 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 					if (ret < 0) {
 						syslog(LOG_ERROR, "sig_sem => %d", ret);
 					}
-					ret = tcp6_rcv_buf(socket->cepid, &socket->input, TMO_FEVR);
+					ret = tcp6_rcv_buf(socket->cepid, &socket->input,
+						(socket->flags & O_NONBLOCK) ? TMO_POL : SOCKET_TIMEOUT);
 					if (ret < 0) {
-						syslog(LOG_ERROR, "tcp6_rcv_buf => %d", ret);
-						return -ECOMM;
+						if ((socket->flags & O_NONBLOCK) == 0)
+							syslog(LOG_ERROR, "tcp6_rcv_buf => %d", ret);
+						return (ret == E_TMOUT) ? -EAGAIN : -ECOMM;
 					}
 					rsz = ret;
 				}
@@ -1052,13 +1081,13 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 					syslog(LOG_ERROR, "sig_sem => %d", ret);
 				}
 
-				T_IPV6EP rep = { 0, 0 };
+				T_IPV6EP rep = { { 0 }, 0 };
 				ret = udp6_rcv_dat(socket->cepid, &rep, buf, len,
 					(socket->flags & O_NONBLOCK) ? TMO_POL : SOCKET_TIMEOUT);
 				if (ret < 0) {
 					if ((socket->flags & O_NONBLOCK) == 0)
 						syslog(LOG_ERROR, "udp6_rcv_buf => %d", ret);
-					return (ret == E_TMOUT) ? -ETIME : -ECOMM;
+					return (ret == E_TMOUT) ? -EAGAIN : -ECOMM;
 				}
 				rsz = ret;
 				if ((addr != NULL) && (alen != NULL)) {
@@ -1067,17 +1096,12 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 						syslog(LOG_ERROR, "wai_sem => %d", ret);
 					}
 					int sz = *alen;
-					memset(raddr, 0, sizeof(socket->raddr6));
+					memset(raddr, 0, sizeof(struct sockaddr_in6));
 					raddr->sin6_family = AF_INET;
 					raddr->sin6_port = htons(rep.portno);
-#if _NET_CFG_BYTE_ORDER == _NET_CFG_BIG_ENDIAN
-					memcpy(raddr->sin6_addr.__in6_union.__s6_addr, rep.ipaddr.__u6_addr.__u6_addr8, 16);
-#else
-					for (int i = 0; i < 16; i++)
-						raddr->sin6_addr.__in6_union.__s6_addr[i] = rep.ipaddr.__u6_addr.__u6_addr8[i];
-#endif
-					if (sz > sizeof(socket->raddr6))
-						sz = sizeof(socket->raddr6);
+					addrcpy(&raddr->sin6_addr, &rep.ipaddr, 16);
+					if (sz > sizeof(struct sockaddr_in6))
+						sz = sizeof(struct sockaddr_in6);
 					memcpy(addr, raddr, sz);
 					*alen = sz;
 					ret = sig_sem(SEM_FILEDESC);
@@ -1094,8 +1118,8 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 				socket->buf = NULL;
 				if ((addr != NULL) && (alen != NULL)) {
 					int sz = *alen;
-					if (sz > sizeof(socket->raddr6))
-						sz = sizeof(socket->raddr6);
+					if (sz > sizeof(struct sockaddr_in6))
+						sz = sizeof(struct sockaddr_in6);
 					memcpy(addr, raddr, sz);
 					*alen = sz;
 				}
@@ -1120,6 +1144,8 @@ ssize_t shell_recvfrom(int fd, void *__restrict buf, size_t len, int flags, stru
 	default:
 		return -ENOPROTOOPT;
 	}
+
+	if (fp->readevt_w != fp->readevt_r) fp->readevt_r++;
 
 	return ret;
 }
@@ -1493,12 +1519,7 @@ int shell_getsockname(int fd, struct sockaddr *restrict addr, socklen_t *restric
 		const T_IN6_ADDR *laddr6 = in6_get_ifaddr(0);
 		struct sockaddr_in6 laddr;
 		laddr.sin6_family = AF_INET;
-#if _NET_CFG_BYTE_ORDER == _NET_CFG_BIG_ENDIAN
-		memcpy(laddr.sin6_addr.__in6_union.__s6_addr, laddr6->__u6_addr.__u6_addr8, 16);
-#else
-		for (int i = 0; i < 16; i++)
-			laddr.sin6_addr.__in6_union.__s6_addr[i] = laddr6->__u6_addr.__u6_addr8[i];
-#endif
+		addrcpy(&laddr.sin6_addr, laddr6, 16);
 		laddr.sin6_port = socket->laddr6.sin6_port;
 		*len = sizeof(struct sockaddr_in6);
 		if (size > sizeof(struct sockaddr_in6))
@@ -1531,7 +1552,7 @@ int tcp_fd_close(struct SHELL_FILE *fp)
 			//delete_fd_by_id(&IO_TYPE_TCP, cepid);
 			delete_id(tcp_cepid_table, tcp_cepid_table_count, cepid);
 			if ((ret < 0) || (ret2 < 0)) {
-				return (ret == E_TMOUT) ? -ETIME : -EINVAL;
+				return (ret == E_TMOUT) ? -ETIMEDOUT : -EIO;
 			}
 		}
 		else if (socket->repid != 0) {
@@ -1560,7 +1581,7 @@ int tcp_fd_close(struct SHELL_FILE *fp)
 			//delete_fd_by_id(&IO_TYPE_TCP, cepid);
 			delete_id(tcp6_cepid_table, tcp6_cepid_table_count, cepid);
 			if ((ret < 0) || (ret2 < 0)) {
-				return (ret == E_TMOUT) ? -ETIME : -EINVAL;
+				return (ret == E_TMOUT) ? -ETIMEDOUT : -EIO;
 			}
 		}
 		else if (socket->repid != 0) {
@@ -1601,6 +1622,16 @@ off_t tcp_fd_seek(struct SHELL_FILE *fp, off_t ofs, int org)
 
 int tcp_fd_ioctl(struct SHELL_FILE *fp, int req, void *arg)
 {
+	socket_t *socket = (socket_t *)fp->exinf;
+
+	switch (req) {
+	case F_GETFL:
+		return socket->flags;
+	case F_SETFL:
+		socket->flags = (unsigned int)arg;
+		return 0;
+	}
+
 	return -EINVAL;
 }
 
@@ -1637,6 +1668,13 @@ bool_t tcp_fd_readable(struct SHELL_FILE *fp)
 	return false;
 }
 
+bool_t tcp_fd_writable(struct SHELL_FILE *fp)
+{
+	//socket_t *socket = (socket_t *)fp->exinf;
+
+	return /*fp->writable &&*/ (fp->writeevt_w == fp->writeevt_r);
+}
+
 void tcp_fd_delete(struct SHELL_FILE *fp)
 {
 	socket_t *socket = (socket_t *)fp->exinf;
@@ -1656,6 +1694,7 @@ ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk)
 	if (fp == NULL)
 		return E_PAR;
 
+	socket_t *socket = (socket_t *)fp->exinf;
 	int fd = fp->fd;
 	FD_SET(fd, (fd_set *)&flgptn);
 
@@ -1669,7 +1708,6 @@ ER socket_tcp_callback(ID cepid, FN fncd, void *p_parblk)
 		if (ret < 0) {
 			syslog(LOG_ERROR, "wai_sem => %d", ret);
 		}
-		socket_t *socket = (socket_t *)fp->exinf;
 		socket->len += len;
 		ret = sig_sem(SEM_FILEDESC);
 		if (ret < 0) {
@@ -1736,6 +1774,7 @@ ER socket_tcp6_callback(ID cepid, FN fncd, void *p_parblk)
 	if (fp == NULL)
 		return E_PAR;
 
+	socket_t *socket = (socket_t *)fp->exinf;
 	int fd = fp->fd;
 	FD_SET(fd, (fd_set *)&flgptn);
 
@@ -1749,7 +1788,6 @@ ER socket_tcp6_callback(ID cepid, FN fncd, void *p_parblk)
 		if (ret < 0) {
 			syslog(LOG_ERROR, "wai_sem => %d", ret);
 		}
-		socket_t *socket = (socket_t *)fp->exinf;
 		socket->len += len;
 		ret = sig_sem(SEM_FILEDESC);
 		if (ret < 0) {
@@ -1872,6 +1910,13 @@ bool_t udp_fd_readable(struct SHELL_FILE *fp)
 	return false;
 }
 
+bool_t udp_fd_writable(struct SHELL_FILE *fp)
+{
+	//socket_t *socket = (socket_t *)fp->exinf;
+
+	return fp->writable && (fp->writeevt_w == fp->writeevt_r);
+}
+
 void udp_fd_delete(struct SHELL_FILE *fp)
 {
 	//socket_t *socket = (socket_t *)fp->exinf;
@@ -1915,7 +1960,7 @@ ER socket_udp_callback(ID cepid, FN fncd, void *p_parblk)
 		}
 		socket->input = udppara->input;
 		socket->buf = GET_UDP_SDU(udppara->input, udppara->off);
-		memset(&socket->raddr4, 0, sizeof(socket->raddr4));
+		memset(&socket->raddr4, 0, sizeof(struct sockaddr_in));
 		socket->raddr4.sin_family = AF_INET;
 		socket->raddr4.sin_port = htons(udppara->rep4.portno);
 		socket->raddr4.sin_addr.s_addr = htonl(udppara->rep4.ipaddr);
@@ -1998,15 +2043,10 @@ ER socket_udp6_callback(ID cepid, FN fncd, void *p_parblk)
 		}
 		socket->input = udppara->input;
 		socket->buf = GET_UDP_SDU(udppara->input, udppara->off);
-		memset(&socket->raddr6, 0, sizeof(socket->raddr6));
+		memset(&socket->raddr6, 0, sizeof(struct sockaddr_in6));
 		socket->raddr6.sin6_family = AF_INET;
 		socket->raddr6.sin6_port = htons(udppara->rep6.portno);
-#if _NET_CFG_BYTE_ORDER == _NET_CFG_BIG_ENDIAN
-		memcpy(socket->raddr6.sin6_addr.__in6_union.__s6_addr, udppara->rep6.ipaddr.__u6_addr.__u6_addr8, 16);
-#else
-		for (int i = 0; i < 16; i++)
-			socket->raddr6.sin6_addr.__in6_union.__s6_addr[i] = udppara->rep6.ipaddr.__u6_addr.__u6_addr8[i];
-#endif
+		addrcpy(&socket->raddr6.sin6_addr, &udppara->rep6.ipaddr, 16);
 		udppara->input->flags |= NB_FLG_NOREL_IFOUT;
 		ret = sig_sem(SEM_FILEDESC);
 		if (ret < 0) {
