@@ -1,12 +1,8 @@
 #include "stdio_impl.h"
 
 /* stdout.c will override this if linked */
-#ifndef __c2__
 static FILE *volatile dummy = 0;
 weak_alias(dummy, __stdout_used);
-#else
-extern FILE *volatile __stdout_used;
-#endif
 
 int fflush(FILE *f)
 {
@@ -45,11 +41,4 @@ int fflush(FILE *f)
 	return 0;
 }
 
-#ifndef __c2__
 weak_alias(fflush, fflush_unlocked);
-#else
-int fflush_unlocked(FILE *f)
-{
-	return fflush_unlocked(f);
-}
-#endif

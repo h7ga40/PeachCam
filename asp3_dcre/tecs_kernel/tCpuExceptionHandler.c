@@ -37,7 +37,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: tCpuExceptionHandler.c 1484 2018-03-30 12:24:59Z coas-nagasima $
+ *  $Id$
  */
 
 #include "tCpuExceptionHandler_tecsgen.h"

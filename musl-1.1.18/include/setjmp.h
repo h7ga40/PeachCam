@@ -32,11 +32,7 @@ _Noreturn void _longjmp (jmp_buf, int);
 int setjmp (jmp_buf);
 _Noreturn void longjmp (jmp_buf, int);
 
-#if !defined(_MSC_VER) && !defined(__c2__)
-#define setjmp __builtin_setjmp
-#else
 #define setjmp setjmp
-#endif
 
 #ifdef __cplusplus
 }

@@ -7,12 +7,8 @@
 #include "syscall.h"
 #include "libc.h"
 
-#ifndef __c2__
 static void dummy(void) { }
 weak_alias(dummy, __vm_wait);
-#else
-extern void __vm_wait(void);
-#endif
 
 void *__mremap(void *old_addr, size_t old_len, size_t new_len, int flags, ...)
 {

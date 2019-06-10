@@ -4,9 +4,7 @@
 
 #define AUX_CNT 38
 
-#ifndef __c2__
 __attribute__((__weak__, __visibility__("hidden")))
-#endif
 extern const size_t _DYNAMIC[];
 
 static int static_dl_iterate_phdr(int(*callback)(struct dl_phdr_info *info, size_t size, void *data), void *data)

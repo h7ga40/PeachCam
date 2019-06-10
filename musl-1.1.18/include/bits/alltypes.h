@@ -1,35 +1,3 @@
-#if defined(_MSC_VER) || defined(__c2__)
-#define close musl_close
-#define execvp musl_execvp
-#define fclose musl_fclose
-#define fdopen musl_fdopen
-#define fflush musl_fflush
-#define fopen musl_fopen
-#define free musl_free
-#define fwrite musl_fwrite
-#define getcwd musl_getcwd
-#define localtime musl_localtime
-#define lseek musl_lseek
-#define open musl_open
-#define read musl_read
-#define malloc musl_malloc
-#define calloc musl_calloc
-#define realloc musl_realloc
-#define time musl_time
-#define unlink musl_unlink
-#define perror musl_perror
-#define strnlen musl_strnlen
-#define strftime musl_strftime
-#define asctime musl_asctime
-#define tzset musl_tzset
-#define clock musl_clock
-#endif
-#ifdef _MSC_VER
-#define __builtin_va_list char *
-#define __NEED_va_list
-#define restrict __restrict
-#endif
-
 #define _Addr int
 #define _Int64 long long
 #define _Reg int

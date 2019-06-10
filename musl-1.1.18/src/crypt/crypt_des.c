@@ -47,7 +47,7 @@
  * SUCH DAMAGE.
  *
  *	$Owl: Owl/packages/glibc/crypt_freesec.c,v 1.6 2010/02/20 14:45:06 solar Exp $
- *	$Id: crypt.c,v 1.15 1994/09/13 04:58:49 davidb Exp $
+ *	$Id$
  *
  * This is an original implementation of the DES and the crypt(3) interfaces
  * by David Burren.  It has been heavily re-worked by Solar Designer.

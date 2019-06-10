@@ -6,12 +6,8 @@
 #include "syscall.h"
 #include "libc.h"
 
-#ifndef __c2__
 static void dummy(void) { }
 weak_alias(dummy, __vm_wait);
-#else
-extern void __vm_wait(void);
-#endif
 
 #define UNIT SYSCALL_MMAP2_UNIT
 #define OFF_MASK ((-0x2000ULL << (8*sizeof(syscall_arg_t)-1)) | (UNIT-1))
@@ -41,13 +37,6 @@ void *__mmap(void *start, size_t len, int prot, int flags, int fd, off_t off)
 	return (void *)__syscall_ret(ret);
 }
 
-#ifndef __c2__
 weak_alias(__mmap, mmap);
-#else
-void *mmap(void *start, size_t len, int prot, int flags, int fd, off_t off)
-{
-	return __mmap(start, len, prot, flags, fd, off);
-}
-#endif
 
 LFS64(mmap);

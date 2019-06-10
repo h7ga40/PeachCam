@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2018 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: optimize.rb 2633 2017-04-02 06:02:05Z okuma-top $
+#   $Id$
 #++
 
 =begin
@@ -177,6 +177,7 @@ class Celltype
   end
 
   def set_domain
+    domain_cells = {}
     @cell_list.each{ |c|
       if c.is_generate? then
         dr = c.get_region.get_domain_root
@@ -190,17 +191,33 @@ class Celltype
         else
           @domain_roots[ dn ] = [ dr ]
         end
+        if domain_cells[ dr ]  then
+          domain_cells[ dr ] << c
+        else
+          domain_cells[ dr ] = [ c ]
+        end
       end
     }
 
     @domain_roots.each{ |dn, drs|
       drs.uniq!
-      if ! $debug then
-        dbgPrint "domains celltype:#{@name} domain=#{dn} "
+      if $verbose && dn then
+        print "[domain] celltype=#{@name} domainType=#{dn} domainRootRegions={"
+        delim = ""
         drs.each{ |r|
-          dbgPrint " region=#{r.get_name}"
+          print delim, r.get_name
+          delim = ", "
         }
-        dbgPrint "\n"
+        print "}\n"
+        drs.each{ |r|
+          print "[domain] celltype=#{@name} domainRootRegion=#{r.get_name} domainType=#{dn} domainKind=#{r.get_domain_root.get_domain_type.get_kind} domainCells={"
+          delim = ""
+          domain_cells[r].each{ |c|
+            print delim, c.get_name
+            delim = ", "
+          }
+          print "}\n"
+        }
       end
     }
     if @domain_roots.length > 1 then
@@ -211,11 +228,14 @@ class Celltype
     @domain_roots.each{ |dn, regions|
       # domain_type は一つのノードに一つしかないので、一つの要素を無条件で取り出す
       if regions.length > 1 then
-        cdl_info( "I9999 celltype:#{@name} has cells in multi domain.\n" )
-        if @idx_is_id == false then
-          cdl_info( "I9999 celltype:#{@name} forcely set idx_is_id\n" )
+        if $verbose then
+          cdl_info( "I9999 celltype '$1' has cells in multi-domain.\n", @name )
         end
-        @idx_is_id_act = true
+        # if @idx_is_id == false then
+        #   cdl_info( "I9999 celltype '$1' forcely set idx_is_id\n", @name )
+        # end
+        @b_need_ptab = true
+        # @idx_is_id_act = true
       end
     }
   end
@@ -227,6 +247,14 @@ class Celltype
       print "=== optimizing celltype #{get_namespace_path.to_s} ===\n"
     end
 
+    optimize_call
+    if $unopt_entry == false then
+      optimize_entry
+    end
+  end
+
+  #=== Celltype#呼び口最適化
+  def optimize_call
     @port.each{ |port|
       next if port.get_port_type != :CALL
       if port.is_omit? then
@@ -360,7 +388,11 @@ class Celltype
       # debug
       dbgPrint "#{port.get_name} : # of cells : #{port_cells.length}  # of ports : #{port_ports.length}\n"
     }
+  end
 
+  #=== Celltype#受け口最適化
+  # optimize_entry は、呼び口最適化の結果を使用している
+  def optimize_entry
     # 受け口最適化の設定
     @port.each{ |port|
       next if port.get_port_type != :CALL

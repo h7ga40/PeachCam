@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: echonet_fbs.c 1484 2018-03-30 12:24:59Z coas-nagasima $
+ *  @(#) $Id$
  */
 
 /*
@@ -415,7 +415,7 @@ ER _ecn_fbs_add_data_ex(ECN_FBS_ID fa_id, const void *fa_dat, ECN_FBS_SSIZE_T fa
 ER _ecn_fbs_get_data(ECN_FBS_ID fa_id, void *fa_buf, ECN_FBS_SSIZE_T fa_maxlen, ECN_FBS_SSIZE_T *p_len)
 {
 	int ret;
-	
+
 	ret = read_message(fa_id.ptr, fa_id.ptr->hdr.rd, fa_buf, fa_maxlen);
 	fa_id.ptr->hdr.rd += ret;
 	*p_len = ret;

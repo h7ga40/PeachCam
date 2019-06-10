@@ -13,13 +13,8 @@ int __mprotect(void *, size_t, int);
 static void dummy_0()
 {
 }
-#ifndef __c2__
 weak_alias(dummy_0, __acquire_ptc);
 weak_alias(dummy_0, __release_ptc);
-#else
-extern void __acquire_ptc();
-extern void __release_ptc();
-#endif
 weak_alias(dummy_0, __pthread_tsd_run_dtors);
 weak_alias(dummy_0, __do_orphaned_stdio_locks);
 weak_alias(dummy_0, __dl_thread_cleanup);
@@ -167,30 +162,19 @@ static int start_c11(void *p)
 #define ROUND(x) (((x)+PAGE_SIZE-1)&-PAGE_SIZE)
 
 /* pthread_key_create.c overrides this */
-#ifndef __c2__
 static volatile size_t dummy = 0;
 weak_alias(dummy, __pthread_tsd_size);
 static void *dummy_tsd[1] = { 0 };
 weak_alias(dummy_tsd, __pthread_tsd_main);
-#else
-extern volatile size_t __pthread_tsd_size;
-extern void *__pthread_tsd_main;
-#endif
 
 volatile int __block_new_threads = 0;
 size_t __default_stacksize = DEFAULT_STACK_SIZE;
 size_t __default_guardsize = DEFAULT_GUARD_SIZE;
 
-#ifndef __c2__
 static FILE *volatile dummy_file = 0;
 weak_alias(dummy_file, __stdin_used);
 weak_alias(dummy_file, __stdout_used);
 weak_alias(dummy_file, __stderr_used);
-#else
-extern FILE *volatile __stdin_used;
-extern FILE *volatile __stdout_used;
-extern FILE *volatile __stderr_used;
-#endif
 
 static void init_file_lock(FILE *f)
 {
@@ -328,17 +312,5 @@ fail:
 	return EAGAIN;
 }
 
-#ifndef __c2__
 weak_alias(__pthread_exit, pthread_exit);
 weak_alias(__pthread_create, pthread_create);
-#else
-_Noreturn void pthread_exit(void *result)
-{
-	__pthread_exit(result);
-}
-
-int pthread_create(pthread_t *restrict res, const pthread_attr_t *restrict attrp, void *(*entry)(void *), void *restrict arg)
-{
-	return __pthread_create(res, attrp, entry, arg);
-}
-#endif

@@ -71,9 +71,7 @@ typedef Elf32_Phdr Phdr;
 typedef Elf64_Phdr Phdr;
 #endif
 
-#ifndef __c2__
 __attribute__((__weak__, __visibility__("hidden")))
-#endif
 extern const size_t _DYNAMIC[];
 
 static void static_init_tls(size_t *aux)
@@ -135,11 +133,4 @@ static void static_init_tls(size_t *aux)
 		a_crash();
 }
 
-#ifndef __c2__
 weak_alias(static_init_tls, __init_tls);
-#else
-void __init_tls(size_t *aux)
-{
-	static_init_tls(aux);
-}
-#endif

@@ -41,7 +41,8 @@ void remove_filehandle(FileHandle *file)
 }
 }
 
-extern "C" uint32_t  __HeapLimit;
+extern "C" uint32_t __HeapBase;
+extern "C" uint32_t __HeapLimit;
 
 // Linker defined symbol used by _sbrk to indicate where heap should start.
 extern "C" uint32_t __end__;
@@ -65,6 +66,36 @@ extern "C" WEAK caddr_t _sbrk(int incr)
 
     heap = new_heap;
     return (caddr_t) prev_heap;
+}
+
+extern "C" void *shell_brk(void *addr)
+{
+	if (addr == 0) {
+		return (void *)(&__HeapBase);
+	}
+	if ((addr >= (void *)&__HeapBase) && (addr < (void *)&__HeapLimit)) {
+		return addr;
+	}
+	return (void *)-1;
+}
+
+extern "C" void *shell_mmap2(void *start, size_t length, int prot, int flags, int fd, off_t pgoffset)
+{
+	if (fd != -1)
+		return (void *)-EINVAL;
+
+	if ((length >= 0) && (length <= sizeof(&__HeapBase))) {
+		return &__HeapBase;
+	}
+	return (void *)-1;
+}
+
+extern "C" int shell_mprotect(void *addr, size_t len, int prot)
+{
+	//if ((addr >= (void *)&__HeapBase) && (addr + len < (void *)&__HeapLimit)) {
+		return 0;
+	//}
+	//return -1;
 }
 
 // Stub out locks when an rtos is not present

@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2016 by TOPPERS Project
+#   Copyright (C) 2008-2018 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: bnf.y.rb 2633 2017-04-02 06:02:05Z okuma-top $
+#   $Id$
 #++
 
 class Generator
@@ -378,7 +378,7 @@ struct_specifier		# mikan
         | STRUCT
 		{
 			# tag が無い場合、内部名を与える
-			result = StructType.new( :"$TAG_#{@@no_struct_tag_num}" )
+			result = StructType.new( :"TAG__#{@@no_struct_tag_num}__" )
 			@@no_struct_tag_num += 1
 			StructType.set_define( true )
 		}
@@ -799,10 +799,10 @@ restrict
 		{	result = [ val[0].val, val[2].val, val[5] ]		}
 
 region_name_list
-        : IDENTIFIER
-		{	result = [val[0].val]		}
-        | region_name_list ',' IDENTIFIER
-		{	result << val[2].val		}
+        : namespace_identifier
+		{	result = [val[0]]		}
+        | region_name_list ',' namespace_identifier
+		{	result << val[2]		}
 
 const_statement
         : declaration   # 定数定義
@@ -1806,7 +1806,7 @@ end
                 elsif line =~ /\A.*\n/     # 改行 \n は '.' にマッチしない
                   string += line
                   # この位置では error メソッドは使えない (token 読出し前)
-                  puts "error: #{file} line #{lineno}: string literal has newline without escape"
+                  puts "#{file}:#{lineno}:#{col}: error: string literal has newline without escape"
                   @@n_error += 1
                 end
               else
@@ -1847,10 +1847,11 @@ end
                   string = $1 + "\\\n"
                   b_in_string = true
                   # この位置では error メソッドは使えない (token 読出し前) # mikan cdl_error ではない
-                  puts "error: #{file} line #{lineno}: string literal has newline without escape"
+                  puts "#{file}:#{lineno}:#{col}: error: string literal has newline without escape"
                   @@n_error += 1
                 # 山括弧で囲まれた文字列
-                when /\A<[0-9A-Za-z_\. \/]+>/   # AB: angle bracke
+                # when /\A<[0-9A-Za-z_\. \/]+>/   # AB: angle bracke
+                when /\A<(?:[^>\\]|\\.)*>/   # これはうまく行くようだ
                   @q << [:AB_STRING_LITERAL, Token.new($&, file, lineno, col)]
                 # 行コメント
                 when /\A\/\/.*$/
@@ -1980,7 +1981,7 @@ end
         locale = @@current_locale[ @@generator_nest ]
       end
       if locale then
-        Console.puts "error: #{locale[0]}: line #{locale[1]} #{msg}"
+        Console.puts "#{locale[0]}:#{locale[1]}:#{locale[2]}: error: #{msg}"
       else
         Console.puts "error: #{msg}"
       end
@@ -2013,7 +2014,7 @@ end
         locale = @@current_locale[ @@generator_nest ]
       end
       if locale then
-        Console.puts "warning: #{locale[0]}: line #{locale[1]} #{msg}"
+        Console.puts "#{locale[0]}:#{locale[1]}:#{locale[2]}: warning: #{msg}"
       else
         Console.puts "warning: #{msg}"
       end
@@ -2046,7 +2047,7 @@ end
         locale = @@current_locale[ @@generator_nest ]
       end
       if locale then
-        Console.puts "info: #{locale[0]}: line #{locale[1]} #{msg}"
+        Console.puts "#{locale[0]}:#{locale[1]}:#{locale[2]}: info: #{msg}"
       else
         Console.puts "info: #{msg}"
       end

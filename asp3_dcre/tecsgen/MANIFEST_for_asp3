@@ -24,7 +24,10 @@ tecslib/core/pluginModule.rb
 tecslib/core/syntaxobj.rb
 tecslib/core/tecs_lang.rb
 tecslib/core/tecsgen.rb
+tecslib/core/tecsinfo.rb
+tecslib/core/tool_info.rb
 tecslib/core/types.rb
+tecslib/core/unjoin_plugin.rb
 tecslib/core/value.rb
 
 tecslib/messages/messages_console_en_US.rb
@@ -35,9 +38,11 @@ tecslib/messages/messages_file_ja_JP.rb
 tecslib/plugin/C2TECSBridgePlugin.rb
 tecslib/plugin/CellPlugin.rb
 tecslib/plugin/CelltypePlugin.rb
+tecslib/plugin/CompositePlugin.rb
 tecslib/plugin/DomainPlugin.rb
 tecslib/plugin/Mruby2CBridgePlugin.rb
 tecslib/plugin/MrubyBridgePlugin.rb
+tecslib/plugin/MultiPlugin.rb
 tecslib/plugin/NotifierPlugin.rb
 tecslib/plugin/RPCPlugin.rb
 tecslib/plugin/SignaturePlugin.rb
@@ -96,3 +101,6 @@ tecs/rpc/tPPAllocator.c
 tecs/rpc/tRPCDedicatedTaskMain.c
 tecs/rpc/tTDR_inline.h
 tecs/rpc/tecs_rpc.h
+tecs/rpc/tMessageBufferCEP.cdl
+tecs/rpc/tMessageBufferCEP_inline.h
+tecs/rpc/tMessageBufferChannel.cdl

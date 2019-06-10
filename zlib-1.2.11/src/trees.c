@@ -30,7 +30,7 @@
  *          Addison-Wesley, 1983. ISBN 0-201-06672-6.
  */
 
-/* @(#) $Id: trees.c 1484 2018-03-30 12:24:59Z coas-nagasima $ */
+/* @(#) $Id$ */
 
 /* #define GEN_TREES_H */
 

@@ -35,7 +35,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  *
- *  $Id: mbed_stub.c 1890 2019-04-19 11:59:49Z coas-nagasima $
+ *  $Id$
  */
 
 /*
@@ -50,7 +50,9 @@
 #include "kernel_cfg.h"
 #include "t_syslog.h"
 
-int _sta_ker(void)
+extern void musl_start(const char *const args);
+
+int main()
 {
 	static const char *const args[] = {
 		(char *)1,
@@ -64,12 +66,6 @@ int _sta_ker(void)
 	};
 	musl_start(args);
 	return 0;
-}
-
-__attribute__((weak))
-int main(void)
-{
-	return _sta_ker();
 }
 
 void wait_us(int us);

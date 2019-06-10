@@ -200,10 +200,10 @@ module_eval(<<'...end C_parser.y.rb/module_eval...', 'C_parser.y.rb', 784)
 	@yydebug = true
 	do_parse
 
-	ensure
-		@@generator_nest -= 1
-		TECS_LANG::reset_kcode
-	end
+		ensure
+			@@generator_nest -= 1
+			TECS_LANG::reset_kcode
+		end
 
 	end
 
@@ -266,7 +266,7 @@ module_eval(<<'...end C_parser.y.rb/module_eval...', 'C_parser.y.rb', 784)
 		locale = @@current_locale[ @@generator_nest ]
 
 		if locale then
-			Console.puts "error: #{locale[0]}: line #{locale[1]} #{msg}"
+			Console.puts "#{locale[0]}:#{locale[1]}: error: #{msg}"
 		else
 			Console.puts "error: #{msg}"
 		end

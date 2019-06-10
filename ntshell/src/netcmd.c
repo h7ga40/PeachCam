@@ -33,7 +33,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  *
- *  @(#) $Id: netcmd.c 1781 2019-02-01 00:02:42Z coas-nagasima $
+ *  @(#) $Id$
  */
 #include "shellif.h"
 #include <kernel.h>

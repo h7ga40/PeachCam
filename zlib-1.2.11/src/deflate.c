@@ -47,7 +47,7 @@
  *
  */
 
-/* @(#) $Id: deflate.c 1484 2018-03-30 12:24:59Z coas-nagasima $ */
+/* @(#) $Id$ */
 
 #include "deflate.h"
 

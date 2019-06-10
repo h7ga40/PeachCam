@@ -40,6 +40,7 @@ enum parse_state_t {
 	psUploadServer,
 	psUploadStorage,
 	psLepton,
+	psLeptonAgc,
 	psLeptonRadiometry,
 	psLeptonFFCNorm,
 	psLeptonTelemetry,
@@ -117,7 +118,11 @@ start(void *data, const XML_Char *el, const XML_Char **attr)
 		}
 		break;
 	case psLepton:
-		if (strcmp(el, "radiometry") == 0) {
+		if (strcmp(el, "agc") == 0) {
+			cd->lepton.agc = 0;
+			cd->state = psLeptonAgc;
+		}
+		else if (strcmp(el, "radiometry") == 0) {
 			cd->lepton.radiometry = 0;
 			cd->state = psLeptonRadiometry;
 		}
@@ -197,6 +202,11 @@ end(void *data, const XML_Char *el)
 	case psUploadStorage:
 		if (strcmp(el, "storage") == 0) {
 			cd->state = psUpload;
+		}
+		break;
+	case psLeptonAgc:
+		if (strcmp(el, "agc") == 0) {
+			cd->state = psLepton;
 		}
 		break;
 	case psLeptonRadiometry:
@@ -313,6 +323,10 @@ text(void *data, const XML_Char *s, int len)
 			cd->upload.storage[cd->pos] = '\0';
 		}
 		break;
+	case psLeptonAgc:
+		if ((*s != '0') || (len != 1))
+			cd->lepton.agc = 1;
+		break;
 	case psLeptonRadiometry:
 		if ((*s != '0') || (len != 1))
 			cd->lepton.radiometry = 1;
@@ -401,6 +415,15 @@ extern "C" int usrcmd_lpt(int argc, char **argv)
 		globalState.MakeFilePath();
 		auto file = globalState.GetFilePath() + ".bmp";
 		lepton->SaveImage(file.c_str());
+	}
+	else if ((strcmp(argv[1], "a") == 0) && (argc > 2)) {
+		lepton->ReqAgc(strcmp(argv[2], "0") == 0);
+	}
+	else if (strcmp(argv[1], "a0") == 0) {
+		lepton->ReqAgc(false);
+	}
+	else if (strcmp(argv[1], "a1") == 0) {
+		lepton->ReqAgc(true);
 	}
 	else if ((strcmp(argv[1], "r") == 0) && (argc > 2)) {
 		lepton->ReqRadiometry(strcmp(argv[2], "0") == 0);
@@ -518,11 +541,15 @@ int main()
 			if (config.lepton.reference != 0)
 				reference = auxtemp;
 
-			int minValue = (int)((config.lepton.slope / 1000.0) * (lepton->GetMinValue() - 8192)) + config.lepton.offset + reference;
+			//int minValue = lepton->GetMinValue() - 27315;
+			//int minValue = (int)((config.lepton.slope / 1000.0) * (lepton->GetMinValue() - 8192)) + config.lepton.offset + reference;
+			int minValue = lepton->GetMinValue();
 			snprintf(textbuf, sizeof(textbuf), "min:%4d.%02u℃", minValue / 100, (minValue > 0) ? (minValue % 100) : -(minValue % 100));
 			lcd_drawString(textbuf, 400, 184, 0xFCCC, 0x0000);
 
-			int maxValue = (int)((config.lepton.slope / 1000.0) * (lepton->GetMaxValue() - 8192)) + config.lepton.offset + reference;
+			//int maxValue = lepton->GetMaxValue() - 27315;
+			//int maxValue = (int)((config.lepton.slope / 1000.0) * (lepton->GetMaxValue() - 8192)) + config.lepton.offset + reference;
+			int maxValue = lepton->GetMaxValue();
 			snprintf(textbuf, sizeof(textbuf), "max:%4d.%02u℃", maxValue / 100, (maxValue > 0) ? (maxValue % 100) : -(maxValue % 100));
 			lcd_drawString(textbuf, 400, 196, 0xFCCC, 0x0000);
 		}

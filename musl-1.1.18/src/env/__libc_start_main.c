@@ -8,29 +8,14 @@
 
 void __init_tls(size_t *);
 
-#ifndef __c2__
 static void dummy(void) {}
 weak_alias(dummy, _init);
-#else
-__attribute((weak))
-void _init(void) {}
-#endif
 
-#ifndef __c2__
 __attribute__((__weak__, __visibility__("hidden")))
 extern void (*const __init_array_start)(void), (*const __init_array_end)(void);
-#else
-extern void(*const __init_array_start)(void);
-#define __init_array_end __init_array_start
-#endif
 
-#ifndef __c2__
 static void dummy1(void *p) {}
 weak_alias(dummy1, __init_ssp);
-#else
-__attribute((weak))
-void __init_ssp(void *p) {}
-#endif
 
 #define AUX_CNT 38
 
@@ -76,14 +61,7 @@ static void libc_start_init(void)
 		(*(void (**)(void))a)();
 }
 
-#ifndef __c2__
 weak_alias(libc_start_init, __libc_start_init);
-#else
-void __libc_start_init(void)
-{
-	libc_start_init();
-}
-#endif
 
 int __libc_start_main(int (*main)(int,char **,char **), int argc, char **argv)
 {

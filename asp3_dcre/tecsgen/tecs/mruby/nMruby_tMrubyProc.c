@@ -1,264 +1,171 @@
 /*
- * This file comes from mruby. (renamed from tools/mruby/mruby.c)
- * This file is distributed under ruby's license. (not under TOPPERS license)
- *   see https://github.com/mruby/mruby
- * A little modification is done to to call initializer registering TECS components.
+ *   Copyright (C) 2008-2017 by TOPPERS Project
  *
- * このファイルは、mruby のものです。
- * mruby のライセンスのもとで、配布されます。(TOPPERS ライセンスではありません)
- *  参照：  https://github.com/mruby/mruby
- * TECS コンポーネントを登録する初期化子を呼ぶため、少しの修正がなされています。
+ *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
+ *  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
+ *  変・再配布（以下，利用と呼ぶ）することを無償で許諾する．
+ *  (1) 本ソフトウェアをソースコードの形で利用する場合には，上記の著作
+ *      権表示，この利用条件および下記の無保証規定が，そのままの形でソー
+ *      スコード中に含まれていること．
+ *  (2) 本ソフトウェアを，ライブラリ形式など，他のソフトウェア開発に使
+ *      用できる形で再配布する場合には，再配布に伴うドキュメント（利用
+ *      者マニュアルなど）に，上記の著作権表示，この利用条件および下記
+ *      の無保証規定を掲載すること．
+ *  (3) 本ソフトウェアを，機器に組み込むなど，他のソフトウェア開発に使
+ *      用できない形で再配布する場合には，次のいずれかの条件を満たすこ
+ *      と．
+ *    (a) 再配布に伴うドキュメント（利用者マニュアルなど）に，上記の著
+ *        作権表示，この利用条件および下記の無保証規定を掲載すること．
+ *    (b) 再配布の形態を，別に定める方法によって，TOPPERSプロジェクトに
+ *        報告すること．
+ *  (4) 本ソフトウェアの利用により直接的または間接的に生じるいかなる損
+ *      害からも，上記著作権者およびTOPPERSプロジェクトを免責すること．
+ *      また，本ソフトウェアのユーザまたはエンドユーザからのいかなる理
+ *      由に基づく請求からも，上記著作権者およびTOPPERSプロジェクトを
+ *      免責すること．
+ * 
+ *  本ソフトウェアは，無保証で提供されているものである．上記著作権者お
+ *  よびTOPPERSプロジェクトは，本ソフトウェアに関して，特定の使用目的
+ *  に対する適合性も含めて，いかなる保証も行わない．また，本ソフトウェ
+ *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
+ *  の責任を負わない．
+ * 
+ *  @(#) $Id$
  */
 
-#include "nMruby_tMrubyProc_tecsgen.h"
+/*
+ * 以前の nMruby_tMrubyProc.c は、mruby の本体に含まれていた 
+ *    mrbgems/mruby-bin-mruby/tools/mruby/mruby.c
+ * をベースに TECS のコードを足していたが、TOPPERS ライセンスと異なるため
+ * 新たに書き下ろした。（小さなコードのため、概ね似たようなものになるが。
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "mruby.h"
+#include "mruby/string.h"
 #include "mruby/array.h"
 #include "mruby/compile.h"
 #include "mruby/dump.h"
 #include "mruby/variable.h"
 
-#ifndef ENABLE_STDIO
-static void
-p(mrb_state *mrb, mrb_value obj)
-{
-  obj = mrb_funcall(mrb, obj, "inspect", 0);
-  fwrite(RSTRING_PTR(obj), RSTRING_LEN(obj), 1, stdout);
-  putc('\n', stdout);
-}
-#else
-#define p(mrb,obj) mrb_p(mrb,obj)
+/* #[<PREAMBLE>]#
+ * Don't edit the comments between #[<...>]# and #[</...>]#
+ * These comment are used by tecsmerege when merging.
+ *
+ * attr access macro #_CAAM_#
+ * mrb              mrb_state*       VAR_mrb         
+ *
+ * call port function #_TCPF_#
+ * call port: cInit signature: nMruby_sInitializeBridge context:task optional:true
+ *   bool_t     is_cInit_joined()                     check if joined
+ *   void           cInit_initializeBridge( const mrb_state* mrb );
+ *
+ * #[</PREAMBLE>]# */
+
+/* プロトタイプ宣言や変数の定義をここに書きます #_PAC_# */
+#include "nMruby_tMrubyProc_tecsgen.h"
+
+#ifndef E_OK
+#define	E_OK	0		/* success */
+#define	E_ID	(-18)	/* illegal ID */
 #endif
 
-void mrb_show_version(mrb_state *);
-void mrb_show_copyright(mrb_state *);
+/* 受け口関数 #_TEPF_# */
+/* #[<ENTRY_PORT>]# eMain
+ * entry port: eMain
+ * signature:  nPosix_sMain
+ * context:    task
+ * #[</ENTRY_PORT>]# */
 
-struct _args {
-  FILE *rfp;
-  char* cmdline;
-  mrb_bool fname        : 1;
-  mrb_bool mrbfile      : 1;
-  mrb_bool check_syntax : 1;
-  mrb_bool verbose      : 1;
-  int argc;
-  char** argv;
-};
-
-static void
-usage(const char *name)
-{
-  static const char *const usage_msg[] = {
-  "switches:",
-  "-b           load and execute RiteBinary (mrb) file",
-  "-c           check syntax only",
-  "-e 'command' one line of script",
-  "-v           print version number, then run in verbose mode",
-  "--verbose    run in verbose mode",
-  "--version    print the version",
-  "--copyright  print the copyright",
-  NULL
-  };
-  const char *const *p = usage_msg;
-
-  printf("Usage: %s [switches] programfile\n", name);
-  while (*p)
-    printf("  %s\n", *p++);
-}
-
-static int
-parse_args(mrb_state *mrb, int argc, char **argv, struct _args *args)
-{
-  char **origargv = argv;
-  static const struct _args args_zero = { 0 };
-
-  *args = args_zero;
-
-  for (argc--,argv++; argc > 0; argc--,argv++) {
-    char *item;
-    if (argv[0][0] != '-') break;
-
-    if (strlen(*argv) <= 1) {
-      argc--; argv++;
-      args->rfp = stdin;
-      break;
-    }
-
-    item = argv[0] + 1;
-    switch (*item++) {
-    case 'b':
-      args->mrbfile = TRUE;
-      break;
-    case 'c':
-      args->check_syntax = TRUE;
-      break;
-    case 'e':
-      if (item[0]) {
-        goto append_cmdline;
-      }
-      else if (argc > 1) {
-        argc--; argv++;
-        item = argv[0];
-append_cmdline:
-        if (!args->cmdline) {
-          size_t buflen;
-          char *buf;
-
-          buflen = strlen(item) + 1;
-          buf = (char *)mrb_malloc(mrb, buflen);
-          memcpy(buf, item, buflen);
-          args->cmdline = buf;
-        }
-        else {
-          size_t cmdlinelen;
-          size_t itemlen;
-
-          cmdlinelen = strlen(args->cmdline);
-          itemlen = strlen(item);
-          args->cmdline =
-            (char *)mrb_realloc(mrb, args->cmdline, cmdlinelen + itemlen + 2);
-          args->cmdline[cmdlinelen] = '\n';
-          memcpy(args->cmdline + cmdlinelen + 1, item, itemlen + 1);
-        }
-      }
-      else {
-        printf("%s: No code specified for -e\n", *origargv);
-        return EXIT_SUCCESS;
-      }
-      break;
-    case 'v':
-      if (!args->verbose) mrb_show_version(mrb);
-      args->verbose = TRUE;
-      break;
-    case '-':
-      if (strcmp((*argv) + 2, "version") == 0) {
-        mrb_show_version(mrb);
-        exit(EXIT_SUCCESS);
-      }
-      else if (strcmp((*argv) + 2, "verbose") == 0) {
-        args->verbose = TRUE;
-        break;
-      }
-      else if (strcmp((*argv) + 2, "copyright") == 0) {
-        mrb_show_copyright(mrb);
-        exit(EXIT_SUCCESS);
-      }
-    default:
-      return EXIT_FAILURE;
-    }
-  }
-
-  if (args->rfp == NULL && args->cmdline == NULL) {
-    if (*argv == NULL) args->rfp = stdin;
-    else {
-      args->rfp = fopen(argv[0], args->mrbfile ? "rb" : "r");
-      if (args->rfp == NULL) {
-        printf("%s: Cannot open program file. (%s)\n", *origargv, *argv);
-        return EXIT_FAILURE;
-      }
-      args->fname = TRUE;
-      args->cmdline = argv[0];
-      argc--; argv++;
-    }
-  }
-  args->argv = (char **)mrb_realloc(mrb, args->argv, sizeof(char*) * (argc + 1));
-  memcpy(args->argv, argv, (argc+1) * sizeof(char*));
-  args->argc = argc;
-
-  return EXIT_SUCCESS;
-}
-
-static void
-cleanup(mrb_state *mrb, struct _args *args)
-{
-  if (args->rfp && args->rfp != stdin)
-    fclose(args->rfp);
-  if (args->cmdline && !args->fname)
-    mrb_free(mrb, args->cmdline);
-  if (args->argv)
-    mrb_free(mrb, args->argv);
-  mrb_close(mrb);
-}
-
+/* #[<ENTRY_FUNC>]# eMain_main
+ * name:         eMain_main
+ * global_name:  nMruby_tMrubyProc_eMain_main
+ * oneway:       false
+ * #[</ENTRY_FUNC>]# */
 int
-// main(int argc, char **argv)
-eMain_main( CELLIDX idx, int argc, const char **argv)
-
+eMain_main(CELLIDX idx, int argc, const char** argv)
 {
-  CELLCB   *p_cellcb = GET_CELLCB( idx );
-  mrb_state *mrb = mrb_open();
-  int n = -1;
-  int i;
-  struct _args args;
-  mrb_value ARGV;
-  mrbc_context *c;
-  mrb_value v;
-  mrb_sym zero_sym;
+	CELLCB	*p_cellcb;
+  mrb_state *mrb;
+  mrbc_context* context;
+  if (VALID_IDX(idx)) {
+		p_cellcb = GET_CELLCB(idx);
+	}
+	else {
+		/* エラー処理コードをここに記述します */
+      return -1;
+	} /* end if VALID_IDX(idx) */
 
-  cInit_initializeBridge( mrb );    // TECS
-
-
-  if (mrb == NULL) {
-    fputs("Invalid mrb_state, exiting mruby\n", stderr);
-    return EXIT_FAILURE;
+	/* ここに処理本体を記述します #_TEFB_# */
+  if (argc != 2) {
+      printf("usage: %s script.rb\n", argv[0]);
+      goto error_return;
+  }
+  mrb = mrb_open();
+  if( mrb == 0 ){
+      printf("%s: mrb_open() failed\n", argv[0]);
+      goto error_return;
+  }
+  context = mrbc_context_new(mrb);
+  if (context == 0) {
+      printf("%s: mrbc_context_new() failed\n", argv[0]);
+      goto error_close;
   }
 
-  n = parse_args(mrb, argc, (char **)argv, &args);
-  if (n == EXIT_FAILURE || (args.cmdline == NULL && args.rfp == NULL)) {
-    cleanup(mrb, &args);
-    usage(argv[0]);
-    return n;
+  /*--------   ARGV   ----------*/
+  {
+      mrb_value ARGV = mrb_ary_new_capa(mrb, argc);
+      int  i;
+      for (i = 0; i < argc; i++) {
+          mrb_ary_push(mrb, ARGV, mrb_str_new_cstr(mrb, argv[i]));
+      }
+      mrb_define_global_const(mrb, "ARGV", ARGV);
+  }
+  /*--------   $0   ----------*/
+  {
+      mrb_sym zero_sym = mrb_intern_lit(mrb, "$0");
+      mrbc_filename(mrb, context, argv[0]);
+      mrb_gv_set(mrb, zero_sym, mrb_str_new_cstr(mrb, argv[0]));
   }
 
-  ARGV = mrb_ary_new_capa(mrb, args.argc);
-  for (i = 0; i < args.argc; i++) {
-    mrb_ary_push(mrb, ARGV, mrb_str_new_cstr(mrb, args.argv[i]));
-  }
-  mrb_define_global_const(mrb, "ARGV", ARGV);
-
-  c = mrbc_context_new(mrb);
-  if (args.verbose)
-    c->dump_result = TRUE;
-  if (args.check_syntax)
-    c->no_exec = TRUE;
-
-  /* Set $0 */
-  zero_sym = mrb_intern_lit(mrb, "$0");
-  if (args.rfp) {
-    char *cmdline;
-    cmdline = args.cmdline ? args.cmdline : "-";
-    mrbc_filename(mrb, c, cmdline);
-    mrb_gv_set(mrb, zero_sym, mrb_str_new_cstr(mrb, cmdline));
-  }
-  else {
-    mrbc_filename(mrb, c, "-e");
-    mrb_gv_set(mrb, zero_sym, mrb_str_new_lit(mrb, "-e"));
+  /* ------- register TECS bridge classes -------*/
+  if (is_cInit_joined()) {
+      cInit_initializeBridge(mrb);
   }
 
-  /* Load program */
-  if (args.mrbfile) {
-    v = mrb_load_irep_file_cxt(mrb, args.rfp, c);
-  }
-  else if (args.rfp) {
-    v = mrb_load_file_cxt(mrb, args.rfp, c);
-  }
-  else {
-    v = mrb_load_string_cxt(mrb, args.cmdline, c);
+  /*--------  load .rb file -------*/
+  {
+      FILE *file = fopen(argv[1], "r");
+      if (file == NULL) {
+          printf("file not found: %s\n", argv[1]);
+          goto error_free;
+      }
+
+      mrb_value val = mrb_load_file_cxt(mrb, file, context);
+      if (mrb->exc) {
+          if(! mrb_undef_p(val)){
+              mrb_print_error(mrb);
+          }
+      }
   }
 
-  mrbc_context_free(mrb, c);
-  if (mrb->exc) {
-    if (!mrb_undef_p(v)) {
-      mrb_print_error(mrb);
-    }
-    n = -1;
-  }
-  else if (args.check_syntax) {
-    printf("Syntax OK\n");
-  }
-  cleanup(mrb, &args);
+  /*---------- success case --------*/
+  mrbc_context_free(mrb, context);
+  mrb_close( mrb );
+  return 0;
 
-  return n == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+  /*---------- error case ----------*/
+error_free:
+  mrbc_context_free(mrb, context);
+error_close:
+  mrb_close( mrb );
+error_return:
+
+  return -1;
 }
+
+/* #[<POSTAMBLE>]#
+ *   Put non-entry functions below.
+ * #[</POSTAMBLE>]#*/

@@ -29,6 +29,9 @@ All text above, and the splash screen below must be included in any redistributi
 #define HIGH 1
 #define LOW 0
 
+uint16_t lcd_init_height = SSD1306_LCDHEIGHT;
+uint16_t lcd_init_width = SSD1306_LCDWIDTH;
+
 // the memory buffer for the LCD
 
 static uint8_t buffer[SSD1306_LCDHEIGHT * SSD1306_LCDWIDTH / 8] = {

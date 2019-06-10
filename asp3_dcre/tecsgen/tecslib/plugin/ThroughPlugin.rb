@@ -46,6 +46,7 @@ class ThroughPlugin < Plugin
 #@plugin_arg_str:: string             through で指定された引数
 #@next_cell:: Cell                    呼び口を結合するセル
 #@next_cell_port_name:: Symbol       呼び口を結合する受口の名前
+#@next_cell_port_subscript::Nil|Integer   呼び口を結合する受口の配列添数．受け口配列でない場合 nil
 #@signature::      Signature          シグニチャ
 #@celltype::       Celltype           呼び先のセルのセルタイプ. through が連接する場合、最終的な呼び先のセルのセルタイプ
 #@entry_port_name::Symbol             生成するセルの受け口名  "eThroughEntry"
@@ -73,15 +74,17 @@ class ThroughPlugin < Plugin
   #plugin_arg::     string             through で指定された引数
   #next_cell::      Cell               呼び口を接続するセル
   #next_cell_port_name:: Symbol        呼び口を接続する受口の名前
+  #next_cell_port_subscript:: Nil|Integer  呼び口を接続する受口配列添数
   #signature::      Signature          シグニチャ
   #celltype::       Celltype           セルタイプ (呼び先のセルのセルタイプ)
   #caller_cell::    Cell               呼び元のセル．@caller_cell の項を参照
-  def initialize( cell_name, plugin_arg, next_cell, next_cell_port_name, signature, celltype, caller_cell )
+  def initialize( cell_name, plugin_arg, next_cell, next_cell_port_name, next_cell_port_subscript, signature, celltype, caller_cell )
     super()
     @cell_name = cell_name                      # 生成すべきセル名（受け口側のセル名）
                                                 # この呼び先に別セルを生成する場合、この名前を接頭辞とすべき
     @next_cell = next_cell                      # 呼び先のセル
     @next_cell_port_name = next_cell_port_name
+    @next_cell_port_subscript = next_cell_port_subscript
     @signature = signature
     @entry_port_name = :"eThroughEntry"
     @call_port_name = :"cCall"
@@ -135,6 +138,11 @@ class ThroughPlugin < Plugin
   #===  生成されたセルの受け口の名前を得る
   def get_through_entry_port_name
     @entry_port_name
+  end
+
+  #===  生成されたセルの受け口配列添数を得る
+  def get_through_entry_port_subscript
+    @entry_port_subscript
   end
 
   #===  宣言コードの生成

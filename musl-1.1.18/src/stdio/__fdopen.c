@@ -57,11 +57,4 @@ FILE *__fdopen(int fd, const char *mode)
 	return __ofl_add(f);
 }
 
-#ifndef __c2__
 weak_alias(__fdopen, fdopen);
-#else
-FILE *fdopen(int fd, const char *mode)
-{
-	return __fdopen(fd, mode);
-}
-#endif

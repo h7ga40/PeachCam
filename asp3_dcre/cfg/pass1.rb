@@ -726,14 +726,14 @@ module Cfg1OutC
   #  静的APIのファイル名と行番号の出力
   #
   def self.OutLineNumber(cfgInfo)
-    @cfg1Out.add("#line #{cfgInfo[:_LINE_]} \"#{cfgInfo[:_FILE_]}\"")
+    @cfg1Out.add("#line #{cfgInfo[:_LINE_]} \"#{cfgInfo[:_FILE_].gsub('\\', '/')}\"")
   end
 
   #
   #  クラス記述のファイル名と行番号の出力
   #
   def self.OutClassLineNumber(cfgInfo)
-    @cfg1Out.add("#line #{cfgInfo[:CLASS_LINE_]} \"#{cfgInfo[:CLASS_FILE_]}\"")
+    @cfg1Out.add("#line #{cfgInfo[:CLASS_LINE_]} \"#{cfgInfo[:CLASS_FILE_].gsub('\\', '/')}\"")
   end
 
   #

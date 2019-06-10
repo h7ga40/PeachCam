@@ -3,7 +3,7 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-/* @(#) $Id: adler32.c 1484 2018-03-30 12:24:59Z coas-nagasima $ */
+/* @(#) $Id$ */
 
 #include "zutil.h"
 

@@ -28,7 +28,7 @@
  *  含めて，いかなる保証も行わない．また，本ソフトウェアの利用により直
  *  接的または間接的に生じたいかなる損害に関しても，その責任を負わない．
  * 
- *  @(#) $Id: net_rename.h 1484 2018-03-30 12:24:59Z coas-nagasima $
+ *  @(#) $Id$
  */
 
 #ifndef _NET_RENAME_H_
@@ -70,9 +70,9 @@
 
 #define tget_net_buf_ex		_tinet_tget_net_buf_ex
 #define tget_net_buf		_tinet_tget_net_buf
-#define rel_net_buf		_tinet_rel_net_buf
-#define rus_net_buf		_tinet_rus_net_buf
-#define net_buf_siz		_tinet_net_buf_siz
+#define rel_net_buf			_tinet_rel_net_buf
+#define rus_net_buf			_tinet_rus_net_buf
+#define net_buf_siz			_tinet_net_buf_siz
 #define net_buf_max_siz		_tinet_net_buf_max_siz
 #define nbuf_get_tbl		_tinet_nbuf_get_tbl
 #define nbuf_get_tbl_size	_tinet_nbuf_get_tbl_size

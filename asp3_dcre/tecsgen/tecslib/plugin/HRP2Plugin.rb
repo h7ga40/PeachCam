@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2014 by TOPPERS Project
+#   Copyright (C) 2018 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: HRP2Plugin.rb 2640 2017-06-03 11:27:12Z okuma-top $
+#   $Id$
 #++
 
 #
@@ -43,7 +43,19 @@
 class HRP2Plugin < DomainPlugin
 
   def initialize( region, name, option )
+    super
     print "HRP2Plugin: initialize: region=#{region.get_name}, domainName=#{name}, option=#{option}\n"
+    @region = region
+    @name   = name
+
+    case option
+    when "trusted", "nontrusted", "OutOfDomain"
+      # OK
+      @option = option
+    else
+      cdl_error( "HRPPlugin: '$1' is unacceptable domain kind, specify 'trusted' or 'nontrusted'", option )
+      @option = "trusted"   # とりあえず trusted を設定しておく
+    end
   end
 
   def add_through_plugin( join, current_region, next_region, through_type )
@@ -105,6 +117,19 @@ class HRP2Plugin < DomainPlugin
     end
 
     puts "=====Join Check End====="
+  end
+
+  #== ドメイン種別を返す
+  #return::Symbol :kernel, :user, :OutOfDomain
+  def get_kind
+    case @option
+    when "trusted"
+      return :kernel
+    when "nontrusted"
+      return :user
+    when "OutOfDomain"
+      return :OutOfDomain
+    end
   end
 
   def joinable?(current_region, next_region, through_type )

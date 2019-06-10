@@ -17,12 +17,8 @@ static struct chain {
 static volatile int synccall_lock[2];
 static volatile int target_tid;
 static void (*callback)(void *), *context;
-#ifndef __c2__
 static volatile int dummy = 0;
 weak_alias(dummy, __block_new_threads);
-#else
-extern volatile int __block_new_threads;
-#endif
 
 static void handler(int sig)
 {

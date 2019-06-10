@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2017 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: ctypes.rb 2622 2017-01-04 13:19:33Z okuma-top $
+#   $Id$
 #++
 
 # CType は C_parser で定義される型を扱う CIntType, CFloatType などに include するもの
@@ -121,7 +121,8 @@ module CType
       # mikan long double
       #   TECS には long double を表現する手段がない (double80_t を定義すればよいか?)
 #      cdl_warning( "C1003 $1 & $2 incompatible (\'long double\' is not supported.). Treated as $3." , self.class, another.class, self.class )
-      cdl_warning( "W9999 $1 & $2 incompatible (\'long double\' is not supported.). Treated as $3." , self.get_type_str, another.get_type_str, self.get_type_str )
+#      cdl_warning( "W9999 $1 & $2 incompatible (\'long double\' is not supported.). Treated as $3." , self.get_type_str, another.get_type_str, self.get_type_str )
+      self.to_long      
       return self
     else
       raise "merge: unknown type"
@@ -184,6 +185,13 @@ class CFloatType < FloatType
     super
   end
 
+  def to_long
+    if @bit_size != -64 then
+      cdl_warning( "W9999 long specified for $1" , get_type_str )
+    else
+      @bit_size = -128  # @bit_size = -128 : long double
+    end
+  end
 end
 
 class CEnumType < EnumType # mikan

@@ -1,7 +1,7 @@
 /*
- *  TOPPERS ECHONET Lite Communication Middleware
+ *  TOPPERS PROJECT Home Network Working Group Software
  * 
- *  Copyright (C) 2018 Cores Co., Ltd. Japan
+ *  Copyright (C) 2018-2019 Cores Co., Ltd. Japan
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
  *  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: ntp_cli.c 1888 2019-04-19 09:55:29Z coas-nagasima $
+ *  @(#) $Id$
  */
 
 /* 

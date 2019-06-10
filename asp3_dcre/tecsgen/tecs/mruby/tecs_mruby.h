@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2017 by TOPPERS Project
+ *  Copyright (C) 2008-2019 by TOPPERS Project
  *
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
  *  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -30,7 +30,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  *
- *  @(#) $Id: tecs_mruby.h 1484 2018-03-30 12:24:59Z coas-nagasima $
+ *  @(#) $Id$
  */
 
 #ifndef tecs_mruby_h__
@@ -45,42 +45,33 @@
 #include "mruby/string.h"
 #include "mruby/irep.h"
 #include "mruby/dump.h"
+#include "mruby/proc.h"
 
 #include "TECSPointer.h"
 #include "TECSStruct.h"
 
-#if  ! defined( MRUBY_RELEASE_MAJOR ) || MRUBY_RELEASE_MAJOR == 1 && MRUBY_RELEASE_MINOR < 2
-#ifndef MRB_ARGS_REQ
-#define MRB_ARGS_REQ(n)     ARGS_REQ(n)
-#define MRB_ARGS_OPT(n)     ARGS_OPT(n)
-#define MRB_ARGS_ARG(n1,n2) ARGS_ARG(n1,n2)
-#define MRB_ARGS_REST()     ARGS_REST()
-#define MRB_ARGS_POST(n)    ARGS_POST(n)
-#define MRB_ARGS_KEY(n1,n2) ARGS_KEY(n1,n2)
-#define MRB_ARGS_BLOCK()    ARGS_BLOCK()
-#define MRB_ARGS_ANY()      ARGS_ANY()
-#define MRB_ARGS_NONE()     ARGS_NONE()
-#endif /* MRB_ARGS_REQ */
-#endif
 
-#if  ! defined( MRUBY_RELEASE_MAJOR )
-#define mrb_float_value( mrb, val )  mrb_float_value( val )
-#endif
-
-#else
+#else /* TECSGEN */
 
 /*
- * fake tecsgen because tecsgen cannot accept actual mruby.h in case of below.
+ * fake definition because tecsgen cannot accept actual mruby.h in case of below.
  *   types:   long long, long long int
  *   special keyword __attribute__(x), __extension__
  */
 typedef int mrb_state;
 typedef int mrb_irep;
 typedef int mrb_context;
-struct  RClass {int dummy;};
-struct  RProc  {int dummy;};
+struct  RClass {uint32_t gcnext;};  // actual definition: struct RBasic *gcnext
+struct  RProc  {uint32_t gcnext;};  // actual definition: struct RBasic *gcnext
 
 typedef int CELLCB;
+
+#define GET_SET_BOOL( Type, type )
+#define GET_SET_CHAR( Type, type )
+#define GET_SET_INT( Type, type )
+#define GET_SET_FLOAT( Type, type )
+#define POINTER_CLASS( Type, type )
+#define CHECK_AND_GET_POINTER( Type, type )
 
 #endif /* TECSGEN */
 

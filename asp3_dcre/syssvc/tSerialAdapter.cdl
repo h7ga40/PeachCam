@@ -2,7 +2,7 @@
  *		C言語で記述されたアプリケーションから，TECSベースのシリアルイン
  *		タフェースドライバを呼び出すためのアダプタ用セルタイプの定義
  * 
- *  $Id: tSerialAdapter.cdl 1484 2018-03-30 12:24:59Z coas-nagasima $
+ *  $Id$
  */
 [singleton, active]
 celltype tSerialAdapter {

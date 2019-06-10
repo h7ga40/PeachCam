@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: echonet_rename.h 1680 2018-11-06 02:48:20Z coas-nagasima $
+ *  @(#) $Id$
  */
 
 #ifndef ECHONET_RENAME_H

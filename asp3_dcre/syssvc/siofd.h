@@ -1,5 +1,5 @@
 /*
- *  TOPPERS ECHONET Lite Communication Middleware
+ *  TOPPERS PROJECT Home Network Working Group Software
  * 
  *  Copyright (C) 2019 Cores Co., Ltd. Japan
  * 
@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: siofd.h 1888 2019-04-19 09:55:29Z coas-nagasima $
+ *  @(#) $Id$
  */
 
 /*

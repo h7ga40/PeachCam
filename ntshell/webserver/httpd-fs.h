@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  *
- *  @(#) $Id: httpd-fs.h 1192 2017-03-08 10:30:27Z coas-nagasima $
+ *  @(#) $Id$
  */
 #ifndef __HTTPD_FS_H__
 #define __HTTPD_FS_H__

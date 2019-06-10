@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2012 by TOPPERS Project
+#   Copyright (C) 2008-2017 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: HRP2KernelObjectPlugin.rb 2640 2017-06-03 11:27:12Z okuma-top $
+#   $Id$
 #++
 
 # Regionクラスにメソッドを追加
@@ -185,7 +185,7 @@ class HRP2KernelObjectPlugin < CelltypePlugin
                 # attrの値をハッシュに入れる
                 val = {}
                 @celltype.get_attribute_list.each{ |a|
-                    p a.get_name
+                    # p a.get_name
                     if a.get_type.kind_of?( ArrayType )
                         val[a.get_name] = []
                         if j = cell.get_join_list.get_item(a.get_name)
@@ -217,7 +217,8 @@ class HRP2KernelObjectPlugin < CelltypePlugin
                 # $id$を置換
                 if val[:id].nil? != true
                     puts val[:id]
-                    val[:id] = val[:id].gsub( /(^|[^\$])\$id\$/, "\\1#{@celltype.get_name.to_s}_#{cell.get_name.to_s}" )
+                    #val[:id] = val[:id].gsub( /(^|[^\$])\$id\$/, "\\1#{@celltype.get_name.to_s}_#{cell.get_name.to_s}" )
+                    val[:id] = @celltype.subst_name( val[:id], @celltype.get_name_array( cell ) )
                 end
                 # $cbp$の代わり
                 index = cell.get_id - @celltype.get_id_base
@@ -243,8 +244,8 @@ class HRP2KernelObjectPlugin < CelltypePlugin
                         file2.puts "\tINCLUDE(\"#{$gen}/tecsgen_#{cell_domain_root.get_name.to_s}.cfg\");" 
                         file2.puts "}\n"
                     else
-                        print "~~~~~ #{cell.get_region.get_name.to_s} is included in"
-                        p @@region_list
+                        dbgPrint "~~~~~ #{cell.get_region.get_name.to_s} is included in"
+                        # p @@region_list
                     end
                     file3 = AppFile.open( "#{$gen}/tecsgen_#{cell_domain_root.get_name.to_s}.cfg" )
                     print_cfg_cre(file3, cell, val,"")
@@ -259,8 +260,8 @@ class HRP2KernelObjectPlugin < CelltypePlugin
                 # SAC_XXXの生成
                 if !val[:accessPattern].nil?
                     puts "===== begin check regions #{cell.get_name} ====="
-                    p val[:accessPattern]
-                    p val[:accessPattern].class
+                    # p val[:accessPattern]
+                    # p val[:accessPattern].class
 
                     #ep = [ :eTaskActivate, :eTaskControl, :eTaskManage, :eTaskRefer ]
                     #各カーネルオブジェクトの受け口名を取得
@@ -272,10 +273,10 @@ class HRP2KernelObjectPlugin < CelltypePlugin
                         # アクセス許可パターンの生成
                         if acptnx != "OMIT"
                             acv << acptnx
-                            p acv[i]
+                            # p acv[i]
                         elsif cell_domain_type.get_option.to_s == "trusted"
                             acv << "TACP_KERNEL"
-                            p acv[i]
+                            # p acv[i]
                         elsif cell_domain_type.get_option.to_s != "OutOfDomain"
                             acv << "TACP(#{cell_domain_root.get_name.to_s})"
                         else
@@ -285,7 +286,7 @@ class HRP2KernelObjectPlugin < CelltypePlugin
                         i += 1
                     }
 
-                    print "acv = "
+                    dbgPrint "acv = "
                     p acv
 
                     #各種SACの生成
@@ -321,11 +322,11 @@ class HRP2KernelObjectPlugin < CelltypePlugin
     end
 
     def self.check_referenced_cells()
-        puts "===== begin check registered celltype ====="
+        dbgPrint "===== begin check registered celltype =====\n"
         self.get_celltype_list.each { |ct|
-            p ct.get_name.to_s
+            dbgPrint( ct.get_name.to_s + "\n" )
         }
-        puts "===== end check registered celltype ====="
+        dbgPrint "===== end check registered celltype =====\n"
 
 =begin
         Cell.get_cell_list2.each { |cell|
@@ -333,16 +334,16 @@ class HRP2KernelObjectPlugin < CelltypePlugin
                 next if p.get_port_type != :CALL
                 j = cell.get_join_list.get_item(p.get_name)
                 printf "===== check call port : "
-                p p.get_name.to_s
+                # p p.get_name.to_s
                 next if j.nil? # 未結合の場合
                 if @@celltype_list.include?(j.get_celltype)
                     # j.get_cell.set_referenced_region(cell.get_region)
                     # j.get_cell.set_referenced_region(cell.get_region, j.get_port_name)
                     j.get_cell.set_referenced_cell(cell, j.get_port_name)
                     printf "===== check joined rhs cell : "
-                    p j.get_cell.get_name.to_s
+                    # p j.get_cell.get_name.to_s
                     printf "===== check joined rhs port_name : "
-                    p j.get_port_name
+                    # p j.get_port_name
                 end
             }
         }

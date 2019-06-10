@@ -105,4 +105,7 @@ long __syscall_ret(unsigned long), __syscall_nr(long nr, ...);
 #define __SYSCALL_CONCAT_X(a,b) a##b
 #define __SYSCALL_CONCAT(a,b) __SYSCALL_CONCAT_X(a,b)
 #define __SYSCALL_DISP(b,...) __SYSCALL_CONCAT(b,__SYSCALL_NARGS(__VA_ARGS__))(__VA_ARGS__)
+
+#define syscall(...) __syscall_ret(__SYSCALL_DISP(__syscall, __VA_ARGS__))
+#define syscall_cp(...) __syscall_ret(__SYSCALL_DISP(__syscall_cp, __VA_ARGS__))
 #endif

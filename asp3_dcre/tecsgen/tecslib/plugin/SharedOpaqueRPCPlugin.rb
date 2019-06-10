@@ -67,7 +67,7 @@ class SharedOpaqueRPCPlugin < ThroughPlugin
 
   #=== RPCPlugin の initialize
   #  説明は ThroughPlugin (plugin.rb) を参照
-  def initialize( cell_name, plugin_arg, next_cell, next_cell_port_name, signature, celltype, caller_cell )
+  def initialize( cell_name, plugin_arg, next_cell, next_cell_port_name, next_cell_port_subscript, signature, celltype, caller_cell )
     super
     initialize_opaque_marshaler
     @entry_port_name = :"eClientEntry"   # Marshaler の受け口名 (through セルの入り口)
@@ -220,6 +220,12 @@ EOT
 #    nest = @caller_cell.get_region.gen_region_str_pre file
     nest = @start_region.gen_region_str_pre file
     indent_str = "  " * nest
+    nest_str = "  " * nest
+    if @next_cell_port_subscript then
+      subscript = '[' + @next_cell_port_subscript.to_s + ']'
+    else
+      subscript = ""
+    end
 
     # セルを探す
     # path =["::",@next_cell.get_name]
@@ -302,7 +308,7 @@ EOT
     file.print <<EOT
 #{indent_str}cell #{@unmarshaler_celltype_name} #{@cell_name}_Server {
 #{indent_str}  cTDR         = #{@shared_channel_cell}_Server.eTDR;
-#{indent_str}  cServerCall  = #{@next_cell.get_namespace_path.get_path_str}.#{@next_cell_port_name};
+#{indent_str}  cServerCall  = #{@next_cell.get_namespace_path.get_path_str}.#{@next_cell_port_name}#{subscript};
 #{ppallocator_join}#{indent_str}};
 EOT
     @end_region.gen_region_str_post file

@@ -34,6 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
+#   $Id$
 #++
 
 # mikan through plugin: namespace が考慮されていない
@@ -82,7 +83,7 @@ class HRP2SVCPlugin < ThroughPlugin
   #  説明は ThroughPlugin (plugin.rb) を参照
   @@generated_celltype_header = {}
 
-  def initialize( cell_name, plugin_arg, next_cell, next_cell_port_name, signature, celltype, caller_cell )
+  def initialize( cell_name, plugin_arg, next_cell, next_cell_port_name, next_cell_port_subscript, signature, celltype, caller_cell )
     super
     @ct_name_body = "#{@ct_name}SVCBody_#{@next_cell.get_name}_#{@next_cell_port_name}".to_sym
     @ct_name = "#{@ct_name}SVCCaller_#{@next_cell.get_name}_#{@next_cell_port_name}".to_sym
@@ -216,6 +217,11 @@ EOT
     ##### サーバー側のセルの生成 #####
     nest = @end_region.gen_region_str_pre file
     nest_str = "  " * nest
+    if @next_cell_port_subscript then
+      subscript = '[' + @next_cell_port_subscript.to_s + ']'
+    else
+      subscript = ""
+    end
 
     # サーバー側チャンネルの生成 
     # 拡張サービスコール本体
@@ -223,7 +229,7 @@ EOT
 
 #{nest_str}  //  Server Side Channel
 #{nest_str}  cell #{@ct_name_body} #{@cell_name_body}{
-#{nest_str}    #{@call_port_name} = #{@next_cell.get_namespace_path.get_path_str}.#{@next_cell_port_name};
+#{nest_str}    #{@call_port_name} = #{@next_cell.get_namespace_path.get_path_str}.#{@next_cell_port_name}#{subscript};
 #{nest_str}  };
 EOT
 
@@ -240,13 +246,18 @@ EOT
     ##### クライアント側のセルの生成 #####
     nest = @start_region.gen_region_str_pre file
     nest_str = "  " * nest
+    if @next_cell_port_subscript then
+      subscript = '[' + @next_cell_port_subscript.to_s + ']'
+    else
+      subscript = ""
+    end
 
     # クライアント側チャンネルの生成
     # 拡張サービスコール呼出し
     file.print <<EOT
 #{nest_str}  //  Client Side Channel
 #{nest_str}  cell #{@ct_name} #{@cell_name}{
-#{nest_str}    #{@call_port_name} = #{@next_cell.get_namespace_path.get_path_str}.#{@next_cell_port_name};
+#{nest_str}    #{@call_port_name} = #{@next_cell.get_namespace_path.get_path_str}.#{@next_cell_port_name}#{subscript};
 #{nest_str}  };
 
 EOT

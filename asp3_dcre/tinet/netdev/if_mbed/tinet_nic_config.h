@@ -3,7 +3,7 @@
  * 
  *  Copyright (C) 2001-2009 by Dep. of Computer Science and Engineering
  *                   Tomakomai National College of Technology, JAPAN
- *  Copyright (C) 2014 Cores Co., Ltd. Japan
+ *  Copyright (C) 2014-2019 Cores Co., Ltd. Japan
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
  *  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: tinet_nic_config.h 1484 2018-03-30 12:24:59Z coas-nagasima $
+ *  @(#) $Id$
  */
 
 #ifndef _TINET_NIC_CONFIG_H_

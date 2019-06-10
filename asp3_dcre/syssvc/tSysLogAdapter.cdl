@@ -2,7 +2,7 @@
  *		C言語で記述されたアプリケーションから，TECSベースのシステムログ
  *		機能を呼び出すためのアダプタ用セルタイプの定義
  *
- *  $Id: tSysLogAdapter.cdl 1484 2018-03-30 12:24:59Z coas-nagasima $
+ *  $Id$
  */
 [singleton, active]
 celltype tSysLogAdapter {

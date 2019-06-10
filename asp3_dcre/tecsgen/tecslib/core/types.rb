@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #
-#   Copyright (C) 2008-2015 by TOPPERS Project
+#   Copyright (C) 2008-2017 by TOPPERS Project
 #--  
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: types.rb 2633 2017-04-02 06:02:05Z okuma-top $
+#   $Id$
 #++
 
 #= HasType: @type を内部に持つ型のためのモジュール
@@ -628,7 +628,7 @@ class IntType < Type
 end
 
 class FloatType < Type
-#  @bit_size::         32, 64, (80), -32, -64
+#  @bit_size::         32, 64, (80), -32, -64, -128
 
   def initialize( bit_size )
     super()
@@ -683,6 +683,8 @@ class FloatType < Type
       str = "#{str}float"
     when -64
       str = "#{str}double"
+    when -128
+      str = "#{str}long double"
     end
     return str
   end
@@ -1557,20 +1559,14 @@ end
 #==  DescriptorType クラス
 # 動的結合で渡すデスクリプタ型
 class DescriptorType < Type
-# @sinagure_nsp::NamespacePath
+  # @sinagure_nsp::NamespacePath
+
+  @@descriptors = {}
 
   def initialize( signature_nsp )
-    # p "Desc #{signature_nsp.to_s}"
-    obj = Namespace.find signature_nsp
-    if ! obj.kind_of? Signature then
-      cdl_error( "T9999 '$1': not signature or not found", signature_nsp.to_s )
-      @signature_nsp = signature_nsp
-    else
-      if obj.has_descriptor? then
-       # cdl_error( "T9999 '$1': has Descriptor in function parameter", signature_nsp.to_s )
-      end
-      @signature_nsp = obj.get_namespace_path
-    end
+    @signature_nsp = signature_nsp
+    # check_signature ##
+    @@descriptors[ self ] = false
   end
 
   def get_type_str
@@ -1594,6 +1590,28 @@ class DescriptorType < Type
       # 引数は初期化できない
     else
       cdl_error2( locale, "T9999 Descriptor cannot be used for $1", kind)
+    end
+  end
+
+  def self.check_signature
+    @@descriptors.each{ |desc, val|
+      if val != true then
+        desc.check_signature
+        @@descriptors[ desc ] = true
+      end
+    }
+  end
+  
+  def check_signature
+    # p "Desc #{@signature_nsp.to_s}"
+    obj = Namespace.find @signature_nsp
+    if ! obj.kind_of? Signature then
+      cdl_error( "T9999 '$1': not signature or not found", @signature_nsp.to_s )
+    else
+      if obj.has_descriptor? then
+       # cdl_error( "T9999 '$1': has Descriptor in function parameter", @signature_nsp.to_s )
+      end
+      # @signature_nsp = obj.get_namespace_path
     end
   end
 

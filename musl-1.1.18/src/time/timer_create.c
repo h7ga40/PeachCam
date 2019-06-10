@@ -14,14 +14,10 @@ struct start_args {
 	struct sigevent *sev;
 };
 
-#ifndef __c2__
 static void dummy_1(pthread_t self)
 {
 }
 weak_alias(dummy_1, __pthread_tsd_run_dtors);
-#else
-extern void __pthread_tsd_run_dtors(pthread_t self);
-#endif
 
 void __reset_tls();
 

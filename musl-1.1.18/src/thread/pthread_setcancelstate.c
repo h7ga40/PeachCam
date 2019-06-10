@@ -9,11 +9,4 @@ int __pthread_setcancelstate(int new, int *old)
 	return 0;
 }
 
-#ifndef __c2__
 weak_alias(__pthread_setcancelstate, pthread_setcancelstate);
-#else
-int pthread_setcancelstate(int new, int *old)
-{
-	return __pthread_setcancelstate(new, old);
-}
-#endif

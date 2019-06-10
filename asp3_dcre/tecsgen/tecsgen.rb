@@ -4,7 +4,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2017 by TOPPERS Project
+#   Copyright (C) 2008-2019 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -35,7 +35,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: tecsgen.rb 2638 2017-05-29 14:05:52Z okuma-top $
+#   $Id$
 #++
 
 #= tecsgen  : TECS のジェネレータ
@@ -53,7 +53,7 @@
 #Authors::    安積　卓也(ASP+TECS, EV3RT+TECS, mruby on TECS等実装)
 #  Authors list is in i-ro-ha order.
 #Version::   see version.rb
-$Copyright = "Copyright(c) 2008-2017, TOPPERS project. All rights reserved."
+$Copyright = "Copyright(c) 2008-2019, TOPPERS project. All rights reserved."
 $License   = "TOPPERS License"
 
 # This doesn't work as expected in exerb version (Ruby 1.8.7?)
@@ -222,7 +222,9 @@ class TECSGEN
     initialize_global_var
     analyze_option addtional_option_parser
     load_modules
-    setup
+    if ! $TECSFLOW then
+      setup
+    end
         
     dbgPrint  "tecspath: #{$tecsgen_base_path}, __FILE__=#{__FILE__}\n"
     dbgPrint  "ARGV(remained): #{ARGV}, argments=#{$arguments}\n"
@@ -283,7 +285,8 @@ class TECSGEN
     $arguments = ""
     ARGV.each { |a| $arguments += " " + a }
 
-    $unopt     = false     # bool:   disable optimizing
+    $unopt     = false     # bool:   disable optimizing both call and entry port
+    $unopt_entry= false    # bool:   disable optimizing entry port
     $gen_base  = "gen"     # string: folder path to place generated files
     $gen       = $gen_base # string: folder path to place generated files
     $generate_all_template = false   # bool:   generarete template files for all celltypes (if non cell exist or system celltypes)
@@ -384,6 +387,9 @@ class TECSGEN
       parser.on('-U', '--unoptimize', 'unoptimize') {
         $unopt = true
       }
+      parser.on('--unoptimize-entry', 'unoptimize entry port') {
+        $unopt_entry = true
+      }
       parser.on('-c', '--cpp=cpp_cmd', 'C pre-processor command used import_C (default: gcc -E -DTECSGEN), you can also specify by environment variable TECS_CPP' ){
         |arg|
         $cpp = arg
@@ -464,7 +470,7 @@ class TECSGEN
       parser.parse!
     }
 
-    if ARGV.empty? && ! $print_version && ! $unit_test
+    if ARGV.empty? && ! $print_version && ! $unit_test && ! $TECSFLOW
       ARGV.options{|parser|
         puts parser.help
         exit 1
@@ -481,15 +487,15 @@ class TECSGEN
     # これを実行するまで tecsgen のバージョンを表示できない
     # このファイルを誤って読み込むと、異なるバージョン名を表示してしまう
     require_tecsgen_lib 'tecslib/version.rb'
-    if $tecscde_version then
-      STDERR << "tecscde version #{$tecscde_version} (tecsgen version #{$version})  #{$Copyright}\n"
+    if $title then
+      STDERR << "#{$title} version #{$tool_version} (tecsgen version #{$version})  #{$Copyright}\n"
     elsif ! $no_banner || $print_version
       STDERR << "tecsgen  version #{$version}  #{$Copyright}\n"
     end
     if $verbose then
       STDERR << "ruby #{RUBY_VERSION} (#{RUBY_RELEASE_DATE} patchlevel #{RUBY_PATCHLEVEL}) [#{RUBY_PLATFORM}]\n"
     end
-    if $print_version && ARGV.empty?
+    if $print_version && ARGV.empty? && ! $TECSFLOW
       exit
     end
 
@@ -517,6 +523,7 @@ class TECSGEN
     require_tecsgen_lib 'tecslib/core/gen_xml.rb'
     require_tecsgen_lib 'tecslib/core/tool_info.rb'
     require_tecsgen_lib 'tecslib/core/tecsinfo.rb'
+    require_tecsgen_lib 'tecslib/core/unjoin_plugin.rb'
     require_tecsgen_lib 'tecslib/plugin/CelltypePlugin.rb'
     require_tecsgen_lib 'tecslib/plugin/CompositePlugin.rb'
     require_tecsgen_lib 'tecslib/plugin/CellPlugin.rb'
@@ -600,12 +607,13 @@ end # TECSGEN
 # 複数のジェネレータインスタンスを生成することは、可能だが、以下の問題がある
 #  クラス変数のリセットを確実に行う必要がある
 
-if $TECSCDE != true then
+if $TECSCDE != true && $TECSFLOW != true then
   begin
     TECSGEN.init
     tecsgen = TECSGEN.new
     tecsgen.run1
     tecsgen.run2
+    tecsgen.dump_tecsgen_rbdmp
   rescue => evar
     print_exception( evar )
     STDERR << "tecsgen: exit because of unrecoverble error.\n"

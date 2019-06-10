@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2018 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: HRP2HandlerPlugin.rb 2640 2017-06-03 11:27:12Z okuma-top $
+#   $Id$
 #++
 
 #require "HRP2KernelObjectPlugin"
@@ -76,15 +76,15 @@ EOT
 EOT
         elsif @plugin_arg_str == "ISR"
             file.print <<EOT
-#{tab}ATT_ISR({ #{val[:attribute]}, &#{cell_CB_name}, #{val[:interruptNumber]}, tISR_start, #{val[:priority]} });
+#{tab}ATT_ISR({ #{val[:attribute]}, #{cell_CBP}, #{val[:interruptNumber]}, tISR_start, #{val[:priority]} });
 EOT
         elsif @plugin_arg_str == "INIT_ROUTINE"
             file.print <<EOT
-#{tab}ATT_INI({ #{val[:attribute]}, &#{cell_CB_name}, tInitializeRoutine_start });
+#{tab}ATT_INI({ #{val[:attribute]}, #{cell_CBP}, tInitializeRoutine_start });
 EOT
         elsif @plugin_arg_str == "TERM_ROUTINE"
             file.print <<EOT
-#{tab}ATT_TER({ #{val[:attribute]}, &#{cell_CB_name}, tTerminateRoutine_start });
+#{tab}ATT_TER({ #{val[:attribute]}, #{cell_CBP}, tTerminateRoutine_start });
 EOT
         else
             raise "#{@plugin_arg_str} is unknown option"

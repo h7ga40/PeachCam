@@ -55,11 +55,4 @@ int __clock_gettime(clockid_t clk, struct timespec *ts)
 	return __syscall_ret(r);
 }
 
-#ifndef __c2__
 weak_alias(__clock_gettime, clock_gettime);
-#else
-int clock_gettime(clockid_t clk, struct timespec *ts)
-{
-	return __clock_gettime(clk, ts);
-}
-#endif

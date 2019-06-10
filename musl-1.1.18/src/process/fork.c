@@ -5,15 +5,11 @@
 #include "libc.h"
 #include "pthread_impl.h"
 
-#ifndef __c2__
 static void dummy(int x)
 {
 }
 
 weak_alias(dummy, __fork_handler);
-#else
-extern void __fork_handler(int x);
-#endif
 
 pid_t fork(void)
 {

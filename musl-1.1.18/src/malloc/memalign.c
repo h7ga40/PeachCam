@@ -45,10 +45,10 @@ void *__memalign(size_t align, size_t len)
 	end = mem + (header & -8);
 	footer = ((size_t *)end)[-2];
 
-	((size_t *)mem)[-1] = header&7 | new-mem;
-	((size_t *)new)[-2] = footer&7 | new-mem;
-	((size_t *)new)[-1] = header&7 | end-new;
-	((size_t *)end)[-2] = footer&7 | end-new;
+	((size_t *)mem)[-1] = (header&7) | new-mem;
+	((size_t *)new)[-2] = (footer&7) | new-mem;
+	((size_t *)new)[-1] = (header&7) | end-new;
+	((size_t *)end)[-2] = (footer&7) | end-new;
 
 	free(mem);
 	return new;

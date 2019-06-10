@@ -1426,13 +1426,13 @@ void lcd_setRotation(LCD_Handler_t *lcd, uint8_t x)
 	switch (lcd->rotation) {
 	case 0:
 	case 2:
-		lcd->_width = ST7735_TFTWIDTH;
-		lcd->_height = ST7735_TFTHEIGHT_18;
+		lcd->_width = lcd_init_width;
+		lcd->_height = lcd_init_height;
 		break;
 	case 1:
 	case 3:
-		lcd->_width = ST7735_TFTWIDTH;
-		lcd->_height = ST7735_TFTHEIGHT_18;
+		lcd->_width = lcd_init_height;
+		lcd->_height = lcd_init_width;
 		break;
 	}
 }

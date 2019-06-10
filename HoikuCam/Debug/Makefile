@@ -37,7 +37,7 @@
 #  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #  の責任を負わない．
 # 
-#  $Id: Makefile 735 2016-04-03 14:11:07Z ertl-hiro $
+#  $Id$
 # 
 
 #
@@ -177,7 +177,7 @@ include $(SRCDIR)/mbed/Makefile.mbed
 #
 #  共通コンパイルオプションの定義
 #
-COPTS := -g -std=gnu99 -ffunction-sections -fdata-sections $(COPTS)
+COPTS := -g3 -std=gnu99 -ffunction-sections -fdata-sections $(COPTS)
 ifndef OMIT_WARNING_ALL
 	COPTS := -Wall $(COPTS)
 endif

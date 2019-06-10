@@ -1,7 +1,7 @@
 /*
- *  TOPPERS ECHONET Lite Communication Middleware
+ *  TOPPERS PROJECT Home Network Working Group Software
  * 
- *  Copyright (C) 2017 Cores Co., Ltd. Japan
+ *  Copyright (C) 2017-2019 Cores Co., Ltd. Japan
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
  *  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: socket_stub.c 1888 2019-04-19 09:55:29Z coas-nagasima $
+ *  @(#) $Id$
  */
 #include "shellif.h"
 #include <kernel.h>
@@ -69,6 +69,7 @@ static const char THIS_FILE[] = __FILE__;
 #endif
 
 #define SOCKET_TIMEOUT 2000000
+#define TCP_SOCKET_BUF_SIZE 512
 
 struct addrinfo {
 	int ai_flags;
@@ -362,12 +363,12 @@ int shell_bind(int fd, const struct sockaddr *addr, socklen_t len)
 			if (cepid < 0)
 				return -ENOMEM;
 
-			socket->buf_size = 512 + 512;
+			socket->buf_size = TCP_SOCKET_BUF_SIZE + TCP_SOCKET_BUF_SIZE;
 			socket->buf = malloc(socket->buf_size);
 #ifdef _DEBUG
 			memset(socket->buf, 0, socket->buf_size);
 #endif
-			T_TCP_CCEP ccep = { 0, socket->buf, 512, &socket->buf[512], 512, (FP)socket_tcp_callback };
+			T_TCP_CCEP ccep = { 0, socket->buf, TCP_SOCKET_BUF_SIZE, &socket->buf[TCP_SOCKET_BUF_SIZE], TCP_SOCKET_BUF_SIZE, (FP)socket_tcp_callback };
 			ret = tcp_cre_cep(cepid, &ccep);
 			if (ret != E_OK) {
 				delete_id(tcp_cepid_table, tcp_cepid_table_count, cepid);
@@ -409,12 +410,12 @@ int shell_bind(int fd, const struct sockaddr *addr, socklen_t len)
 			if (cepid < 0)
 				return -ENOMEM;
 
-			socket->buf_size = 512 + 512;
+			socket->buf_size = TCP_SOCKET_BUF_SIZE + TCP_SOCKET_BUF_SIZE;
 			socket->buf = malloc(socket->buf_size);
 #ifdef _DEBUG
 			memset(socket->buf, 0, socket->buf_size);
 #endif
-			T_TCP6_CCEP ccep = { 0, socket->buf, 512, &socket->buf[512], 512, (FP)socket_tcp6_callback };
+			T_TCP6_CCEP ccep = { 0, socket->buf, TCP_SOCKET_BUF_SIZE, &socket->buf[TCP_SOCKET_BUF_SIZE], TCP_SOCKET_BUF_SIZE, (FP)socket_tcp6_callback };
 			ret = tcp6_cre_cep(cepid, &ccep);
 			if (ret != E_OK) {
 				delete_id(tcp6_cepid_table, tcp6_cepid_table_count, cepid);
@@ -521,12 +522,12 @@ int shell_connect(int fd, const struct sockaddr *addr, socklen_t alen)
 			if (cepid < 0)
 				return -ENOMEM;
 
-			socket->buf_size = 512 + 512;
+			socket->buf_size = TCP_SOCKET_BUF_SIZE + TCP_SOCKET_BUF_SIZE;
 			socket->buf = malloc(socket->buf_size);
 #ifdef _DEBUG
 			memset(socket->buf, 0, socket->buf_size);
 #endif
-			T_TCP_CCEP ccep = { 0, socket->buf, 512, &socket->buf[512], 512, (FP)socket_tcp_callback };
+			T_TCP_CCEP ccep = { 0, socket->buf, TCP_SOCKET_BUF_SIZE, &socket->buf[TCP_SOCKET_BUF_SIZE], TCP_SOCKET_BUF_SIZE, (FP)socket_tcp_callback };
 			ret = tcp_cre_cep(cepid, &ccep);
 			if (ret != E_OK) {
 				delete_id(tcp_cepid_table, tcp_cepid_table_count, cepid);
@@ -559,12 +560,12 @@ int shell_connect(int fd, const struct sockaddr *addr, socklen_t alen)
 			if (cepid < 0)
 				return -ENOMEM;
 
-			socket->buf_size = 512 + 512;
+			socket->buf_size = TCP_SOCKET_BUF_SIZE + TCP_SOCKET_BUF_SIZE;
 			socket->buf = malloc(socket->buf_size);
 #ifdef _DEBUG
 			memset(socket->buf, 0, socket->buf_size);
 #endif
-			T_TCP6_CCEP ccep = { 0, socket->buf, 512, &socket->buf[512], 512, (FP)socket_tcp6_callback };
+			T_TCP6_CCEP ccep = { 0, socket->buf, TCP_SOCKET_BUF_SIZE, &socket->buf[TCP_SOCKET_BUF_SIZE], TCP_SOCKET_BUF_SIZE, (FP)socket_tcp6_callback };
 			ret = tcp6_cre_cep(cepid, &ccep);
 			if (ret != E_OK) {
 				delete_id(tcp6_cepid_table, tcp6_cepid_table_count, cepid);
@@ -628,12 +629,12 @@ int shell_accept(int fd, struct sockaddr *__restrict addr, socklen_t *__restrict
 			if (cepid < 0)
 				return -ENOMEM;
 
-			socket->buf_size = 512 + 512;
+			socket->buf_size = TCP_SOCKET_BUF_SIZE + TCP_SOCKET_BUF_SIZE;
 			socket->buf = malloc(socket->buf_size);
 #ifdef _DEBUG
 			memset(socket->buf, 0, socket->buf_size);
 #endif
-			T_TCP_CCEP ccep = { 0, socket->buf, 512, &socket->buf[512], 512, (FP)socket_tcp_callback };
+			T_TCP_CCEP ccep = { 0, socket->buf, TCP_SOCKET_BUF_SIZE, &socket->buf[TCP_SOCKET_BUF_SIZE], TCP_SOCKET_BUF_SIZE, (FP)socket_tcp_callback };
 			ret = tcp_cre_cep(cepid, &ccep);
 			if (ret != E_OK) {
 				delete_id(tcp_cepid_table, tcp_cepid_table_count, cepid);
@@ -683,12 +684,12 @@ int shell_accept(int fd, struct sockaddr *__restrict addr, socklen_t *__restrict
 			if (cepid < 0)
 				return -ENOMEM;
 
-			socket->buf_size = 512 + 512;
+			socket->buf_size = TCP_SOCKET_BUF_SIZE + TCP_SOCKET_BUF_SIZE;
 			socket->buf = malloc(socket->buf_size);
 #ifdef _DEBUG
 			memset(socket->buf, 0, socket->buf_size);
 #endif
-			T_TCP6_CCEP ccep = { 0, socket->buf, 512, &socket->buf[512], 512, (FP)socket_tcp6_callback };
+			T_TCP6_CCEP ccep = { 0, socket->buf, TCP_SOCKET_BUF_SIZE, &socket->buf[TCP_SOCKET_BUF_SIZE], TCP_SOCKET_BUF_SIZE, (FP)socket_tcp6_callback };
 			ret = tcp6_cre_cep(cepid, &ccep);
 			if (ret != E_OK) {
 				delete_id(tcp6_cepid_table, tcp6_cepid_table_count, cepid);

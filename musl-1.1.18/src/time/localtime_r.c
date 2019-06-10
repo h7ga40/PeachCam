@@ -18,11 +18,4 @@ struct tm *__localtime_r(const time_t *restrict t, struct tm *restrict tm)
 	return tm;
 }
 
-#ifndef __c2__
 weak_alias(__localtime_r, localtime_r);
-#else
-struct tm *localtime_r(const time_t *restrict t, struct tm *restrict tm)
-{
-	return __localtime_r(t, tm);
-}
-#endif

@@ -13,6 +13,4 @@ void *__tls_get_addr(tls_mod_off_t *v)
 	return __tls_get_new(v);
 }
 
-#ifndef __c2__
 weak_alias(__tls_get_addr, __tls_get_new);
-#endif

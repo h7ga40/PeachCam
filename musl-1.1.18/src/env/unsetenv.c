@@ -5,12 +5,8 @@
 
 char *__strchrnul(const char *, int);
 
-#ifndef __c2__
 static void dummy(char *old, char *new) {}
 weak_alias(dummy, __env_rm_add);
-#else
-extern void __env_rm_add(char *old, char *new);
-#endif
 
 int unsetenv(const char *name)
 {

@@ -55,11 +55,4 @@ int __pthread_mutex_trylock(pthread_mutex_t *m)
 	return __pthread_mutex_trylock_owner(m);
 }
 
-#ifndef __c2__
 weak_alias(__pthread_mutex_trylock, pthread_mutex_trylock);
-#else
-int pthread_mutex_trylock(pthread_mutex_t *m)
-{
-	return __pthread_mutex_trylock(m);
-}
-#endif

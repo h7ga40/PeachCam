@@ -69,7 +69,7 @@ double fma(double x, double y, double z)
 	if (d > 0) {
 		if (d < 64) {
 			zlo = nz.m<<d;
-			zhi = nz.m>>64-d;
+			zhi = nz.m>>(64-d);
 		} else {
 			zlo = 0;
 			zhi = nz.m;
@@ -77,7 +77,7 @@ double fma(double x, double y, double z)
 			d -= 64;
 			if (d == 0) {
 			} else if (d < 64) {
-				rlo = rhi<<64-d | rlo>>d | !!(rlo<<64-d);
+				rlo = rhi<<(64-d) | rlo>>d | !!(rlo<<(64-d));
 				rhi = rhi>>d;
 			} else {
 				rlo = 1;
@@ -90,7 +90,7 @@ double fma(double x, double y, double z)
 		if (d == 0) {
 			zlo = nz.m;
 		} else if (d < 64) {
-			zlo = nz.m>>d | !!(nz.m<<64-d);
+			zlo = nz.m>>d | !!(nz.m<<(64-d));
 		} else {
 			zlo = 1;
 		}
@@ -122,7 +122,7 @@ double fma(double x, double y, double z)
 		e += 64;
 		d = a_clz_64(rhi)-1;
 		/* note: d > 0 */
-		rhi = rhi<<d | rlo>>64-d | !!(rlo<<d);
+		rhi = rhi<<d | rlo>>(64-d) | !!(rlo<<d);
 	} else if (rlo) {
 		d = a_clz_64(rlo)-1;
 		if (d < 0)
@@ -173,7 +173,7 @@ double fma(double x, double y, double z)
 		} else {
 			/* only round once when scaled */
 			d = 10;
-			i = ( rhi>>d | !!(rhi<<64-d) ) << d;
+			i = ( rhi>>d | !!(rhi<<(64-d)) ) << d;
 			if (sign)
 				i = -i;
 			r = i;

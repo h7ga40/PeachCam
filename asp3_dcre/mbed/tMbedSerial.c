@@ -35,7 +35,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  $Id: tMbedSerial.c 1846 2019-03-28 10:22:45Z coas-nagasima $
+ *  $Id$
  */
 
 /*
@@ -113,9 +113,7 @@ eSIOPort_getChar(CELLIDX idx)
 	char	c;
 
 	if (serial_readable(obj)) {
-		if (c = serial_getc(obj)) {
-			return((int_t) c);
-		}
+		return serial_getc(obj);
 	}
 	return(-1);
 }

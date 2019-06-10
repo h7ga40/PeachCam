@@ -53,10 +53,3 @@ int vsnprintf(char *restrict s, size_t n, const char *restrict fmt, va_list ap)
 	*c.s = 0;
 	return vfprintf(&f, fmt, ap);
 }
-
-#ifdef __c2__
-int _vsnprintf(char *restrict s, size_t n, const char *restrict fmt, va_list ap)
-{
-	return vsnprintf(s, n, fmt, ap);
-}
-#endif

@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: echonet_udp_task.c 1781 2019-02-01 00:02:42Z coas-nagasima $
+ *  @(#) $Id$
  */
 
 /*
@@ -338,7 +338,7 @@ void _ecn_int_msg(ECN_FBS_ID fbs_id, ECN_FBS_SSIZE_T a_snd_len)
 			result = E_PAR;
 			break;
 		}
-		
+
 		a_ret = _ecn_udp_cre_res_fbs(fbs_id, ECN_UDP_MSG_GET_IPADDR_RES, &buf);
 		if (a_ret != E_OK) {
 			return;

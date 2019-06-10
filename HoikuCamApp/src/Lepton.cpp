@@ -5,6 +5,7 @@
 #include "LEPTON_SYS.h"
 #include "LEPTON_OEM.h"
 #include "LEPTON_RAD.h"
+#include "LEPTON_AGC.h"
 #include "Palettes.h"
 #include "EasyAttach_CameraAndLCD.h"
 #include "crc16.h"
@@ -267,6 +268,8 @@ void LeptonTask::OnStart()
 
 	LowPower();
 
+	EnableAgc(_config->agc);
+
 	EnableRadiometry(_config->radiometry);
 
 	if (_config->ffcnorm) {
@@ -274,6 +277,18 @@ void LeptonTask::OnStart()
 	}
 
 	EnableTelemetry(_config->telemetry);
+}
+
+void LeptonTask::EnableAgc(bool enable)
+{
+	printf("AGC %s set", enable ? "enable" : "disable");
+	LEP_RESULT ret = LEP_SetAgcEnableState(&_port, enable ? LEP_AGC_ENABLE : LEP_AGC_DISABLE);
+	if (ret == LEP_OK) {
+		printf(" OK\n");
+	}
+	else {
+		printf(" %s %d\n", GetLeptonErrorString(ret), ret);
+	}
 }
 
 void LeptonTask::EnableRadiometry(bool enable)
@@ -573,6 +588,16 @@ void LeptonTask::Process()
 	case State::UpdateParam:
 		LEP_GetSysFpaTemperatureKelvin(&_port, &_fpaTemperature);
 		LEP_GetSysAuxTemperatureKelvin(&_port, &_auxTemperature);
+		switch (_agcReq) {
+		case 1:
+			_agcReq = 0;
+			EnableRadiometry(false);
+			break;
+		case 2:
+			_agcReq = 0;
+			EnableRadiometry(true);
+			break;
+		}
 		switch (_radiometryReq) {
 		case 1:
 			_radiometryReq = 0;

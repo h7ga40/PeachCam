@@ -32,7 +32,7 @@
  *   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *   の責任を負わない．
  *  
- *   $Id: TECSPointer.h 1484 2018-03-30 12:24:59Z coas-nagasima $ 
+ *   $Id$ 
  */
 
 #ifndef TECSPointer_h__
@@ -101,8 +101,8 @@ POINTER_BODY( SChar,  char_t )		/* struct SCharPointerBody */
 	VALCHECK_MRB_ ## Type( mrb_state *mrb, type val )					\
 	{																	\
 		if( sizeof( type ) > sizeof( mrb_int ) ){						\
-			if( val >= (((type)1) << (sizeof(mrb_int)*8-1))				\
-				|| val < -(((type)1) << (sizeof(mrb_int)*8-1)) )		\
+			if( val > TYPE ## _MAX				\
+				|| val < TYPE ## _MIN )		\
 				/* '=' unecessary for negative value	*/				\
 				/* ignore warning on int32_t */							\
 				mrb_raise(mrb, E_ARGUMENT_ERROR, "too large or too small for mrb_int"); \
@@ -125,7 +125,7 @@ POINTER_BODY( SChar,  char_t )		/* struct SCharPointerBody */
 	VALCHECK_MRB_ ## Type( mrb_state *mrb, type val )					\
 	{																	\
 		if( sizeof( type ) > sizeof( mrb_int ) ){						\
-			if( val >= (((type)1) << (sizeof(mrb_int)*8)))				\
+      if( val > TYPE ## _MAX )                        \
 				/* '=' unecessary for negative value	*/				\
 				/* ignore warning on int32_t */							\
 				mrb_raise(mrb, E_ARGUMENT_ERROR, "too large or too small for mrb_int"); \

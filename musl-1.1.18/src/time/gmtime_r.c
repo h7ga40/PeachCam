@@ -16,11 +16,4 @@ struct tm *__gmtime_r(const time_t *restrict t, struct tm *restrict tm)
 	return tm;
 }
 
-#ifndef __c2__
 weak_alias(__gmtime_r, gmtime_r);
-#else
-struct tm *gmtime_r(const time_t *restrict t, struct tm *restrict tm)
-{
-	return __gmtime_r(t, tm);
-}
-#endif

@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2014 by TOPPERS Project
+#   Copyright (C) 2008-2018 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -463,8 +463,10 @@ EOT
 
 	/* Channel Lock */
 	SET_RPC_STATE( state_, RPCSTATE_CLIENT_GET_SEM );
-	if( is_cLockChannel_joined() )
-		cLockChannel_wait();
+	if( is_cLockChannel_joined() ){
+		if( (ercd_=cLockChannel_wait()) != E_OK )
+			goto error_reset;
+	}
 EOT
 
     # SOP を送信
@@ -553,8 +555,16 @@ EOT
     file.print <<EOT
 	/* Channel Unlock */
 	SET_RPC_STATE( state_, RPCSTATE_CLIENT_RELEASE_SEM );
-	if( is_cLockChannel_joined() )
-		cLockChannel_signal();
+	if( is_cLockChannel_joined() ){
+		if( (ercd_=cLockChannel_signal()) != E_OK )
+			goto error_reset;
+	}
+EOT
+
+    file.print <<EOT
+	/* state_ is not used in normal case */
+  /* below is to avoid 'set but not used' warnning */
+	(void)state_;
 EOT
 
     if( b_void == false )then
@@ -629,7 +639,7 @@ EOT
     if b_ret_er then
         file.print <<EOT
 	}else{
-		return;
+		return E_ID;
 	}
 EOT
     else

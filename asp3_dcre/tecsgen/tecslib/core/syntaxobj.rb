@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2016 by TOPPERS Project
+#   Copyright (C) 2008-2017 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: syntaxobj.rb 2633 2017-04-02 06:02:05Z okuma-top $
+#   $Id$
 #++
 
 # mikan ruby の symbol と文字列の使い分けがどうしてもうまくいかないことが時々あるので name.to_sym を入れることにした
@@ -681,6 +681,13 @@ class Decl < BDNode
       else
         return false
       end
+    end
+  end
+
+  #=== Decl# print_flowinfo
+  def print_flowinfo file
+    if @kind == :VAR then
+      file.write "#{@identifier} "
     end
   end
 

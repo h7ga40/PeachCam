@@ -16,12 +16,3 @@ int vsscanf(const char *restrict s, const char *restrict fmt, va_list ap)
 }
 
 weak_alias(vsscanf,__isoc99_vsscanf);
-
-#ifdef __c2__
-void _vacopy(va_list a, va_list b)
-{
-	void *c;
-	c = *(void **)b;
-	*(void **)a = &c;
-}
-#endif

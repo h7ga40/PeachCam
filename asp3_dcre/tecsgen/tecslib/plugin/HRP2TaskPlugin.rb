@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: HRP2TaskPlugin.rb 2640 2017-06-03 11:27:12Z okuma-top $
+#   $Id$
 #++
 
 #require "HRP2KernelObjectPlugin"
@@ -52,15 +52,17 @@ class HRP2TaskPlugin < HRP2KernelObjectPlugin
     # val  : 
     # tab  : 
     def print_cfg_cre(file, cell, val, tab)
-        val[:id] = val[:id].gsub( /(^|[^\$])\$id\$/, "\\1#{@celltype.get_name.to_s}_#{cell.get_name.to_s}" )
+        #val[:id] = val[:id].gsub( /(^|[^\$])\$id\$/, "\\1#{@celltype.get_name.to_s}_#{cell.get_global_name.to_s}" )
+        #val[:id] = @celltype.subst_name( val[:id], @celltype.get_name_array( cell ) )
         # $cbp$の代わり
         index = cell.get_id - @celltype.get_id_base
         #cell_CB_name = "#{@celltype.get_global_name}_pCB_tab[#{index}]"
         cell_CB_name = "#{index}"
         # CRE_XXX/DEF_XXXの生成
-        print "assign task plugin\n"
+        dbgPrint "assign task plugin\n"
         domainOption = cell.get_region.get_domain_root.get_domain_type.get_option
         # if cell.get_region.get_region_type == :DOMAIN
+# cell.show_tree 1
         if domainOption != "OutOfDomain"
             # 保護ドメインに属する場合
             if domainOption == "trusted"
@@ -68,6 +70,7 @@ class HRP2TaskPlugin < HRP2KernelObjectPlugin
                 if val[:userStackSize] != "OMIT"
                     raise "system task cannot have user stack."
                 end
+p "CRE_TSK 0 user=#{val[:userStackSize]} system=#{val[:systemStackSize]}"
                 file.print <<EOT
 #{tab}CRE_TSK(#{val[:id]}, { #{val[:taskAttribute]}, #{cell_CB_name}, tTask_start_task, #{val[:priority]}, #{val[:systemStackSize]}, NULL });
 EOT
@@ -76,11 +79,13 @@ EOT
                 if val[:userStackSize] == "OMIT"
                     raise "user task must have user stack."
                 end
+p "CRE_TSK 1"
                 if val[:systemStackSize] == "OMIT"
                     file.print <<EOT
 #{tab}CRE_TSK(#{val[:id]}, { #{val[:taskAttribute]}, #{cell_CB_name}, tTask_start_task, #{val[:priority]}, #{val[:userStackSize]}, NULL });
 EOT
                 else
+p "CRE_TSK 2"
                     file.print <<EOT
 #{tab}CRE_TSK(#{val[:id]}, { #{val[:taskAttribute]}, #{cell_CB_name}, tTask_start_task, #{val[:priority]}, #{val[:userStackSize]}, NULL, #{val[:systemStackSize]}, NULL });
 EOT
@@ -137,9 +142,9 @@ EOT
                     # HRP2のドメインリージョンを取得
                     regions = ct.get_domain_roots
                     regions_hrp2 = regions[ :HRP2 ]
-                    print "HRP2 domain in #{ct.get_name}: "
+                    dbgPrint "HRP2 domain in #{ct.get_name}: "
                     regions_hrp2.each { |reg|
-                        print reg.get_name
+                        dbgPrint reg.get_name
                     }
                     puts ""
 

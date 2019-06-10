@@ -43,8 +43,11 @@
 #
 # Usage: tecsgen_rcov.rb [options] CDL-file.cdl
 #
+
+$:.unshift(File.dirname(__FILE__))
+
 require 'simplecov'
-SimpleCov.command_name "tecsgen#{$$}"
+SimpleCov.command_name "tecsgen#{Time.now.to_f}"
 SimpleCov.root File.dirname( File.expand_path __FILE__ )
 SimpleCov.at_exit do
   SimpleCov.result.format!

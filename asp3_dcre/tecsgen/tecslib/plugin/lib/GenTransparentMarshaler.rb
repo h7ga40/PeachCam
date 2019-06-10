@@ -387,12 +387,13 @@ EOT
         syslog(LOG_INFO, "unmarshaler task: ERROR: unknown func_id: %d", func_id_ );
     };
 #{ppallocator_dealloc_str}
-    return;
+    return E_OK;
 
 error_reset:
     if( ercd_ != ERCD( E_RPC, E_RESET ) )
         (void)cTDR_reset();
 #{ppallocator_dealloc_str}
+    return E_OK;
 EOT
 
   end

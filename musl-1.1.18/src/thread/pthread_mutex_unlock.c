@@ -34,11 +34,4 @@ int __pthread_mutex_unlock(pthread_mutex_t *m)
 	return 0;
 }
 
-#ifndef __c2__
 weak_alias(__pthread_mutex_unlock, pthread_mutex_unlock);
-#else
-int pthread_mutex_unlock(pthread_mutex_t *m)
-{
-	return __pthread_mutex_unlock(m);
-}
-#endif

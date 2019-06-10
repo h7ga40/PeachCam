@@ -28,7 +28,7 @@
  *  含めて，いかなる保証も行わない．また，本ソフトウェアの利用により直
  *  接的または間接的に生じたいかなる損害に関しても，その責任を負わない．
  * 
- *  @(#) $Id: tinet_target_config.h 1484 2018-03-30 12:24:59Z coas-nagasima $
+ *  @(#) $Id$
  */
 
 #ifndef _TINET_TARGET_CONFIG_H_

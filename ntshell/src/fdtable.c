@@ -1,7 +1,7 @@
 /*
- *  TOPPERS ECHONET Lite Communication Middleware
+ *  TOPPERS PROJECT Home Network Working Group Software
  * 
- *  Copyright (C) 2017 Cores Co., Ltd. Japan
+ *  Copyright (C) 2017-2019 Cores Co., Ltd. Japan
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
  *  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -32,7 +32,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id: fdtable.c 1888 2019-04-19 09:55:29Z coas-nagasima $
+ *  @(#) $Id$
  */
 #include "shellif.h"
 #include <stdint.h>
@@ -298,7 +298,7 @@ int shell_poll(struct pollfd *fds, nfds_t nfds, int timeout)
 
 ER shell_get_evts(struct fd_events *evts, TMO tmout)
 {
-	int count = 0;
+	int count;
 	SYSTIM prev, now;
 	FLGPTN flgptn;
 
@@ -314,6 +314,7 @@ ER shell_get_evts(struct fd_events *evts, TMO tmout)
 #else
 		waitptn = *((FLGPTN *)&evts->readfds) | *((FLGPTN *)&evts->errorfds);
 #endif
+		count = 0;
 		for (int fd = 0; fd < fd_table_count; fd++) {
 			fp = &fd_table[fd];
 

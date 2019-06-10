@@ -34,6 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
+#   $Id$
 #++
 
 require_tecsgen_lib "lib/GenHRP2Marshaler.rb"
@@ -69,7 +70,7 @@ class HRP2RPCPlugin < ThroughPlugin
 
   #=== RPCPlugin の initialize
   #  説明は ThroughPlugin (plugin.rb) を参照
-  def initialize( cell_name, plugin_arg, next_cell, next_cell_port_name, signature, celltype, caller_cell )
+  def initialize( cell_name, plugin_arg, next_cell, next_cell_port_name, next_cell_port_subscript, signature, celltype, caller_cell )
     super
     @b_noClientSemaphore = false
     @semaphoreCelltype = "tSemaphore"
@@ -233,7 +234,7 @@ EOT
     # アロケータの指定があるか？
     if cell.get_allocator_list.length > 0 then
 
-      dbgPrint "make allocator"
+      dbgPrint "make allocator\n"
       file.print "#{indent_str}[allocator("
 
       delim = ""
@@ -268,10 +269,16 @@ EOT
 
     nest = @end_region.gen_region_str_pre file
     indent_str = "  " * nest
+    nest_str = "  " * nest
+    if @next_cell_port_subscript then
+      subscript = '[' + @next_cell_port_subscript.to_s + ']'
+    else
+      subscript = ""
+    end
 
     file.print <<EOT
 #{indent_str}cell #{@rpc_channel_celltype_name}Server #{@cell_name}Body {
-#{indent_str}    #{@call_port_name} = #{@next_cell.get_namespace_path.get_path_str}.#{@next_cell_port_name};
+#{indent_str}    #{@call_port_name} = #{@next_cell.get_namespace_path.get_path_str}.#{@next_cell_port_name}#{subscript};
 //#{indent_str}    #{@call_port_name} = #{@next_cell.get_name}.#{@next_cell_port_name};
 #{indent_str}  //cTDR         = #{@channelCellName}.eTDR;
 #{indent_str}  cEventflag   = #{@channelCellName}.eEventflag;

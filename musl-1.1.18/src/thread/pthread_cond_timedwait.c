@@ -211,11 +211,4 @@ int __private_cond_signal(pthread_cond_t *c, int n)
 	return 0;
 }
 
-#ifndef __c2__
 weak_alias(__pthread_cond_timedwait, pthread_cond_timedwait);
-#else
-int pthread_cond_timedwait(pthread_cond_t *restrict c, pthread_mutex_t *restrict m, const struct timespec *restrict ts)
-{
-	return __pthread_cond_timedwait(c, m, ts);
-}
-#endif

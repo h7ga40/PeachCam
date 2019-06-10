@@ -89,6 +89,7 @@ struct TLeptonTelemetryC {
 } __attribute__((packed));
 
 struct lepton_config_t {
+	int agc;
 	int radiometry;
 	int ffcnorm;
 	int telemetry;
@@ -145,12 +146,14 @@ private:
 	TLeptonTelemetryC _telemetryC;
 	uint16_t _fpaTemperature;
 	uint16_t _auxTemperature;
+	int _agcReq;
 	int _radiometryReq;
 	bool _runFFCNormReq;
 	int _telemetryReq;
 	int _spotmeterReq;
 	LEP_RAD_ROI_T _spotmeterRoi;
 	LEP_RAD_ROI_T _reqSpotmeterRoi;
+	void EnableAgc(bool enable);
 	void EnableRadiometry(bool enable);
 	void RunFFCNormalization();
 	void EnableTelemetry(bool enable);
@@ -164,6 +167,7 @@ public:
 	void Process() override;
 	void SetConfig(lepton_config_t *config) { _config = config; }
 	void SaveImage(const char *filename);
+	void ReqAgc(bool enable) { _agcReq = enable ? 2 : 1; }
 	void ReqRadiometry(bool enable) { _radiometryReq = enable ? 2 : 1; }
 	void ReqFFCNormalization() { _runFFCNormReq = 1; }
 	void ReqTelemetry(bool enable) { _telemetryReq = enable ? 2 : 1; }
