@@ -513,7 +513,7 @@ LEP_RESULT LEP_GetCameraBootStatus(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
 
    result = LEP_DirectReadRegister(portDescPtr, 0x2, &regValue);
 
-   if(result == LEP_OK && regValue & 4)
+   if(result == LEP_OK && (regValue & 4))
    {
       *bootStatusPtr = LEP_BOOT_STATUS_BOOTED;
    }

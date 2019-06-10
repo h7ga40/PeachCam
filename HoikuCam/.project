@@ -3,11 +3,11 @@
 	<name>HoikuCam</name>
 	<comment></comment>
 	<projects>
-		<project>FLIR_Lepton</project>
-		<project>HoikuCamApp</project>
 		<project>asp3_dcre</project>
 		<project>curl-7.57.0</project>
 		<project>expat-2.2.5</project>
+		<project>FLIR_Lepton</project>
+		<project>HoikuCamApp</project>
 		<project>libcxx</project>
 		<project>libcxxabi</project>
 		<project>mbed-gr-libs</project>

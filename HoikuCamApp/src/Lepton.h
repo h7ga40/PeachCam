@@ -158,6 +158,7 @@ private:
 	void RunFFCNormalization();
 	void EnableTelemetry(bool enable);
 	void GetSpotmeterObj();
+	bool GetSpotmeterObj(uint16_t *minValue, uint16_t *maxValue);
 	void SetSpotmeterRoi(LEP_RAD_ROI_T newRoi);
 	void LowPower();
 	void PowerOn();
