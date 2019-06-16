@@ -62,7 +62,9 @@ LeptonTask::LeptonTask(TaskThread *taskThread) :
 	_telemetryReq(0),
 	_spotmeterReq(0),
 	_spotmeterRoi(),
-	_reqSpotmeterRoi()
+	_reqSpotmeterRoi(),
+	_agcReq(0),
+	_config()
 {
 	memcpy(_image, BMPHeader, BITMAP_HEADER_SIZE);
 	memset(&_image[BITMAP_HEADER_SIZE / 2], 0xFF, sizeof(_image) - BITMAP_HEADER_SIZE);

@@ -39,7 +39,8 @@
 /* Video input and LCD layer 0 output */
 #define VIDEO_FORMAT           (DisplayBase::VIDEO_FORMAT_YCBCR422)
 #define GRAPHICS_FORMAT        (DisplayBase::GRAPHICS_FORMAT_YCBCR422)
-#define WR_RD_WRSWA            (DisplayBase::WR_RD_WRSWA_32_16BIT)
+//#define WR_RD_WRSWA            (DisplayBase::WR_RD_WRSWA_32_16BIT)
+#define WR_RD_WRSWA            (DisplayBase::WR_RD_WRSWA_16BIT)
 #define DATA_SIZE_PER_PIC      (2u)
 
 /*! Frame buffer stride: Frame buffer stride should be set to a multiple of 32 or 128

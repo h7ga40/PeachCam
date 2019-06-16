@@ -1,11 +1,5 @@
 #include "mbed.h"
-#include "EasyAttach_CameraAndLCD.h"
 #include "draw_font.h"
-
-#define RESULT_BUFFER_BYTE_PER_PIXEL  (2u)
-#define RESULT_BUFFER_STRIDE          (((LCD_PIXEL_WIDTH * RESULT_BUFFER_BYTE_PER_PIXEL) + 31u) & ~31u)
-#define RESULT_BUFFER_HEIGHT          (LCD_PIXEL_HEIGHT)
-extern uint8_t user_frame_buffer_result[RESULT_BUFFER_STRIDE * RESULT_BUFFER_HEIGHT]__attribute((section("NC_BSS"), aligned(32)));
 
 void get_bitmap_font(const uint8_t *string, uint8_t *bitmap_data, uint32_t *use_chars)
 {
@@ -90,17 +84,51 @@ void get_bitmap_font(const uint8_t *string, uint8_t *bitmap_data, uint32_t *use_
 	}
 }
 
-void lcd_drawFont(uint8_t *bitmap_data, int x, int y, uint16_t color, uint16_t back_color)
+void lcd_drawPixel(LCD_Handler_t *hlcd, int16_t x, int16_t y, uint16_t color)
 {
-	uint16_t * p_bottom_left_pos = (uint16_t *)&user_frame_buffer_result[0];
+	uint16_t *p_bottom_left_pos = (uint16_t *)& hlcd->_buffer[0];
+	p_bottom_left_pos[x + y * hlcd->_width] = color;
+}
+
+void lcd_drawFastVLine(LCD_Handler_t *hlcd, int16_t x, int16_t y,
+	int16_t h, uint16_t color)
+{
+	uint16_t *p_bottom_left_pos = (uint16_t *)& hlcd->_buffer[0];
+	uint16_t *p_frame_buf;
+	int i;
+
+	p_frame_buf = &p_bottom_left_pos[x + y * hlcd->_width];
+
+	for (i = 0; i < h; i++, p_frame_buf += hlcd->_width) {
+		*p_frame_buf = color;
+	}
+}
+
+void lcd_drawFastHLine(LCD_Handler_t *hlcd, int16_t x, int16_t y,
+	int16_t w, uint16_t color)
+{
+	uint16_t *p_bottom_left_pos = (uint16_t *)& hlcd->_buffer[0];
+	uint16_t *p_frame_buf;
+	int i;
+
+	p_frame_buf = &p_bottom_left_pos[x + y * hlcd->_width];
+
+	for (i = 0; i < w; i++, p_frame_buf++) {
+		*p_frame_buf = color;
+	}
+}
+
+void lcd_drawFont(LCD_Handler_t *hlcd, uint8_t *bitmap_data, int x, int y, uint16_t color, uint16_t back_color)
+{
+	uint16_t * p_bottom_left_pos = (uint16_t *)&hlcd->_buffer[0];
 	uint16_t * p_frame_buf;
 	int i, j, b;
 	uint8_t *bitmap = bitmap_data;
 
 	b = 0x80;
-	p_frame_buf = &p_bottom_left_pos[x + y * LCD_PIXEL_WIDTH];
+	p_frame_buf = &p_bottom_left_pos[x + y * hlcd->_width];
 
-	for (i = 0; i < FONT_HEIGHT; i++, p_frame_buf += LCD_PIXEL_WIDTH - FONT_WIDTH) {
+	for (i = 0; i < FONT_HEIGHT; i++, p_frame_buf += hlcd->_width - FONT_WIDTH) {
 		for (j = 0; j < FONT_WIDTH; j++, p_frame_buf++) {
 			if ((*bitmap & b) != 0) {
 				*p_frame_buf = color;
@@ -117,17 +145,17 @@ void lcd_drawFont(uint8_t *bitmap_data, int x, int y, uint16_t color, uint16_t b
 	}
 }
 
-void lcd_drawFontHalf(uint8_t *bitmap_data, int x, int y, uint16_t color, uint16_t back_color)
+void lcd_drawFontHalf(LCD_Handler_t *hlcd, uint8_t *bitmap_data, int x, int y, uint16_t color, uint16_t back_color)
 {
-	uint16_t * p_bottom_left_pos = (uint16_t *)&user_frame_buffer_result[0];
+	uint16_t * p_bottom_left_pos = (uint16_t *)&hlcd->_buffer[0];
 	uint16_t * p_frame_buf;
 	int i, j, b;
 	uint8_t *bitmap = bitmap_data;
 
 	b = 0x80;
-	p_frame_buf = &p_bottom_left_pos[x + y * LCD_PIXEL_WIDTH];
+	p_frame_buf = &p_bottom_left_pos[x + y * hlcd->_width];
 
-	for (i = 0; i < FONT_HEIGHT; i++, p_frame_buf += LCD_PIXEL_WIDTH - FONT_HALF_WIDTH) {
+	for (i = 0; i < FONT_HEIGHT; i++, p_frame_buf += hlcd->_width - FONT_HALF_WIDTH) {
 		for (j = 0; j < FONT_HALF_WIDTH; j++, p_frame_buf++) {
 			if ((*bitmap & b) != 0) {
 				*p_frame_buf = color;
@@ -144,15 +172,15 @@ void lcd_drawFontHalf(uint8_t *bitmap_data, int x, int y, uint16_t color, uint16
 	}
 }
 
-void lcd_drawString(const char *string, int x, int y, uint16_t color, uint16_t back_color)
+void lcd_drawString(LCD_Handler_t *hlcd, const char *string, int x, int y, uint16_t color, uint16_t back_color)
 {
 	uint32_t current_top, use_chars, for_3B_hankaku_code;
 	uint8_t bitmap_data[FONT_WIDTH * FONT_HEIGHT / 8], ctrl_code;
-	int local_x, local_y, len = strlen(string);
+	int len = strlen(string);
 	const uint8_t *code = (const uint8_t *)string;
 
-	local_x = x;
-	local_y = y;
+	hlcd->cursor_x = x;
+	hlcd->cursor_y = y;
 
 	current_top = 0;
 	while (current_top < len) {
@@ -175,20 +203,20 @@ void lcd_drawString(const char *string, int x, int y, uint16_t color, uint16_t b
 		//1バイトコード半角文字
 		if (use_chars == 1) {
 			if (ctrl_code == 0x0D) { // CR
-				local_x = X_LINE_TO_PIX(hlcd, 0);
+				hlcd->cursor_x = X_LINE_TO_PIX(hlcd, 0);
 				continue;
 			}
 			if (ctrl_code == 0x0A) { // LF
-				local_y = local_y + FONT_HEIGHT;
+				hlcd->cursor_y = hlcd->cursor_y + FONT_HEIGHT;
 				continue;
 			}
 
-			if (local_x + FONT_HALF_WIDTH > LCD_PIXEL_WIDTH) {
-				local_x = X_LINE_HALF_TO_PIX(hlcd, 0);
-				local_y = local_y + FONT_HEIGHT;
+			if (hlcd->cursor_x + FONT_HALF_WIDTH > hlcd->_width) {
+				hlcd->cursor_x = X_LINE_HALF_TO_PIX(hlcd, 0);
+				hlcd->cursor_y = hlcd->cursor_y + FONT_HEIGHT;
 			}
-			lcd_drawFontHalf(bitmap_data, local_x, local_y, color, back_color);
-			local_x += FONT_HALF_WIDTH;
+			lcd_drawFontHalf(hlcd, bitmap_data, hlcd->cursor_x, hlcd->cursor_y, color, back_color);
+			hlcd->cursor_x += FONT_HALF_WIDTH;
 			continue;
 		}
 
@@ -197,22 +225,22 @@ void lcd_drawString(const char *string, int x, int y, uint16_t color, uint16_t b
 			if (((0xEFBDA1 <= for_3B_hankaku_code) && (for_3B_hankaku_code <= 0xEFBDBF)) ||
 				((0xEFBE80 <= for_3B_hankaku_code) && (for_3B_hankaku_code <= 0xEFBE9F))) {
 				//3バイトコード半角文字
-				if (local_x + FONT_HALF_WIDTH > LCD_PIXEL_WIDTH) {
-					local_x = X_LINE_HALF_TO_PIX(hlcd, 0);
-					local_y = local_y + FONT_HEIGHT;
+				if (hlcd->cursor_x + FONT_HALF_WIDTH > hlcd->_width) {
+					hlcd->cursor_x = X_LINE_HALF_TO_PIX(hlcd, 0);
+					hlcd->cursor_y = hlcd->cursor_y + FONT_HEIGHT;
 				}
-				lcd_drawFontHalf(bitmap_data, local_x, local_y, color, back_color);
-				local_x += FONT_HALF_WIDTH;
+				lcd_drawFontHalf(hlcd, bitmap_data, hlcd->cursor_x, hlcd->cursor_y, color, back_color);
+				hlcd->cursor_x += FONT_HALF_WIDTH;
 				continue;
 			}
 		}
 
 		//全角文字
-		if (local_x + FONT_WIDTH > LCD_PIXEL_WIDTH) {
-			local_x = X_LINE_TO_PIX(hlcd, 0);
-			local_y = local_y + FONT_HEIGHT;
+		if (hlcd->cursor_x + FONT_WIDTH > hlcd->_width) {
+			hlcd->cursor_x = X_LINE_TO_PIX(hlcd, 0);
+			hlcd->cursor_y = hlcd->cursor_y + FONT_HEIGHT;
 		}
-		lcd_drawFont(bitmap_data, local_x, local_y, color, back_color);
-		local_x += FONT_WIDTH;
+		lcd_drawFont(hlcd, bitmap_data, hlcd->cursor_x, hlcd->cursor_y, color, back_color);
+		hlcd->cursor_x += FONT_WIDTH;
 	}
 }

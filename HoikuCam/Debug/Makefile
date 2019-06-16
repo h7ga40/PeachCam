@@ -70,6 +70,7 @@ ifeq ($(SRCLANG),c)
 		$(SRCDIR)/../mbed-gr-libs/GraphicsFramework/TARGET_RZA1H/RGA/TOOLCHAIN_GCC_ARM/libRGAH.a \
 		$(SRCDIR)/../mbed-gr-libs/GraphicsFramework/TARGET_RZA1H/RGA/TOOLCHAIN_GCC_ARM/libRGA.a \
 		$(SRCDIR)/../utilities/Debug/libutilities.a \
+		$(SRCDIR)/../zxing/Debug/libzxing.a \
 		$(SRCDIR)/../HoikuCamApp/Debug/libHoikuCamApp.a
 	LDFLAGS = -L"${TCINSTALL}/lib/gcc/arm-none-eabi/${GCC_VERSION}/armv7-ar/thumb/fpu" \
 		-L"${TCINSTALL}/arm-none-eabi/lib/armv7-ar/thumb/fpu"

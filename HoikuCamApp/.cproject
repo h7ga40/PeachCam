@@ -195,6 +195,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/zlib-1.2.11/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/expat-2.2.5/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/FLIR_Lepton/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/zxing/src}&quot;"/>
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.nostdinc.1497182582" name="Do not search system directories (-nostdinc)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.nostdinc" useByScannerDiscovery="true" value="true" valueType="boolean"/>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.nostdincpp.1851399909" name="Do not search system C++ directories (-nostdinc++)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.nostdincpp" useByScannerDiscovery="true" value="true" valueType="boolean"/>

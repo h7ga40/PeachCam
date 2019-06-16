@@ -15,6 +15,7 @@ static uint8_t audio_frame_buffer[AUDIO_FRAME_BUFFER_STRIDE * AUDIO_FRAME_BUFFER
 
 DisplayBase Display;
 JPEG_Converter Jcu;
+extern LCD_Handler_t lcd;
 
 void Audio_Start_LCD_Display(void) {
     DisplayBase::rect_t rect;
@@ -209,7 +210,7 @@ void AudioTask::AudioReadEnd(void *p_data, int result)
 	if (_face_roi->width > 0 && _face_roi->height > 0) {
 		draw_square(_face_roi->x, _face_roi->y, _face_roi->width, _face_roi->height, 0xF0F0);
 	}
-	lcd_drawString("●", 0, 0, 0xF000 | (0xF00 & (((uint16_t)heart_mark) << 8)), 0x0000);
+	lcd_drawString(&lcd, "●", 0, 0, 0xF000 | (0xF00 & (((uint16_t)heart_mark) << 8)), 0x0000);
 
 	mail_t mail = {
 		.p_data = p_data,

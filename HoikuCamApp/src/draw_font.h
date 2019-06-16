@@ -1,6 +1,7 @@
 #ifndef DRAW_FONT_H
 #define DRAW_FONT_H
 
+#include "adafruit_gfx.h"
 #include "shnm12_font.h"
 
 #define DISP_X_ADJ	0
@@ -17,9 +18,9 @@ extern "C" {
 #endif
 
 void get_bitmap_font(const uint8_t *string, uint8_t *bitmap_data, uint32_t *use_chars);
-void lcd_drawFont(uint8_t *bitmap_data, int x, int y, uint16_t color, uint16_t back_color);
-void lcd_drawFontHalf(uint8_t *bitmap_data, int x, int y, uint16_t color, uint16_t back_color);
-void lcd_drawString(const char *string, int x, int y, uint16_t color, uint16_t back_color );
+void lcd_drawFont(LCD_Handler_t *hlcd, uint8_t *bitmap_data, int x, int y, uint16_t color, uint16_t back_color);
+void lcd_drawFontHalf(LCD_Handler_t *hlcd, uint8_t *bitmap_data, int x, int y, uint16_t color, uint16_t back_color);
+void lcd_drawString(LCD_Handler_t *hlcd, const char *string, int x, int y, uint16_t color, uint16_t back_color );
 
 #ifdef __cplusplus
 }

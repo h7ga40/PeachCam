@@ -34,7 +34,7 @@
 
 using namespace cv;
 
-static uint8_t FrameBuffer_Video[FRAME_BUFFER_STRIDE * FRAME_BUFFER_HEIGHT]__attribute((section("NC_BSS"),aligned(32)));
+/*static*/ uint8_t FrameBuffer_Video[FRAME_BUFFER_STRIDE * FRAME_BUFFER_HEIGHT]__attribute((section("NC_BSS"),aligned(32)));
 static uint8_t JpegBuffer[1024 * 63]__attribute((aligned(32)));
 
 /* jpeg convert */
