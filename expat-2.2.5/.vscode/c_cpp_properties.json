@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "GR-PEACH",
+            "includePath": [
+                "${workspaceFolder}/../musl-1.1.18/include",
+                "${workspaceFolder}/../expat-2.2.5/src",
+                "${workspaceFolder}/../expat-2.2.5"
+            ],
+            "defines": [
+                "HAVE_EXPAT_CONFIG_H"
+            ],
+            "windowsSdkVersion": "10.0.17763.0",
+            "compilerPath": "C:\\Program Files (x86)\\GNU Tools ARM Embedded\\6 2017-q2-update\\bin\\arm-none-eabi-gcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
+}

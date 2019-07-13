@@ -1,0 +1,178 @@
+﻿{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "name": "make",
+    "type": "shell",
+    "problemMatcher": {
+        "owner": "cpp",
+        "fileLocation": [
+            "relative",
+            "${workspaceRoot}/HoikuCam"
+        ],
+        "pattern": {
+            "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5
+        }
+    },
+    "tasks": [
+        {
+            "label": "build all",
+            "args": [
+                "-j",
+                "-C", "..",
+                "all"
+            ],
+            "linux": {
+                "command": "make"
+            },
+            "osx": {
+                "command": "make"
+            },
+            "windows": {
+                "command": "make.exe"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "clean all",
+            "args": [
+                "-C", "..",
+                "clean"
+            ],
+            "linux": {
+                "command": "make"
+            },
+            "osx": {
+                "command": "make"
+            },
+            "windows": {
+                "command": "make.exe"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "realclean all",
+            "args": [
+                "-C", "..",
+                "realclean"
+            ],
+            "linux": {
+                "command": "make"
+            },
+            "osx": {
+                "command": "make"
+            },
+            "windows": {
+                "command": "make.exe"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build HoikuCam",
+            "args": [
+                "-j",
+                "all"
+            ],
+            "linux": {
+                "command": "make"
+            },
+            "osx": {
+                "command": "make"
+            },
+            "windows": {
+                "command": "make.exe"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "clean HoikuCam",
+            "args": [
+                "clean"
+            ],
+            "linux": {
+                "command": "make"
+            },
+            "osx": {
+                "command": "make"
+            },
+            "windows": {
+                "command": "make.exe"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "realclean HoikuCam",
+            "args": [
+                "realclean"
+            ],
+            "linux": {
+                "command": "make"
+            },
+            "osx": {
+                "command": "make"
+            },
+            "windows": {
+                "command": "make.exe"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "write mbed drive",
+            "linux": {
+                "command": "rsync",
+                "args": [
+                    "-av",
+                    "--progress",
+                    "${workspaceRoot}/Debug/HoikuCam.bin",
+                    "/media/usb0",
+                ]
+            },
+            "osx": {
+                "command": "rsync",
+                "args": [
+                    "-av",
+                    "--progress",
+                    "${workspaceRoot}/Debug/HoikuCam.bin",
+                    "/Volumes/MBED/"
+                ]
+            },
+            "windows": {
+                "command": "C:\\Windows\\System32\\robocopy.exe",
+                "args": [
+                    "${workspaceRoot}\\Debug",
+                    "j:\\",
+                    "HoikuCam.bin"
+                ],
+                "options": {
+                    "shell": {
+                        "executable": "C:\\Windows\\System32\\cmd.exe",
+                        "args":["/D", "/C"]
+                    }
+                }
+            }
+        }
+    ]
+}

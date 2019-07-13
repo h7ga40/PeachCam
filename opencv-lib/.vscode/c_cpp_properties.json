@@ -1,0 +1,46 @@
+{
+    "configurations": [
+        {
+            "name": "GR-PEACH",
+            "includePath": [
+                "${workspaceFolder}/../musl-1.1.18/include",
+                "${workspaceFolder}/../TCINSTALLlib/gcc/arm-none-eabi/GCC_VERSION/include",
+                "${workspaceFolder}/../opencv-lib",
+                "${workspaceFolder}/../opencv-lib/3rdparty",
+                "${workspaceFolder}/../opencv-lib/3rdparty/libjpeg",
+                "${workspaceFolder}/../opencv-lib/calib3d/include",
+                "${workspaceFolder}/../opencv-lib/core/include",
+                "${workspaceFolder}/../opencv-lib/features2d/include",
+                "${workspaceFolder}/../opencv-lib/flann/include",
+                "${workspaceFolder}/../opencv-lib/imgcodecs/include",
+                "${workspaceFolder}/../opencv-lib/imgproc/include",
+                "${workspaceFolder}/../opencv-lib/ml/include",
+                "${workspaceFolder}/../opencv-lib/objdetect/include",
+                "${workspaceFolder}/../opencv-lib/opencv_contrib/modules/face/include",
+                "${workspaceFolder}/../opencv-lib/photo/include",
+                "${workspaceFolder}/../opencv-lib/shape/include",
+                "${workspaceFolder}/../opencv-lib/stitching/include",
+                "${workspaceFolder}/../opencv-lib/superres/include",
+                "${workspaceFolder}/../opencv-lib/video/include",
+                "${workspaceFolder}/../opencv-lib/videostab/include",
+                "${workspaceFolder}/../zlib-1.2.11/src",
+                ".",
+                "${workspaceFolder}/../libcxx/include"
+            ],
+            "defines": [
+                "__MBED__=1",
+                "__OPENCV_BUILD",
+                "__ARM_NEON__",
+                "_GNU_SOURCE",
+                "_LIBCPP_HAS_MUSL_LIBC",
+                "_GCC_MAX_ALIGN_T"
+            ],
+            "windowsSdkVersion": "10.0.17763.0",
+            "compilerPath": "C:\\Program Files (x86)\\GNU Tools ARM Embedded\\6 2017-q2-update\\bin\\arm-none-eabi-gcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
+}
