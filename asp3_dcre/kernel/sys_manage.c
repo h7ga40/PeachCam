@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2015 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2019 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -183,7 +183,7 @@ rot_rdq(PRI tskpri)
 			dispatch();
 		}
 		else {
-			request_dispatch();
+			request_dispatch_retint();
 		}
 	}
 	ercd = E_OK;
@@ -214,7 +214,7 @@ get_tid(ID *p_tskid)
 	if (!lock)
 		lock_cpu();
 	*p_tskid = (p_runtsk == NULL) ? TSK_NONE : TSKID(p_runtsk);
-	ercd = E_OK;
+	ercd = E_OK;								/*［NGKI2710］［NGKI2709］*/
 	if (!lock)
 		unlock_cpu();
 
@@ -402,8 +402,7 @@ ena_dsp(void)
 	lock_cpu();
 	enadsp = true;
 	if (t_get_ipm() == TIPM_ENAALL) {
-		dspflg = true;
-		p_schedtsk = search_schedtsk();
+		set_dspflg();
 		if (p_runtsk->raster && p_runtsk->enater) {
 			task_terminate(p_runtsk);
 			exit_and_dispatch();

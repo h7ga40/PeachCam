@@ -3,7 +3,7 @@
  *      Toyohashi Open Platform for Embedded Real-Time Systems/
  *      Advanced Standard Profile Kernel
  * 
- *  Copyright (C) 2006-2017 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2006-2018 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -41,8 +41,9 @@
 /*
  *		タイマドライバ（MPCore内蔵タイマ用）
  *
- *  MPCoreがプロセッサ毎に持っているプライベートタイマとウォッチドッグ
- *  を用いて，高分解能タイマドライバを実現する．
+ *  MPCoreがプロセッサ毎に持っているプライベートタイマとウォッチドッグ，
+ *  各プロセッサからアクセスできるグローバルタイマを用いて，カーネルが
+ *  必要とする各種のタイマを実現する．
  */
 
 #include "kernel_impl.h"
@@ -52,15 +53,16 @@
 #include "mpcore.h"
 
 /*
- *  タイマ割込み要求のクリア
- *
- *  タイマの割込みペンディングビットをクリアする．
+ *  スプリアス割込み対策マクロのデフォルト定義
  */
-Inline void
-target_hrt_int_clear()
-{
-	sil_wrw_mem(MPCORE_TMR_ISR, MPCORE_TMR_ISR_EVENTFLAG);
-}
+#ifndef MPCORE_TMR_CLEAR_INT
+#define MPCORE_TMR_CLEAR_INT()
+#endif /* MPCORE_TMR_CLEAR_INT */
+
+#ifdef USE_MPCORE_TMRWDG_HRT
+/*
+ *		プライベートタイマとウォッチドッグを用いて高分解能タイマを実現
+ */
 
 /*
  *  タイマの起動処理
@@ -101,7 +103,8 @@ target_hrt_initialize(intptr_t exinf)
 	/*
 	 *  タイマ割込み要求をクリアする．
 	 */
-	target_hrt_int_clear();
+	sil_wrw_mem(MPCORE_TMR_ISR, MPCORE_TMR_ISR_EVENTFLAG);
+	MPCORE_TMR_CLEAR_INT();
 }
 
 /*
@@ -119,7 +122,8 @@ target_hrt_terminate(intptr_t exinf)
 	/*
 	 *  タイマ割込み要求をクリアする．
 	 */
-	target_hrt_int_clear();
+	sil_wrw_mem(MPCORE_TMR_ISR, MPCORE_TMR_ISR_EVENTFLAG);
+	MPCORE_TMR_CLEAR_INT();
 }
 
 /*
@@ -131,10 +135,159 @@ target_hrt_handler(void)
 	/*
 	 *  タイマ割込み要求をクリアする．
 	 */
-	target_hrt_int_clear();
+	sil_wrw_mem(MPCORE_TMR_ISR, MPCORE_TMR_ISR_EVENTFLAG);
+	MPCORE_TMR_CLEAR_INT();
 
 	/*
 	 *  高分解能タイマ割込みを処理する．
 	 */
 	signal_time();
 }
+
+#endif /* USE_MPCORE_TMRWDG_HRT */
+
+#ifdef USE_MPCORE_GTC_HRT
+/*
+ *		グローバルタイマを用いて高分解能タイマを実現
+ */
+
+/*
+ *  タイマの起動処理
+ */
+void
+target_hrt_initialize(intptr_t exinf)
+{
+	/*
+	 *  タイマをディスエーブルする．
+	 */
+	sil_wrw_mem(MPCORE_GTC_CTRL, MPCORE_GTC_CTRL_DISABLE);
+
+	/*
+	 *  カウンタを0に初期化する（セキュアモードでないと効果がない）．
+	 */
+	sil_wrw_mem(MPCORE_GTC_COUNT_L, 0U);
+	sil_wrw_mem(MPCORE_GTC_COUNT_U, 0U);
+
+	/*
+	 *  タイマの動作を開始する（コンパレータと割込みはディスエーブル）．
+	 */
+	sil_wrw_mem(MPCORE_GTC_CTRL,
+				MPCORE_GTC_CTRL_ENABLE
+					| (MPCORE_GTC_PS_VALUE << MPCORE_GTC_CTRL_PS_SHIFT));
+
+	/*
+	 *  タイマ割込み要求をクリアする．
+	 */
+	sil_wrw_mem(MPCORE_GTC_ISR, MPCORE_GTC_ISR_EVENTFLAG);
+}
+
+/*
+ *  タイマの停止処理
+ */
+void
+target_hrt_terminate(intptr_t exinf)
+{
+	/*
+	 *  タイマを停止する．
+	 */
+	sil_wrw_mem(MPCORE_GTC_CTRL, MPCORE_GTC_CTRL_DISABLE);
+
+	/*
+	 *  タイマ割込み要求をクリアする．
+	 */
+	sil_wrw_mem(MPCORE_GTC_ISR, MPCORE_GTC_ISR_EVENTFLAG);
+}
+
+/*
+ *  タイマ割込みハンドラ
+ */
+void
+target_hrt_handler(void)
+{
+	/*
+	 *  タイマ割込み要求をクリアする．
+	 */
+	sil_wrw_mem(MPCORE_GTC_ISR, MPCORE_GTC_ISR_EVENTFLAG);
+
+	/*
+	 *  高分解能タイマ割込みを処理する．
+	 */
+	signal_time();
+}
+
+#endif /* USE_MPCORE_GTC_HRT */
+
+#ifdef USE_MPCORE_WDG_OVRTIMER
+/*
+ *		ウォッチドッグタイマを用いてオーバランタイマを実現
+ */
+#ifdef TOPPERS_SUPPORT_OVRHDR
+
+#include "overrun.h"
+
+/*
+ *  オーバランタイマの初期化処理
+ */
+void
+target_ovrtimer_initialize(intptr_t exinf)
+{
+	/*
+	 *  ウォッチドッグを停止する．
+	 */
+	sil_wrw_mem(MPCORE_WDG_CTRL, MPCORE_WDG_CTRL_DISABLE);
+
+	/*
+	 *  ウォッチドッグをタイマモードに設定する．
+	 */
+	sil_wrw_mem(MPCORE_WDG_DIS, 0x12345678);
+	sil_wrw_mem(MPCORE_WDG_DIS, 0x87654321);
+
+	/*
+	 *  ウォッチドッグタイマを停止した状態で設定する．
+	 */
+	sil_wrw_mem(MPCORE_WDG_CTRL,
+				MPCORE_WDG_CTRL_ENAINT
+					| (MPCORE_WDG_PS_VALUE << MPCORE_WDG_CTRL_PS_SHIFT));
+
+	/*
+	 *  ウォッチドッグ割込み要求をクリアする．
+	 */
+	sil_wrw_mem(MPCORE_WDG_ISR, MPCORE_WDG_ISR_EVENTFLAG);
+}
+
+/*
+ *  オーバランタイマの終了処理
+ */
+void
+target_ovrtimer_terminate(intptr_t exinf)
+{
+	/*
+	 *  ウォッチドッグを停止する．
+	 */
+	sil_wrw_mem(MPCORE_WDG_CTRL, MPCORE_WDG_CTRL_DISABLE);
+
+	/*
+	 *  ウォッチドッグ割込み要求をクリアする．
+	 */
+	sil_wrw_mem(MPCORE_WDG_ISR, MPCORE_WDG_ISR_EVENTFLAG);
+}
+
+/*
+ *  オーバランタイマ割込みハンドラ
+ */
+void
+target_ovrtimer_handler(void)
+{
+	/*
+	 *  ウォッチドッグ割込み要求をクリアする．
+	 */
+	sil_wrw_mem(MPCORE_WDG_ISR, MPCORE_WDG_ISR_EVENTFLAG);
+
+	/*
+	 *  オーバランハンドラの起動処理をする．
+	 */
+	call_ovrhdr();
+}
+
+#endif /* TOPPERS_SUPPORT_OVRHDR */
+#endif /* USE_MPCORE_WDG_OVRTIMER */

@@ -55,8 +55,6 @@
  *  各タスクの優先度の定義
  */
 
-#define MAIN_PRIORITY		5		/* メインタスクの優先度 */
-#define MAIN_STACK_SIZE		2048	/* メインタスクのスタック領域のサイズ */
 #define NUM_MAIN_DATAQUEUE	1		/* メインタスクで待ち受けているデータキューのサイズ */
 
 #define HOIKUCAM_PRIORITY	5		/* HoikuCamタスクの優先度 */
@@ -67,8 +65,6 @@
  */
 #ifndef TOPPERS_MACRO_ONLY
 
-/* メインタスク */
-extern void main_task(intptr_t exinf);
 /* HoikuCamタスク */
 extern void hoikucam_task(intptr_t exinf);
 

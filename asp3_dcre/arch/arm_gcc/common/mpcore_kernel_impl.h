@@ -3,7 +3,9 @@
  *      Toyohashi Open Platform for Embedded Real-Time Systems/
  *      Advanced Standard Profile Kernel
  * 
- *  Copyright (C) 2006-2017 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
+ *                              Toyohashi Univ. of Technology, JAPAN
+ *  Copyright (C) 2006-2018 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -39,43 +41,45 @@
  */
 
 /*
- *		kernel.hのチップ依存部（MPCore用）
+ *		kernel_impl.hのMPCore依存部
  *
- *  このヘッダファイルは，target_kernel.h（または，そこからインクルード
- *  されるファイル）のみからインクルードされる．他のファイルから直接イ
- *  ンクルードしてはならない．
+ *  このヘッダファイルは，target_kernel_impl.h（または，そこからインク
+ *  ルードされるファイル）のみからインクルードされる．他のファイルから
+ *  直接インクルードしてはならない．
  */
 
-#ifndef TOPPERS_CHIP_KERNEL_H
-#define TOPPERS_CHIP_KERNEL_H
+#ifndef TOPPERS_MPCORE_KERNEL_IMPL_H
+#define TOPPERS_MPCORE_KERNEL_IMPL_H
 
 /*
- *  サポートできる機能の定義
+ *  MPCoreのハードウェア資源の定義
+ */
+#include "mpcore.h"
+
+/*
+ *  MMUの使用に関する設定
+ */
+#define USE_ARM_MMU
+#define USE_ARM_SSECTION
+
+/*
+ *  GICに関する定義，コアで共通な定義
  *
- *  GICでは，ena_int／dis_int／clr_int／ras_int／prb_intをサポートする
- *  ことができる．
+ *  core_kernel_impl.hは，gic_kernel_impl.hからインクルードされる．
  */
-#define TOPPERS_TARGET_SUPPORT_ENA_INT		/* ena_int */
-#define TOPPERS_TARGET_SUPPORT_DIS_INT		/* dis_int */
-#define TOPPERS_TARGET_SUPPORT_CLR_INT		/* clr_int */
-#define TOPPERS_TARGET_SUPPORT_RAS_INT		/* ras_int */
-#define TOPPERS_TARGET_SUPPORT_PRB_INT		/* prb_int */
+#include "gic_kernel_impl.h"
+
+#ifndef TOPPERS_MACRO_ONLY
 
 /*
- *  高分解能タイマのタイマ周期
- *
- *  タイマ周期が2^32の場合には，このマクロを定義しない．
+ *  MPCore依存の初期化
  */
-#undef TCYC_HRTCNT
+extern void mpcore_initialize(void);
 
 /*
- *  高分解能タイマのカウント値の進み幅
+ *  MPcore依存の終了処理
  */
-#define TSTEP_HRTCNT	1U
+extern void mpcore_terminate(void);
 
-/*
- *  コアで共通な定義
- */
-#include "core_kernel.h"
-
-#endif /* TOPPERS_CHIP_KERNEL_H */
+#endif /* TOPPERS_MACRO_ONLY */
+#endif /* TOPPERS_MPCORE_KERNEL_IMPL_H */

@@ -103,7 +103,7 @@ size_t encode_jpeg(uint8_t* buf, int len, int width, int height, uint8_t* inbuf)
     bitmap_buff_info.buffer_address = (void *) inbuf;
     encode_options.encode_buff_size = len;
     encode_options.p_EncodeCallBackFunc = NULL;
-    encode_options.input_swapsetting = JPEG_Converter::WR_RD_WRSWA_32_16_8BIT;
+    encode_options.input_swapsetting = JPEG_Converter::WR_RD_WRSWA_16BIT;
 
     encode_size = 0;
     dcache_invalid(buf, len);

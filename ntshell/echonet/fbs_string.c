@@ -6,7 +6,7 @@
  *                              Toyohashi Univ. of Technology, JAPAN
  *  Copyright (C) 2004-2011 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
- *  Copyright (C) 2015 Cores Co., Ltd. Japan
+ *  Copyright (C) 2015-2019 Cores Co., Ltd. Japan
  *
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
  *  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -37,7 +37,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  *
- *  @(#) $Id$
+ *  @(#) $Id: fbs_string.c 1971 2019-07-10 04:36:59Z coas-nagasima $
  */
 
 #include <stdint.h>

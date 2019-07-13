@@ -2,7 +2,7 @@
  *  TOPPERS Software
  *      Toyohashi Open Platform for Embedded Real-Time Systems
  * 
- *  Copyright (C) 2006-2015 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2006-2018 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -70,12 +70,17 @@
 #define MPCORE_SCU_INVALL	((uint32_t *)(MPCORE_SCU_BASE + 0x0cU))
 
 /*
- *  SCU制御レジスタ（SCU_CTRL）の設定値
+ *  SCU制御レジスタ（MPCORE_SCU_CTRL）の設定値
  */
 #define MPCORE_SCU_CTRL_ENABLE		UINT_C(0x00000001)
 
 /*
- *  SCUインバリデートオールレジスタ（SCU_INVALL）の設定値
+ *  SCUパワーステータスレジスタ（MPCORE_SCU_CPUSTAT）の設定値
+ */
+#define MPCORE_SCU_CPUSTAT_ALLNORMAL	UINT_C(0x00000000)
+
+/*
+ *  SCUインバリデートオールレジスタ（MPCORE_SCU_INVALL）の設定値
  */
 #define MPCORE_SCU_INVALL_ALLWAYS	UINT_C(0x0000ffff)
 
@@ -86,18 +91,24 @@
 /*
  *  GICレジスタのベースアドレスの定義
  */
+#ifndef GICC_BASE
 #define GICC_BASE			(MPCORE_PMR_BASE + UINT_C(0x0100))
+#endif /* GICC_BASE */
+
+#ifndef GICD_BASE
 #define GICD_BASE			(MPCORE_PMR_BASE + UINT_C(0x1000))
+#endif /* GICD_BASE */
+
+/*
+ *  割込み番号の定義
+ */
+#define MPCORE_IRQNO_GTC	27U			/* グローバルタイマの割込み番号 */
+#define MPCORE_IRQNO_TMR	29U			/* プライベートタイマの割込み番号 */
+#define MPCORE_IRQNO_WDG	30U			/* ウォッチドッグの割込み番号 */
 
 /*
  *  プライベートタイマとウォッチドッグ関連の定義
  */
-
-/*
- *  プライベートタイマとウォッチドッグの割込み番号
- */
-#define MPCORE_IRQNO_TMR	29U			/* プライベートタイマの割込み番号 */
-#define MPCORE_IRQNO_WDG	30U			/* ウォッチドッグの割込み番号 */
 
 /*
  *  プライベートタイマとウォッチドッグレジスタの番地の定義
@@ -156,13 +167,24 @@
 #define MPCORE_GTC_COUNT_U	((uint32_t *)(MPCORE_GTC_BASE + 0x04U))
 #define MPCORE_GTC_CTRL		((uint32_t *)(MPCORE_GTC_BASE + 0x08U))
 #define MPCORE_GTC_ISR		((uint32_t *)(MPCORE_GTC_BASE + 0x0cU))
-#define MPCORE_GTC_CVR_L	((uint32_t *)(MPCORE_PMR_BASE + 0x10U))
-#define MPCORE_GTC_CVR_U	((uint32_t *)(MPCORE_PMR_BASE + 0x14U))
+#define MPCORE_GTC_CVR_L	((uint32_t *)(MPCORE_GTC_BASE + 0x10U))
+#define MPCORE_GTC_CVR_U	((uint32_t *)(MPCORE_GTC_BASE + 0x14U))
+#define MPCORE_GTC_AUTOINCR	((uint32_t *)(MPCORE_GTC_BASE + 0x18U))
 
 /*
  *  グローバルタイマ制御レジスタ（MPCORE_GTC_CTRL）の設定値
  */
+#define MPCORE_GTC_CTRL_DISABLE			0x00U
 #define MPCORE_GTC_CTRL_ENABLE			0x01U
+#define MPCORE_GTC_CTRL_ENACOMP			0x02U
+#define MPCORE_GTC_CTRL_ENAINT			0x04U
+#define MPCORE_GTC_CTRL_AUTOINCR		0x08U
+#define MPCORE_GTC_CTRL_PS_SHIFT		8
+
+/*
+ *  グローバルタイマ割込みステータスレジスタ（MPCORE_GTC_ISR）の設定値
+ */
+#define MPCORE_GTC_ISR_EVENTFLAG		0x01U
 
 #endif /* __TARGET_ARCH_ARM == 7 */
 
@@ -192,6 +214,11 @@ Inline void
 mpcore_enable_scu(void)
 {
 	uint32_t	reg;
+
+	/*
+	 *  すべてのプロセッサをノーマルモードにする．
+	 */
+	sil_wrw_mem(MPCORE_SCU_CPUSTAT, MPCORE_SCU_CPUSTAT_ALLNORMAL);
 
 	/*
 	 *  SCUのすべてのタグを無効化する．

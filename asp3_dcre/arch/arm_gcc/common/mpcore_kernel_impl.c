@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2006-2015 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2006-2018 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -41,42 +41,94 @@
  */
 
 /*
- *		kernel_impl.hのチップ依存部（MPCore用）
- *
- *  このヘッダファイルは，target_kernel_impl.h（または，そこからインク
- *  ルードされるファイル）のみからインクルードされる．他のファイルから
- *  直接インクルードしてはならない．
+ *		カーネルのMPCore依存部
  */
 
-#ifndef TOPPERS_CHIP_KERNEL_IMPL_H
-#define TOPPERS_CHIP_KERNEL_IMPL_H
-
-#include "mpcore.h"
+#include "kernel_impl.h"
+#include <sil.h>
+#include "arm.h"
 
 /*
- *  MMUの使用に関する設定
+ *  MPCore依存の初期化
  */
-#define USE_ARM_MMU
-#define USE_ARM_SSECTION
+void
+mpcore_initialize(void)
+{
+	/*
+	 *  キャッシュをディスエーブル
+	 */
+	arm_disable_cache();
+
+	/*
+	 *  コア依存の初期化
+	 */
+	core_initialize();
+
+	/*
+	 *  MPCoreをSMPモードに設定
+	 *
+	 *  Shareable属性のメモリ領域をキャッシュ有効にするには，シングル
+	 *  コアであっても，SMPモードに設定されている必要がある．
+	 */
+	mpcore_enable_smp();
+
+	/*
+	 *  SCUをイネーブル
+	 */
+	mpcore_enable_scu();
+
+	/*
+	 *  キャッシュをイネーブル
+	 */
+	arm_enable_cache();
+
+	/*
+	 * GICのディストリビュータの初期化
+	 */
+	gicd_initialize();
+
+	/*
+	 * GICのCPUインタフェースの初期化
+	 */
+	gicc_initialize();
+
+	/*
+	 *  分岐予測の無効化とイネーブル
+	 */
+	arm_invalidate_bp();
+	arm_enable_bp();
+}
 
 /*
- *  GICに関する定義，コアで共通な定義
- *
- *  core_kernel_impl.hは，gic_kernel_impl.hからインクルードされる．
+ *  MPCore依存の終了処理
  */
-#include "gic_kernel_impl.h"
+void
+mpcore_terminate(void)
+{
+	extern void    software_term_hook(void);
+	void (*volatile fp)(void) = software_term_hook;
 
-#ifndef TOPPERS_MACRO_ONLY
+	/*
+	 *  software_term_hookへのポインタを，一旦volatile指定のあるfpに代
+	 *  入してから使うのは，0との比較が最適化で削除されないようにするた
+	 *  めである．
+	 */
+	if (fp != 0) {
+		(*fp)();
+	}
 
-/*
- *  チップ依存の初期化
- */
-extern void chip_initialize(void);
+	/*
+	 *  GICのCPUインタフェースの終了処理
+	 */
+	gicc_terminate();
 
-/*
- *  チップ依存の終了処理
- */
-extern void chip_terminate(void);
+	/*
+	 *  GICのディストリビュータの終了処理
+	 */
+	gicd_terminate();
 
-#endif /* TOPPERS_MACRO_ONLY */
-#endif /* TOPPERS_CHIP_KERNEL_IMPL_H */
+	/*
+	 *  コア依存の終了処理
+	 */
+	core_terminate();
+}

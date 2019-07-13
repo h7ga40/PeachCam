@@ -2120,12 +2120,14 @@ void
 dhcp4_cli_wakeup(T_DHCP4_CLI_CONTEXT *ct)
 {
 	if (ct->fsm == DHCP4_FSM_WAKE) {
-		ct->flags = 0;
-		ct->error = E_OK;
+		if (ct->snd_msg == NULL) {
+			ct->flags = 0;
+			ct->error = E_OK;
 
-		/* メッセージ構造体を初期化する。*/
-		if ((ct->error = init_cli_msg(ct)) != E_OK)
-			return;
+			/* メッセージ構造体を初期化する。*/
+			if ((ct->error = init_cli_msg(ct)) != E_OK)
+				return;
+		}
 
 		ct->timer = 1000 * 1000;
 

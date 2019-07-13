@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2017 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2018 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -215,7 +215,7 @@ acre_flg(const T_CFLG *pk_cflg)
 
 	flgatr = pk_cflg->flgatr;
 
-	CHECK_RSATR(flgatr, TA_TPRI|TA_WMUL|TA_CLR);
+	CHECK_VALIDATR(flgatr, TA_TPRI|TA_WMUL|TA_CLR);
 
 	lock_cpu();
 	if (tnum_flg == 0 || queue_empty(&free_flgcb)) {
@@ -291,12 +291,12 @@ del_flg(ID flgid)
 ER
 set_flg(ID flgid, FLGPTN setptn)
 {
-	FLGCB	*p_flgcb;
-	QUEUE	*p_queue;
-	TCB		*p_tcb;
-	WINFO_FLG *p_winfo_flg;
-	bool_t lock;
-	ER		ercd;
+	FLGCB		*p_flgcb;
+	QUEUE		*p_queue;
+	TCB			*p_tcb;
+	WINFO_FLG	*p_winfo_flg;
+	bool_t		lock;
+	ER			ercd;
 
 	LOG_SET_FLG_ENTER(flgid, setptn);
 	lock = sense_lock();
@@ -329,7 +329,7 @@ set_flg(ID flgid, FLGPTN setptn)
 				dispatch();
 			}
 			else {
-				request_dispatch();
+				request_dispatch_retint();
 			}
 		}
 		ercd = E_OK;
@@ -388,9 +388,9 @@ clr_flg(ID flgid, FLGPTN clrptn)
 ER
 wai_flg(ID flgid, FLGPTN waiptn, MODE wfmode, FLGPTN *p_flgptn)
 {
-	FLGCB	*p_flgcb;
-	WINFO_FLG winfo_flg;
-	ER		ercd;
+	FLGCB		*p_flgcb;
+	WINFO_FLG	winfo_flg;
+	ER			ercd;
 
 	LOG_WAI_FLG_ENTER(flgid, waiptn, wfmode, p_flgptn);
 	CHECK_DISPATCH();
@@ -416,8 +416,8 @@ wai_flg(ID flgid, FLGPTN waiptn, MODE wfmode, FLGPTN *p_flgptn)
 	else {
 		winfo_flg.waiptn = waiptn;
 		winfo_flg.wfmode = wfmode;
-		p_runtsk->tstat = TS_WAITING_FLG;
-		wobj_make_wait((WOBJCB *) p_flgcb, (WINFO_WOBJ *) &winfo_flg);
+		wobj_make_wait((WOBJCB *) p_flgcb, TS_WAITING_FLG,
+											(WINFO_WOBJ *) &winfo_flg);
 		dispatch();
 		ercd = winfo_flg.winfo.wercd;
 		if (ercd == E_OK) {
@@ -482,10 +482,10 @@ pol_flg(ID flgid, FLGPTN waiptn, MODE wfmode, FLGPTN *p_flgptn)
 ER
 twai_flg(ID flgid, FLGPTN waiptn, MODE wfmode, FLGPTN *p_flgptn, TMO tmout)
 {
-	FLGCB	*p_flgcb;
-	WINFO_FLG winfo_flg;
-	TMEVTB	tmevtb;
-	ER		ercd;
+	FLGCB		*p_flgcb;
+	WINFO_FLG	winfo_flg;
+	TMEVTB		tmevtb;
+	ER			ercd;
 
 	LOG_TWAI_FLG_ENTER(flgid, waiptn, wfmode, p_flgptn, tmout);
 	CHECK_DISPATCH();
@@ -515,9 +515,8 @@ twai_flg(ID flgid, FLGPTN waiptn, MODE wfmode, FLGPTN *p_flgptn, TMO tmout)
 	else {
 		winfo_flg.waiptn = waiptn;
 		winfo_flg.wfmode = wfmode;
-		p_runtsk->tstat = TS_WAITING_FLG;
-		wobj_make_wait_tmout((WOBJCB *) p_flgcb, (WINFO_WOBJ *) &winfo_flg,
-														&tmevtb, tmout);
+		wobj_make_wait_tmout((WOBJCB *) p_flgcb, TS_WAITING_FLG,
+								(WINFO_WOBJ *) &winfo_flg, &tmevtb, tmout);
 		dispatch();
 		ercd = winfo_flg.winfo.wercd;
 		if (ercd == E_OK) {

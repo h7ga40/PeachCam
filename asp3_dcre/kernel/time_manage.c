@@ -52,6 +52,7 @@
 #include "dataqueue.h"
 #include "time_event.h"
 #include "target_timer.h"
+#include <sil.h>
 
 /*
  *  トレースログマクロのデフォルト定義
@@ -185,7 +186,9 @@ adj_tim(int32_t adjtim)
 			monotonic_evttim = current_evttim;	/*［ASPD1054］*/
 		}
 
-		set_hrt_event();						/*［ASPD1056］*/
+		if (!in_signal_time) {
+			set_hrt_event();					/*［ASPD1056］*/
+		}
 		ercd = E_OK;
 	}
 	unlock_cpu();

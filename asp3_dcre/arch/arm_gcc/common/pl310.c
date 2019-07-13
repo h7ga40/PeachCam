@@ -42,7 +42,7 @@
  */
 
 #include "kernel_impl.h"
-#include "core_pl310.h"
+#include "pl310.h"
 
 Inline uint32_t
 get_way_mask(void)
