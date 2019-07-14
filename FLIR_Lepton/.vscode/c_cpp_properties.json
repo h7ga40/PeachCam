@@ -3,8 +3,7 @@
         {
             "name": "GR-PEACH",
             "includePath": [
-                "${workspaceFolder}/../FLIR_Lepton/src",
-                "${workspaceFolder}/../mbed-os/hal"
+                "${workspaceFolder}/../FLIR_Lepton/src"
             ],
             "defines": [ ],
             "windowsSdkVersion": "10.0.17763.0",

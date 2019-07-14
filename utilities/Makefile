@@ -229,7 +229,6 @@ INCLUDE_PATHS += -I../../utilities/components/WIFI/esp32-driver/ESP32
 INCLUDE_PATHS += -I../../utilities/mbed-http
 INCLUDE_PATHS += -I../../utilities/mbed-http/http_parser
 INCLUDE_PATHS += -I../../utilities/mbed-rpc
-INCLUDE_PATHS += -I../../utilities/src
 
 # Objects and Paths
 ###############################################################################

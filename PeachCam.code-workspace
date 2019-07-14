@@ -4,6 +4,9 @@
 			"path": "HoikuCam"
 		},
 		{
+			"path": "HoikuCamApp"
+		},
+		{
 			"path": "asp3_dcre"
 		},
 		{
@@ -14,9 +17,6 @@
 		},
 		{
 			"path": "FLIR_Lepton"
-		},
-		{
-			"path": "HoikuCamApp"
 		},
 		{
 			"path": "libcxx"

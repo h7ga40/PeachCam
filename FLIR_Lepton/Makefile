@@ -57,7 +57,6 @@ OBJECTS += src/LEPTON_VID.o
 
 INCLUDE_PATHS += -I../../musl-1.1.18/include
 INCLUDE_PATHS += -I../../FLIR_Lepton/src
-INCLUDE_PATHS += -I../../mbed-os/hal
 
 # Objects and Paths
 ###############################################################################

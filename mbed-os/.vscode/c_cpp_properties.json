@@ -6,7 +6,7 @@
                 "${workspaceFolder}/../mbed-os/src",
                 "${workspaceFolder}/../libcxx/include",
                 "${workspaceFolder}/../musl-1.1.18/include",
-                "${workspaceFolder}/../TCINSTALLlib/gcc/arm-none-eabi/GCC_VERSION/include",
+                "C:\\Program Files (x86)\\GNU Tools ARM Embedded\\6 2017-q2-update\\lib/gcc/arm-none-eabi/6.3.1/include",
                 "${workspaceFolder}/../mbed-os",
                 "${workspaceFolder}/../mbed-os/include",
                 "${workspaceFolder}/../mbed-os/features",
