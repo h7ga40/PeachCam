@@ -8,7 +8,7 @@
         "owner": "cpp",
         "fileLocation": [
             "relative",
-            "${workspaceRoot}/Debug"
+            "${workspaceFolder}/Debug"
         ],
         "pattern": {
             "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error|fatal error):\\s+(.*)$",
@@ -146,7 +146,7 @@
                 "args": [
                     "-av",
                     "--progress",
-                    "${workspaceRoot}/Debug/HoikuCam.bin",
+                    "${workspaceFolder}/Debug/HoikuCam.bin",
                     "/media/usb0",
                 ]
             },
@@ -155,14 +155,14 @@
                 "args": [
                     "-av",
                     "--progress",
-                    "${workspaceRoot}/Debug/HoikuCam.bin",
+                    "${workspaceFolder}/Debug/HoikuCam.bin",
                     "/Volumes/MBED/"
                 ]
             },
             "windows": {
                 "command": "C:\\Windows\\System32\\robocopy.exe",
                 "args": [
-                    "${workspaceRoot}\\Debug",
+                    "${workspaceFolder}\\Debug",
                     "j:\\",
                     "HoikuCam.bin"
                 ],
