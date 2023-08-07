@@ -654,10 +654,10 @@ class TECSMsg
 @@error_message[ :"S1145" ] = "$1: 一時的な C ソース: 書込みエラーです．"
 
 # S1146 $1: error occured while CPP"
-@@error_message[ :"S1146" ] = "$1: CPP(C-PreProcessor) 実行中にエラーが発生しました．Cコンパイラのパスまたはコマンドラインオプションをチェックしてください"
+@@error_message[ :"S1146" ] = "$1: CPP 実行中にエラーが発生しました．"
 
 # S1147 $1: popen for CPP failed"
-@@error_message[ :"S1147" ] = "$1: CPP(C-PreProcessor) に対する popen が失敗しました．Cコンパイラのパスまたはコマンドラインオプションをチェックしてください"
+@@error_message[ :"S1147" ] = "$1: CPPに対する popen が失敗しました．"
 
 # S1148 $1 not found in search path"
 @@error_message[ :"S1148" ] = "$1 が検索パスの中に見つかりません．"
@@ -799,7 +799,7 @@ class TECSMsg
 @@error_message[ :"S2015" ] = "'$1' は \'in\' パラメータ $2 に対して定数である必要があります．"
 
 # S2016 $1 can not be const for $2 parameter"
-@@error_message[ :"S2016" ] = "'$1' は $2 パラメータに対して定数指定できません． このエラーは signature に [deviate] を指定することで抑制できます"
+@@error_message[ :"S2016" ] = "'$1' は $2 パラメータに対して定数指定できません． "
 
 # S2017 size_is argument is not integer type"
 @@error_message[ :"S2017" ] = "size_is 引数が整数型ではありません．"
@@ -1112,7 +1112,7 @@ class TECSMsg
 @@warning_message[ :"W3002" ] = "$1: この文字列はバッファーオーバーランを引き起こすかもしれません．"
 
 # W3003 $1 pointer level mismatch"
-@@warning_message[ :"W3003" ] = "$1 ポインターレベルの不整合です．このエラーは signature に [deviate] を指定することで抑制できます"
+@@warning_message[ :"W3003" ] = "$1 ポインターレベルの不整合です．"
 
 # W3004 $1 pointer type has returned. specify deviate or stop return pointer"
 @@error_message[ :"W3004" ] = "$1 ポインタ型が返されました。deviate を指定するかポインタを返すのを止めてください"

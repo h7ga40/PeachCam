@@ -1753,6 +1753,9 @@ end
       b_in_comment2 = false
       b_in_string = false
 
+      # euc のコメントを utf8 として扱うと、コメントの終わりを誤る問題の対策
+      TECS_LANG::set_kcode_binary
+
       files.each {|file|
     lineno = 1
     begin
@@ -1882,6 +1885,7 @@ end
 
     ensure
       @@generator_nest -= 1
+      TECS_LANG::reset_kcode
     end
 
   end
@@ -2159,19 +2163,24 @@ class TECSIO
   def self.foreach(file, &pr) # ブロック引数 { |line| }
     # obsolete Ruby 3.0 では使えなくなった
     # pr = Proc.new   # このメソッドのブロック引数を pr に代入
+    if $b_no_kcode then
+      msg = "E".encode $Ruby19_File_Encode
+      if( $Ruby19_File_Encode == "Shift_JIS" )
 
-    msg = "E".encode $Ruby19_File_Encode
-    if( $Ruby19_File_Encode == "Shift_JIS" )
+    # Shift JIS は、いったん Windows-31J として読み込ませ、Shift_JIS に変換させる．
+    # コメント等に含まれる SJIS に不適切な文字コードは '?' または REPLACEMENT CHARACTER に変換される．
+    # EUC や UTF-8 で記述された CDL が混在していても、Ruby 例外が発生することなく処理を進めることができる．
+    # 文字コード指定が SJIS であって、文字列リテラルの中に、文字コードがSJIS 以外の非 ASCII が含まれている場合、
+    # Ruby 1.8 の tecsgen では文字コード指定に影響なく処理されたものが、Ruby 1.9 以降では '?' に置き換わる可能性がある．
 
-        # Shift JIS は、いったん Windows-31J として読み込ませ、Shift_JIS に変換させる．
-        # コメント等に含まれる SJIS に不適切な文字コードは '?' または REPLACEMENT CHARACTER に変換される．
-        # EUC や UTF-8 で記述された CDL が混在していても、Ruby 例外が発生することなく処理を進めることができる．
-        # 文字コード指定が SJIS であって、文字列リテラルの中に、文字コードがSJIS 以外の非 ASCII が含まれている場合、
-        # Ruby 1.8 の tecsgen では文字コード指定に影響なく処理されたものが、Ruby 1.9 以降では '?' に置き換わる可能性がある．
-
-        mode = "r:Windows-31J"
+    mode = "r:Windows-31J"
+      else
+    mode = "r:#{$Ruby19_File_Encode}"
+      end
+      # mode = "r"
     else
-        mode = "r:#{$Ruby19_File_Encode}"
+      msg = "E"
+      mode = "r"
     end
 
     f = File.open( file, mode )
@@ -2194,6 +2203,9 @@ class TECSIO
   #
   #msg_enc::Encode | String
   def self.str_code_convert( msg, str )
+    if $b_no_kcode == false then
+      return str              # Ruby V1.8 まで
+    end
     if msg.encoding != str.encoding then
       begin
         # option = { :invalid => :replace, :undef => :replace }   # 例外を発生させず、'?' に変換する(utf-8 は 0xfffd)

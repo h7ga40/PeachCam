@@ -97,6 +97,7 @@ end
 #RETURN::Bool   : true=成功、 false=失敗   失敗した場合、Generator.error は呼び元で出力する
 def require_tecsgen_lib( fname, b_fatal = true )
   dbgPrint( "require_lib: #{fname}\n")
+  set_kcode $KCODE_TECSGEN
   begin  
     b_require = false
     b_exception = false
@@ -159,6 +160,8 @@ def require_tecsgen_lib( fname, b_fatal = true )
     end
     return true
   ensure
+    # $KCODE を CDL の文字コードに戻しておく
+    set_kcode $KCODE_CDL
   end
 end
 
@@ -206,6 +209,12 @@ def print_report
   puts msg if msg
 end
 
+#=== $KCODE を設定
+def set_kcode kcode
+  if ! $b_no_kcode then
+    $KCODE = kcode
+  end
+end
 #----- class TECSGEN -------#
 class TECSGEN
 
@@ -266,6 +275,11 @@ class TECSGEN
     require 'optparse'
     #2.0 require 'runit/assert.rb'
     require 'kconv'
+    $b_no_kcode = RUBY_VERSION >= "1.9.0" ? true : false
+	       # Use Ruby 1.9 M17N code (use Ruby 1.8 code if false).
+    if ! $b_no_kcode then
+      require 'jcode'
+    end
     require 'pp'
     # include RUNIT::Assert
 
@@ -333,10 +347,18 @@ class TECSGEN
     end
 
     # # 文字コードの設定
-    $KCONV_CDL = Kconv::EUC      # const: NONE には ASCII を対応させる
-
-    # $KCONV_TECSGEN を仮に設定する (tecs_lang.rb ですぐに再設定される)
+    if $IN_EXERB then
+      # KCODE_CDL, $KCONV_CDL を仮に設定する (tecs_lang.rb ですぐに再設定される)
+      $KCODE_CDL = "SJIS"          # string: "EUC" | "SJIS" | "NONE" | "UTF8"
+      $KCONV_CDL = Kconv::SJIS     # const: NONE には ASCII を対応させる
+    else
+      $KCODE_CDL = "EUC"           # string: "EUC" | "SJIS" | "NONE" | "UTF8"
+      $KCONV_CDL = Kconv::EUC      # const: NONE には ASCII を対応させる
+    end
+    # $KCODE_TECSGEN, $KCONV_TECSGEN を仮に設定する (tecs_lang.rb ですぐに再設定される)
+    $KCODE_TECSGEN = "UTF8"      # string: "EUC"  このファイルの文字コード（オプションではなく定数）
     $KCONV_TECSGEN = Kconv::UTF8 # const: 
+    set_kcode( $KCODE_TECSGEN )  # このファイルの文字コードを設定
 
   end # initialize_global_var
 

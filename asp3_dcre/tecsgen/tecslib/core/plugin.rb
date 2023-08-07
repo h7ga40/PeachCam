@@ -300,12 +300,14 @@ class CFile
   end
 
   def initialize( path, mode )
-    mode += ":" + $Ruby19_File_Encode
+    if $b_no_kcode then 
+      mode += ":" + $Ruby19_File_Encode
+    end
     @file = File.open( path, mode )
   end
 
   def print str
-    if $KCONV_CONSOLE == Kconv::BINARY then 
+    if $b_no_kcode && $KCONV_CONSOLE == Kconv::BINARY then 
       @file.print( str )
     else
       @file.print( str.kconv( $KCONV_CDL, $KCONV_TECSGEN ) )
@@ -313,7 +315,7 @@ class CFile
   end
 
   def puts str
-    if $KCONV_CONSOLE == Kconv::BINARY then 
+    if $b_no_kcode && $KCONV_CONSOLE == Kconv::BINARY then 
       @file.print( str )
     else
       @file.print( str.kconv( $KCONV_CDL, $KCONV_TECSGEN ) )
@@ -322,7 +324,7 @@ class CFile
   end
 
   def printf( format, *arg )
-    if $KCONV_CONSOLE == Kconv::BINARY then 
+    if $b_no_kcode && $KCONV_CONSOLE == Kconv::BINARY then 
       @file.print( sprintf( format, *arg ) )
     else
       @file.print( sprintf( format, *arg ).kconv( $KCONV_CDL, $KCONV_TECSGEN ) )

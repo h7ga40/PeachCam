@@ -654,10 +654,10 @@ class TECSMsg
 @@error_message[ :"S1145" ] = "$1: temporary C source: writing error"
 
 # S1146 $1: error occured while CPP"
-@@error_message[ :"S1146" ] = "$1: error occured while CPP(C-PreProcesor), please check C-compiler path or command line options"
+@@error_message[ :"S1146" ] = "$1: error occured while CPP"
 
 # S1147 $1: popen for CPP failed"
-@@error_message[ :"S1147" ] = "$1: popen for CPP(C-PreProcesor) failed, please check C-compiler path or command line options"
+@@error_message[ :"S1147" ] = "$1: popen for CPP failed"
 
 # S1148 $1 not found in search path"
 @@error_message[ :"S1148" ] = "$1 not found in search path"
@@ -799,7 +799,7 @@ class TECSMsg
 @@error_message[ :"S2015" ] = "'$1' must be const for \'in\' parameter $2"
 
 # S2016 $1 can not be const for $2 parameter"
-@@error_message[ :"S2016" ] = "'$1' can not be const for $2 parameter. This error can be eliminated by specifying [deviate] to signature"
+@@error_message[ :"S2016" ] = "'$1' can not be const for $2 parameter"
 
 # S2017 size_is argument is not integer type"
 @@error_message[ :"S2017" ] = "size_is argument is not integer type"
@@ -1112,7 +1112,7 @@ class TECSMsg
 @@warning_message[ :"W3002" ] = "$1: this string might cause buffer over run"
 
 # W3003 $1 pointer level mismatch"
-@@warning_message[ :"W3003" ] = "$1 pointer level mismatch. This warning can be eliminated by specifying [deviate] to signature"
+@@warning_message[ :"W3003" ] = "$1 pointer level mismatch"
 
 # W3004 $1 pointer type has returned. specify deviate or stop return pointer"
 @@error_message[ :"W3004" ] = "$1 pointer type has returned. specify deviate or stop return pointer"

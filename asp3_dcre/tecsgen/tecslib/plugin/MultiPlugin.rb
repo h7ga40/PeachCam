@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: MultiPlugin.rb 3263 2022-12-30 11:45:37Z okuma-top $
+#   $Id: MultiPlugin.rb 2952 2018-05-07 10:19:07Z okuma-top $
 #++
 
 #== MultiPlugin クラス
@@ -42,19 +42,15 @@ class MultiPlugin < Node
   def self.get_plugin superClass
     # case when (つまりは ===) では、期待したように一致しない模様
     if superClass == SignaturePlugin then
-      require_tecsgen_lib "tecslib/plugin/SignaturePlugin.rb"
       return SignaturePlugin
     elsif superClass == CelltypePlugin
-      require_tecsgen_lib "tecslib/plugin/CelltypePlugin.rb"
       return CelltypePlugin
     elsif superClass == CellPlugin
-      require_tecsgen_lib "tecslib/plugin/CellPlugin.rb"
       return CellPlugin
     elsif superClass == ThroughPlugin
-      require_tecsgen_lib "tecslib/plugin/ThroughPlugin.rb"
       return ThroughPlugin
     elsif superClass == DomainPlugin
-      return nil
+      return DomainPlugin
     else
       return nil
     end

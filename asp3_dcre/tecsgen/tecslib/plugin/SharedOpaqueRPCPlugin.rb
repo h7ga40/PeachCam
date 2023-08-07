@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: SharedOpaqueRPCPlugin.rb 3155 2020-06-28 12:57:32Z okuma-top $
+#   $Id: SharedOpaqueRPCPlugin.rb 3140 2020-03-29 09:21:42Z okuma-top $
 #++
 
 require_tecsgen_lib "lib/GenOpaqueMarshaler.rb"

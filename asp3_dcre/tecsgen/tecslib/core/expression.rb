@@ -444,7 +444,11 @@ class Expression < Node
     when :CHARACTER_LITERAL
       str =  elements[1].val.gsub(/'/, "" )
 #2.0      if str.jlength == 1
-      len = str.length
+      if $b_no_kcode then
+        len = str.length
+      else
+        len = str.jlength
+      end
       if len == 1 then
         sum = 0
         str.each_byte { |b| sum = sum * 256 + b }
@@ -693,19 +697,13 @@ class Expression < Node
     case elements[0]
     when :IDENTIFIER
       nsp = elements[1]
-      if nsp.is_name_only? && namedList then    #1202
+      if nsp.is_name_only? then
         paramdecl = namedList.get_item( nsp.get_name )
       else
         paramdecl = nil
       end
       unless paramdecl then
-        if namedList then                       #1202
-          cdl_error( "E1012 $1: not found in parameter list" , nsp.get_path_str )
-        else
-          # namedList = nil: expression.rb の initializer.get_type( attribute ) から呼ばれた場合
-          # この場合、E1001 が出るので、ここでは出さない
-          dbgPrint "elements_get_type_sub: #{nsp.get_path_str} not found (namedList==nil)"
-        end
+        cdl_error( "E1012 $1: not found in parameter list" , nsp.get_path_str )
         return IntType.new(32)        # dummy result
       end
       return paramdecl.get_type

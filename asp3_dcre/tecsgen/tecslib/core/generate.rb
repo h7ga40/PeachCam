@@ -1315,7 +1315,69 @@ class Celltype
 
     if @n_entry_port_inline > 0 then
       ifdef_cb_type_only f
-      gen_ph_undef f
+      f.printf TECSMsg.get( :UDF_comment ), "#_UDF_#"
+      f.print "#undef VALID_IDX\n"
+      f.print "#undef GET_CELLCB\n"
+      f.print "#undef CELLCB\n"
+      f.print "#undef CELLIDX\n"
+      f.print "#undef #{@name}_IDX\n"
+
+      f.print "#undef FOREACH_CELL\n"
+      f.print "#undef END_FOREACH_CELL\n"
+      f.print "#undef INITIALIZE_CB\n"
+      f.print "#undef SET_CB_INIB_POINTER\n"
+
+      @attribute.each { |a|
+        f.print( "#undef ATTR_#{a.get_name}\n" )
+        f.print( "#undef #{@global_name}_ATTR_#{a.get_name}\n" )
+        f.print( "#undef #{@global_name}_GET_#{a.get_name}\n" )
+      }
+      @var.each { |v|
+        f.print( "#undef VAR_#{v.get_name}\n" )
+        f.print( "#undef VAR_#{v.get_name}\n" )
+        f.print( "#undef #{@global_name}_VAR_#{v.get_name}\n" )
+        f.print( "#undef #{@global_name}_GET_#{v.get_name}\n" )
+        f.print( "#undef #{@global_name}_SET_#{v.get_name}\n" )
+      }
+      @port.each { |p|
+        next if p.get_port_type != :CALL
+
+        # is_...joined は omit するケースでも出力されるため、omit を検査する前に出力
+        if p.is_optional? then
+          f.print( "#undef is_#{p.get_name}_joined\n" )
+        end
+
+        next if p.is_omit?
+
+        p.get_signature.get_function_head_array.each{ |fun|
+          f.print( "#undef #{@global_name}_#{p.get_name}_#{fun.get_name}\n" )
+          if ! p.is_require? || p.has_name? then
+            f.print( "#undef #{p.get_name}_#{fun.get_name}\n" )
+          else
+            f.print( "#undef #{fun.get_name}\n" )
+          end
+        }
+        if p.is_dynamic? then
+          f.print( "#undef #{p.get_name}_set_descriptor\n" )
+          if p.is_optional? then
+            f.print( "#undef #{p.get_name}_unjoin\n" )
+          end
+        elsif p.is_ref_desc? then
+          f.print( "#undef #{p.get_name}_refer_to_descriptor\n" )
+          f.print( "#undef #{p.get_name}_ref_desc\n" )
+        end
+      }
+      @port.each { |p|
+        next if p.get_port_type != :ENTRY
+        next if p.is_omit?
+        p.get_signature.get_function_head_array.each{ |fun|
+          f.print( "#undef #{p.get_name}_#{fun.get_name}\n" )
+        }
+      }
+
+      gen_ph_dealloc_code( f, "", true )
+      gen_ph_dealloc_code( f, "_RESET", true )
+
       endif_cb_type_only f
     end
 
@@ -3011,6 +3073,7 @@ EOT
 
   end
 
+
   def gen_ph_inline f
     # inline ポートが一つでもあれば、inline.h の include
     if @n_entry_port_inline > 0 then
@@ -3018,75 +3081,7 @@ EOT
       f.print( "#include \"#{@global_name}_inline.#{$h_suffix}\"\n\n" )
     end
   end
-  
-  def gen_ph_undef f
-    f.printf TECSMsg.get( :UDF_comment ), "#_UDF_#"
-    f.print "#undef VALID_IDX\n"
-    f.print "#undef GET_CELLCB\n"
-    f.print "#undef CELLCB\n"
-    f.print "#undef CELLIDX\n"
-    f.print "#undef #{@name}_IDX\n"
 
-    f.print "#undef FOREACH_CELL\n"
-    f.print "#undef END_FOREACH_CELL\n"
-    f.print "#undef INITIALIZE_CB\n"
-    f.print "#undef SET_CB_INIB_POINTER\n"
-
-    @attribute.each { |a|
-      f.print( "#undef ATTR_#{a.get_name}\n" )
-      f.print( "#undef #{@global_name}_ATTR_#{a.get_name}\n" )
-      f.print( "#undef #{@global_name}_GET_#{a.get_name}\n" )
-    }
-    @var.each { |v|
-      f.print( "#undef VAR_#{v.get_name}\n" )
-      f.print( "#undef VAR_#{v.get_name}\n" )
-      f.print( "#undef #{@global_name}_VAR_#{v.get_name}\n" )
-      f.print( "#undef #{@global_name}_GET_#{v.get_name}\n" )
-      f.print( "#undef #{@global_name}_SET_#{v.get_name}\n" )
-    }
-    @port.each { |p|
-      next if p.get_port_type != :CALL
-
-      # is_...joined は omit するケースでも出力されるため、omit を検査する前に出力
-      if p.is_optional? then
-        f.print( "#undef is_#{p.get_name}_joined\n" )
-      end
-
-      next if p.is_omit?
-
-      p.get_signature.get_function_head_array.each{ |fun|
-        f.print( "#undef #{@global_name}_#{p.get_name}_#{fun.get_name}\n" )
-        if ! p.is_require? || p.has_name? then
-          f.print( "#undef #{p.get_name}_#{fun.get_name}\n" )
-        else
-          f.print( "#undef #{fun.get_name}\n" )
-        end
-      }
-      if p.is_dynamic? then
-        f.print( "#undef #{p.get_name}_set_descriptor\n" )
-        if p.is_optional? then
-          f.print( "#undef #{p.get_name}_unjoin\n" )
-        end
-      elsif p.is_ref_desc? then
-        f.print( "#undef #{p.get_name}_refer_to_descriptor\n" )
-        f.print( "#undef #{p.get_name}_ref_desc\n" )
-      end
-    }
-    @port.each { |p|
-      next if p.get_port_type != :ENTRY
-      next if p.is_omit?
-      p.get_signature.get_function_head_array.each{ |fun|
-        f.print( "#undef #{p.get_name}_#{fun.get_name}\n" )
-      }
-      if p.get_array_size then
-        f.print( "#undef NEP_#{p.get_name}\n" )
-      end
-    }
-
-    gen_ph_dealloc_code( f, "", true )
-    gen_ph_dealloc_code( f, "_RESET", true )
-  end
-  
   def gen_ph_endif( f, post = "TECSGEN" )
     f.print("#endif /* #{@global_name}_#{post}H */\n")
   end
@@ -3105,21 +3100,10 @@ EOT
 
     f = AppFile.open("#{$gen}/#{@global_name}_factory.#{$h_suffix}")
 
-=begin
     plugin_obj = get_celltype_plugin
     if plugin_obj
-      p "gen_factory: #{plugin_obj.class.name} #{plugin_obj}"
       plugin_obj.gen_factory f
     end
-=end
-
-    # generate 文指定によるプラグイン適用
-    @generate_list.each{ |generate|
-      if generate[2] then 
-        # p "gen_factory2: #{generate[2].class.name} #{generate[2]}"
-        generate[2].gen_factory f
-      end
-    }
 
     f.print("#endif /* #{@name}_FACTORY_H */\n")
     f.close
@@ -3895,7 +3879,7 @@ EOT
     elsif has_INIB? then
       cell_CBP = "&#{cell_INIB_name}"
     else
-      cell_CBP = "((#{@global_name}_IDX)0)"    # CB も INIB もなければ 0 に置換 (警告が出ることがあったので "NULL" から変更)
+      cell_CBP = "NULL"    # CB も INIB もなければ NULL に置換
     end
 
     if @idx_is_id_act then
@@ -4836,11 +4820,16 @@ EOT
               ret_cd = nil
             end
             f.print <<EOT
-	#{nCELLCB}	*p_cellcb = #{nGET_CELLCB}(idx);
+	#{nCELLCB}	*p_cellcb;
+	if (#{nVALID_IDX}(idx)) {
+		p_cellcb = #{nGET_CELLCB}(idx);
+	}
+	else {
+		#{er_cd}
+	} /* end if #{nVALID_IDX}(idx) */
 
 EOT
             f.printf( TECSMsg.get( :TEFB_comment ), "#_TEFB_#" )
-            f.printf( "#warning \"'#{p.get_name}_#{fun.get_name}' needs to be edited.\"   /* delete this line after edit */\n")
             f.printf( "\n" )
 
             if ret_cd then
@@ -5290,7 +5279,11 @@ class AppFile
     end
 
 #2.0
-    mode = ":" + $Ruby19_File_Encode
+    if $b_no_kcode then 
+      mode = ":" + $Ruby19_File_Encode
+    else
+      mode = ""
+    end
 
     # 既に開いているか？
     if @@file_name_list[ name ] then

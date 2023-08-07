@@ -150,9 +150,7 @@ tecslib/messages/messages_file_ja_JP.rb
 tecslib/plugin/C2TECSBridgePlugin.rb
 tecslib/plugin/CellPlugin.rb
 tecslib/plugin/CelltypePlugin.rb
-tecslib/plugin/ClassPlugin.rb
 tecslib/plugin/CompositePlugin.rb
-tecslib/plugin/DomainPlugin.rb
 tecslib/plugin/Mruby2CBridgePlugin.rb
 tecslib/plugin/MrubyBridgeCellPlugin.rb
 tecslib/plugin/MrubyBridgeCelltypePlugin.rb
