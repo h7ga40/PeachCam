@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id$
+#   $Id: unjoin_plugin.rb 3075 2019-06-08 01:51:59Z okuma-top $
 #++
 
 # Marshal.dump で不都合な事項への対策
@@ -127,6 +127,7 @@ class Namespace
   def unjoin_plugin
     @signature_list.each{ |sig| sig.unjoin_plugin }
     @celltype_list.each{ |ct| ct.unjoin_plugin }
+    @compositecelltype_list.each{ |ct| ct.unjoin_plugin }
     @cell_list.each{ |cell| cell.unjoin_plugin }
     @namespace_list.each{ |ns| ns.unjoin_plugin}
   end
@@ -147,6 +148,7 @@ end
 
 class DomainType < Node
   def unjoin_plugin
+    # p "unjoin_plugin ############"
     @plugin = nil
   end
 end
@@ -162,6 +164,13 @@ class Celltype < NSBDNode
     @generate = nil
     @generate_list = []
     @plugin = nil
+  end
+end
+
+class CompositeCelltype < NSBDNode
+  def unjoin_plugin
+    @generate = nil
+    @generate_list = []
   end
 end
 

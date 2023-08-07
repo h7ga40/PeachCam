@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id$
+#   $Id: MrubyBridgeCelltypePlugin.rb 3077 2019-06-09 07:23:31Z okuma-top $
 #++
 
 require_tecsgen_lib 'tecslib/plugin/lib/MrubyBridgeCelltypePluginModule.rb'
@@ -87,7 +87,6 @@ end
 #    @plugin_arg_str = CDLString.remove_dquote option
 #    parse_plugin_arg
 #
-#    MrubyBridgeCellPlugin.set_gen_post_code_by_dependent
 #  end
 #
 #  #=== 新しいセル

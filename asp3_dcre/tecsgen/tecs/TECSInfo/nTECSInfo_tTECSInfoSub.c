@@ -30,7 +30,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id$
+ *  @(#) $Id: nTECSInfo_tTECSInfoSub.c 2663 2017-07-08 23:09:53Z okuma-top $
  */
 
 /* #[<PREAMBLE>]#
@@ -144,6 +144,11 @@
 #define	E_ID	(-18)	/* illegal ID */
 #endif
 
+#ifndef DBG_SYSLOG
+#define DBG_SYSLOG( x )
+// #define DBG_SYSLOG( x ) syslog x
+#endif
+
 static ER
 separate_basename( const char_t **namespace_path, char_t **basename );
 
@@ -249,7 +254,6 @@ eTECSInfo_findRegion(const char_t* namespace_path, Descriptor( nTECSInfo_sRegion
         cRegionInfoTemp_set_descriptor( desc2 );
         n = cRegionInfoTemp_getNRegion( );
         for( i = 0; i < n; i++ ){
-            // syslog_3( LOG_NOTICE, "tTECSInfo.eTECSInfo.findRegion 2 %s i=%d n=%d", VAR_name1, i, n );
             cRegionInfoTemp_set_descriptor( desc2 );
             cRegionInfoTemp_getRegionInfo( i, &desc );
             cRegionInfoTemp_set_descriptor( desc );
@@ -293,7 +297,6 @@ eTECSInfo_findSignature(const char_t* namespace_path, Descriptor( nTECSInfo_sSig
     if( ercd != E_OK )
         return ercd;
 
-    // syslog_0( LOG_NOTICE, "tTECSInfo.eTECSInfo.findCell 4" );
     cNamespaceInfoTemp_set_descriptor( nsDesc );
     n = cNamespaceInfoTemp_getNSignature( );
     for( i = 0; i < n; i++ ){
@@ -303,7 +306,6 @@ eTECSInfo_findSignature(const char_t* namespace_path, Descriptor( nTECSInfo_sSig
         if( strcmp( pname, VAR_name1 ) == 0 )
             break;
     }
-    // syslog_0( LOG_NOTICE, "tTECSInfo.eTECSInfo.findCell 5" );
     if( i == n )
         return E_NOEXS;
 
@@ -336,50 +338,14 @@ eTECSInfo_findCell(const char_t* namespace_path, Descriptor( nTECSInfo_sCellInfo
     int     i, n, len;
     ER      ercd;
 
-#if 0
-    // syslog_0( LOG_NOTICE, "tTECSInfo.eTECSInfo.findCell 1" );
-    len = strnlen( namespace_path, ATTR_path_len );
-    if( len >= ATTR_path_len ){
-        return E_NOMEM;
-    }
-    if( VAR_path != namespace_path )     // findRawEntryDescriptorInfo から呼ばれた時、VAR_path に入っているのでコピー不要
-        strcpy( VAR_path, namespace_path );
-    p = &VAR_path[ len - 1 ];
-    while( p > VAR_path ){
-        if( *p == ':' )
-            break;
-        p--;
-    }
-    if( *p == ':' ){
-        p--;
-        if( p < VAR_path || *p != ':' )
-            return E_PAR;    // :: ではなく、: であった
-        if( p == VAR_path ){
-            namespace_path = "::";
-        }
-        else{
-            *p = '\0';
-            namespace_path = VAR_path;
-        }
-        pname = &p[2];
-    }
-    else{
-        namespace_path = "::";
-        pname = VAR_path;
-    }
-#endif
     ercd = separate_basename( &namespace_path, &pname );
     if( ercd != E_OK )
         return ercd;
 
-    // syslog_2( LOG_NOTICE, "tTECSInfo.eTECSInfo.findCell 2 %s %s", namespace_path, pname );
-    
-    // syslog_0( LOG_NOTICE, "tTECSInfo.eTECSInfo.findCell 3" );
     ercd = eTECSInfo_findRegion( namespace_path, &RegionDesc);
     if( ercd != E_OK )
         return ercd;
 
-    // syslog_0( LOG_NOTICE, "tTECSInfo.eTECSInfo.findCell 4" );
     cRegionInfoTemp_set_descriptor( RegionDesc );
     n = cRegionInfoTemp_getNCell( );
     for( i = 0; i < n; i++ ){
@@ -389,7 +355,6 @@ eTECSInfo_findCell(const char_t* namespace_path, Descriptor( nTECSInfo_sCellInfo
         if( strcmp( pname, VAR_name1 ) == 0 )
             break;
     }
-    // syslog_0( LOG_NOTICE, "tTECSInfo.eTECSInfo.findCell 5" );
     if( i == n )
         return E_NOEXS;
 
@@ -403,15 +368,15 @@ eTECSInfo_findCell(const char_t* namespace_path, Descriptor( nTECSInfo_sCellInfo
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 ER
-eTECSInfo_findRawEntryDescriptor(const char_t* namespace_path, int_t ith, Descriptor( nTECSInfo_sRawEntryDescriptorInfo )* rawEntryDescDesc, Descriptor( nTECSInfo_sEntryInfo )* entryDesc)
+eTECSInfo_findRawEntryDescriptor(const char_t* namespace_path, Descriptor( nTECSInfo_sRawEntryDescriptorInfo )* rawEntryDescDesc, Descriptor( nTECSInfo_sEntryInfo )* entryDesc)
 {
     int_t  len;
     Descriptor( nTECSInfo_sCelltypeInfo )  celltypeDesc;
     Descriptor( nTECSInfo_sCellInfo )      cellDesc;
     Descriptor( nTECSInfo_sEntryInfo )     entDesc;
-    char_t *p;
+    char_t *p, *p2;
     int_t  i, n;
-    ER     ercd;
+    ER        ercd;
 
     len = strnlen( namespace_path, ATTR_path_len );
     if( len >= ATTR_path_len ){
@@ -432,23 +397,29 @@ eTECSInfo_findRawEntryDescriptor(const char_t* namespace_path, int_t ith, Descri
     cCelltypeInfoTemp_set_descriptor( celltypeDesc );
     n = cCelltypeInfoTemp_getNEntry();
     p += 1;
-    //syslog_1( LOG_NOTICE, "tTECSInfo.eTECSInfo.findRawEntryDescriptor 4 n_entry=%d", n );
-    // dly_tsk( 10000 );
+    p2 = p;
+    while( *p2 ){
+        p2++;
+        if( *p2 == '[' ){
+            *p2 = '\0';
+            p2++;
+            break;
+        }
+    }
+
     for( i = 0; i < n; i++ ){
         ercd = cCelltypeInfoTemp_getEntryInfo( i, &entDesc ); // エラーはみない
-        //syslog_2( LOG_NOTICE, "tTECSInfo.eTECSInfo.findRawEntryDescriptor 5 ercd=%d entDesc=%x", ercd, entDesc.vdes );
         cEntryInfoTemp_set_descriptor( entDesc );
         ercd = cEntryInfoTemp_getName( VAR_name1, ATTR_name_len );
-        //dly_tsk( 5 );
-        //syslog_4( LOG_NOTICE, "tTECSInfo.eTECSInfo.findRawEntryDescriptor 6 ercd=%d entDesc=%x nm=%s p=%s", ercd, entDesc.vdes, VAR_name1, p );
-        //dly_tsk( 5 );
         if( ercd != E_OK )
             return ercd;
-        if( strcmp( VAR_name1, p ) == 0 )
+        if( strcmp( VAR_name1, p ) == 0 ){
+            DBG_SYSLOG(( LOG_INFO, "tTECSInfoSub: cell name:%s entry:%s", namespace_path, VAR_name1 ));
             break;
+        }
     }
     if( i != n ){
-        cCellInfoTemp_getRawEntryDescriptorInfo( ith, rawEntryDescDesc );
+        ercd = cCellInfoTemp_getRawEntryDescriptorInfo( i, rawEntryDescDesc );
         *entryDesc = entDesc;
     }
     else{
@@ -463,16 +434,16 @@ eTECSInfo_findRawEntryDescriptor(const char_t* namespace_path, int_t ith, Descri
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 ER
-eTECSInfo_findRawEntryDescriptor_unsafe(const char_t* namespace_path, void** rawDesc)
+eTECSInfo_findRawEntryDescriptor_unsafe(const char_t* namespace_path, uint32_t subsc, void** rawDesc)
 {
     ER   ercd;
     Descriptor( nTECSInfo_sRawEntryDescriptorInfo ) rawEntryDescDesc;
     Descriptor( nTECSInfo_sEntryInfo ) entryDesc;
-    ercd = eTECSInfo_findRawEntryDescriptor(namespace_path, 0, &rawEntryDescDesc, &entryDesc);
+    ercd = eTECSInfo_findRawEntryDescriptor(namespace_path, &rawEntryDescDesc, &entryDesc);
     if( ercd != E_OK )
         return ercd;
     cRawEntryDescriptorInfoTemp_set_descriptor( rawEntryDescDesc );
-    ercd = cRawEntryDescriptorInfoTemp_getRawDescriptor( 0, rawDesc );
+    ercd = cRawEntryDescriptorInfoTemp_getRawDescriptor( subsc, rawDesc );
     return ercd;
 }
 

@@ -30,7 +30,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id$
+ *  @(#) $Id: nTECSInfo_tRegionInfo.c 2656 2017-06-24 11:57:31Z okuma-top $
  */
 
 /* #[<PREAMBLE>]#
@@ -169,6 +169,7 @@ eRegionInfo_getCellInfo(CELLIDX idx, uint32_t ith, Descriptor( nTECSInfo_sCellIn
 
 	/* Put statements here #_TEFB_# */
   *des = cCellInfo_refer_to_descriptor( ith );
+  return E_OK;
 }
 
 /* #[<ENTRY_FUNC>]# eRegionInfo_getNRegion
@@ -209,6 +210,7 @@ eRegionInfo_getRegionInfo(CELLIDX idx, uint32_t ith, Descriptor( nTECSInfo_sRegi
 
 	/* Put statements here #_TEFB_# */
   *des = cRegionInfo_refer_to_descriptor( ith );
+  return E_OK;
 }
 
 /* #[<POSTAMBLE>]#

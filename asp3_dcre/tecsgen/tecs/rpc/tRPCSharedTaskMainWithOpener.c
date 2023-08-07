@@ -33,7 +33,7 @@
  *   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *   の責任を負わない．
  *  
- *   $Id$
+ *   $Id: tRPCSharedTaskMainWithOpener.c 2027 2014-01-20 08:36:17Z okuma-top $
  */
 
 /*

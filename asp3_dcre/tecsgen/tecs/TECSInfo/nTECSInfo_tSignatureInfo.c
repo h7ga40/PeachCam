@@ -30,7 +30,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id$
+ *  @(#) $Id: nTECSInfo_tSignatureInfo.c 2656 2017-06-24 11:57:31Z okuma-top $
  */
 
 /* #[<PREAMBLE>]#
@@ -158,6 +158,7 @@ eSignatureInfo_getFunctionInfo(CELLIDX idx, uint32_t ith, Descriptor( nTECSInfo_
 
 	/* Put statements here #_TEFB_# */
   *desc = cFunctionInfo_ref_desc( ith );
+  	return E_OK;
 }
 
 /* #[<POSTAMBLE>]#

@@ -30,7 +30,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id$
+ *  @(#) $Id: nTECSInfo_tDefinedTypeInfo.c 2665 2017-07-24 08:59:28Z okuma-top $
  */
 
 /* #[<PREAMBLE>]#
@@ -206,6 +206,7 @@ eTypeInfo_getTypeInfo(CELLIDX idx, Descriptor( nTECSInfo_sTypeInfo )* desc)
    * but this function always returns valid value
    */
   *desc = cTypeInfo_refer_to_descriptor();
+  	return E_OK;
 }
 
 /* #[<ENTRY_FUNC>]# eTypeInfo_getNMember
@@ -225,6 +226,7 @@ eTypeInfo_getNMember(CELLIDX idx)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	return 0;
 
 }
 

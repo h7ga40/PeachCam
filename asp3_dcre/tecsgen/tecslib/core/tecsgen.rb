@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2017 by TOPPERS Project
+#   Copyright (C) 2008-2020 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id$
+#   $Id: tecsgen.rb 2665 2017-07-24 08:59:28Z okuma-top $
 #++
 
 
@@ -265,32 +265,15 @@ class TECSGEN
     if ARGV.length > 0 then
       dbgPrint( "## Generating Post Code\n")
       # プラグインのポストコードの出力と import
-      tmp_file_name = "#{$gen}/tmp_plugin_post_code.cdl"
-      file = nil
-      begin
-        file = CFile.open( tmp_file_name, "w" )
-      rescue
-        Generator.error( "G9999 fail to create #{tmp_file_name}" )
-      end
-
-      if file then
-        # through プラグインのポストコード生成
-        PluginModule.gen_plugin_post_code file
-
-        begin
-          file.close
-        rescue
-          Generator.error( "G9999 fail to close #{tmp_file_name}" )
-        end
-        dbgPrint( "## Import Post Code\n")
-        Import.new( "#{tmp_file_name}" )
-      end
+      PluginModule.gen_plugin_post_code
     end
 
     ####  意味解析１ (post コード) ####
     dbgPrint( "## Creating reverse join (for post code) \n")
     Cell.create_reverse_join
 
+    ################  ここで　セルタイプ、シグニチャのチェックが行われないのは、よいのか？  ################
+  
     # Join の定義の設定とチェック
     #0 # 前方参照対応
     #0 set_definition_join は2回呼び出される（2回目）  post_code で生成された

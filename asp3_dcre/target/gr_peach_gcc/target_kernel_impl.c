@@ -57,6 +57,10 @@ void __libc_init_array()
 	   タスクが起動してから行う */
 }
 
+void __libc_fini_array()
+{
+}
+
 /*
  *  カーネル動作時のメモリマップと関連する定義
  *

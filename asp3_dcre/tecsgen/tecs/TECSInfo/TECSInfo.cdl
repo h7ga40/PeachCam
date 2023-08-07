@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2008-2017 by TOPPERS Project
+ *   Copyright (C) 2008-2019 by TOPPERS Project
  *
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
  *  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -30,10 +30,11 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id$
+ *  @(#) $Id: TECSInfo.cdl 2850 2018-04-01 12:38:45Z okuma-top $
  */
 
 import_C( "t_stddef.h" );
+import_C( "t_syslog.h" );
 
 /* Constants of Kinds */
 const int8_t TECSTypeKind_BoolType    = 1;
@@ -46,6 +47,7 @@ const int8_t TECSTypeKind_StructType  = 7;
 const int8_t TECSTypeKind_EnumType    = 8;
 const int8_t TECSTypeKind_VoidType    = 9;
 const int8_t TECSTypeKind_DescriptorType = 10;
+const int8_t TECSTypeKind_FuncType    = 11;
 
 /* Parameter Direction */
 const int8_t PARAM_DIR_IN         = 1;
@@ -230,8 +232,8 @@ namespace nTECSInfo {
     [deviate]
     signature sRawEntryDescriptorInfo {
         uint16_t   getNRawEntryDescriptorInfo( void );         // 受け口配列の場合、要素数を返す。非配列の場合 1。
-        ER         getRawDescriptor( [in]int_t ith, [out]void **rawDesc );
-                        // ith が配列範囲外の場合、E_NOEXS を返す
+        ER         getRawDescriptor( [in]int_t subsc, [out]void **rawDesc );
+                        // ith が配列範囲外の場合、E_ID を返す
     };
 
     /* NAMESPACE Information */
@@ -276,11 +278,11 @@ namespace nTECSInfo {
         ER     findCell(     [in,string]const char_t *namespace_path, [out]Descriptor( sCellInfo )*cellDesc);
         ER     findRawEntryDescriptor(
                              [in,string]const char_t *namespace_path,
-                             [in]             int_t  ith,
                              [out]Descriptor( sRawEntryDescriptorInfo )*rawEntryDescDesc,
                              [out]Descriptor( sEntryInfo )*entryDesc);
-        ER     findRawEntryDescriptor_unsafe(           // このメソッドは、非配列の場合のみしようできる
+        ER     findRawEntryDescriptor_unsafe(  // TECSGEN V1.7 で配列を扱えるように変更
                              [in,string]const char_t *namespace_path,
+                             [in]uint32_t subsc,
                              [out]void **rawDesc );
     };
 
@@ -555,8 +557,9 @@ namespace nTECSInfo {
             bool_t   b_volatile;
         };
         entry sTypeInfo eTypeInfo;
-        [ref_desc]
+        [ref_desc, optional]
             call sVarDeclInfo cVarDeclInfo[];
+            /* import_C から来る struct の中には不完全型 (メンバー未定義) が含まれる */
     };
     celltype tPtrTypeInfo {
         attr {
@@ -615,4 +618,12 @@ namespace nTECSInfo {
             write( "$ct_global$_factory.h", "#include \"include_all_signature_header.h\"" );
         };
     };
+    celltype tFuncTypeInfo {
+        attr {
+            char_t   *name;
+            int8_t   typeKind;
+        };
+        entry sTypeInfo eTypeInfo;
+    };
 };
+

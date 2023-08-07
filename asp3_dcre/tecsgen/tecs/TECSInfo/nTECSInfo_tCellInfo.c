@@ -30,7 +30,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id$
+ *  @(#) $Id: nTECSInfo_tCellInfo.c 2656 2017-06-24 11:57:31Z okuma-top $
  */
 
 /* #[<PREAMBLE>]#
@@ -79,6 +79,11 @@
 #ifndef E_OK
 #define	E_OK	0		/* success */
 #define	E_ID	(-18)	/* illegal ID */
+#endif
+
+#ifndef DBG_SYSLOG
+#define DBG_SYSLOG( x )
+// #define DBG_SYSLOG( x ) syslog x
 #endif
 
 /* entry port function #_TEPF_# */
@@ -175,6 +180,7 @@ eCellInfo_getRawEntryDescriptorInfo(CELLIDX idx, int_t index, Descriptor( nTECSI
 
 	/* ここに処理本体を記述します #_TEFB_# */
   if( 0 <= index && index < NCP_cRawEntryDescriptor ){
+      DBG_SYSLOG(( LOG_INFO, "tCellInfo: index=%d", index ));
       if( is_cRawEntryDescriptor_joined( index ) )
           *desc = cRawEntryDescriptor_refer_to_descriptor( index );
       else

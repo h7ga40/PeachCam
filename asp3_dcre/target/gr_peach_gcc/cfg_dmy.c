@@ -36,6 +36,10 @@ void __libc_init_array()
 {
 }
 
+void __libc_fini_array()
+{
+}
+
 void *memset(void *dst, int c, size_t size)
 {
 	return NULL;
@@ -52,4 +56,14 @@ int main()
 
 void exit(int exitcd)
 {
+	while(1);
+}
+
+void *calloc(size_t a, size_t b)
+{
+	return NULL;
+}
+
+long SYS_futex(long a, long b, long c, long d, long e, long f) {
+	return -1;
 }

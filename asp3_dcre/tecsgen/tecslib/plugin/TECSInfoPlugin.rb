@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id$
+#   $Id: TECSInfoPlugin.rb 3159 2020-07-05 10:25:24Z okuma-top $
 #++
 
 #== CelltypePlugin for tTECSInfo
@@ -118,7 +118,7 @@ EOT
 
     undefs = [ :VALID_IDX, :GET_CELLCB, :CELLCB, :CELLIDX,
                :tVarDeclInfo_IDX, :ATTR_name, :ATTR_sizeIsExpr,
-               :ATTR_declType, :ATTR_offset ]
+               :ATTR_declType, :ATTR_offset, :FOREACH_CELL ]
 
     f.print <<EOT
 
@@ -174,7 +174,7 @@ EOT
                :eCelltypeInfo_getNVar, :eCelltypeInfo_getVarInfo, :eCelltypeInfo_getNCall,
                :eCelltypeInfo_getCallInfo, :eCelltypeInfo_getNEntry, :eCelltypeInfo_getEntryInfo,
                :eCelltypeInfo_isSingleton, :eCelltypeInfo_isIDX_is_ID, :eCelltypeInfo_hasCB,
-               :eCelltypeInfo_hasINIB, :FOREACH_CELL, :END_FOREACH_CELL ]
+               :eCelltypeInfo_hasINIB, :FOREACH_CELL, :END_FOREACH_CELL, :INITIALIZE_CB ]
 
     f = AppFile.open( "#{$gen}/nTECSInfo_tCelltypeInfo_factory.h" )
     undefs.each{ |u|
@@ -203,7 +203,7 @@ EOT
                :eCallInfo_getNameLength, :eCallInfo_getSignatureInfo,
                :eCallInfo_getArraySize, :eCallInfo_isOptional,
                :eCallInfo_isDynamic, :eCallInfo_isRefDesc,
-               :eCallInfo_isOmit ]
+               :eCallInfo_isOmit, :FOREACH_CELL ]
 
     f = AppFile.open( "#{$gen}/nTECSInfo_tCallInfo_factory.h" )
     f.print <<EOT
@@ -279,5 +279,11 @@ EOT
       root = cell.get_region # .get_link_root
       TECSInfo.print_info file, root
     }
+  end
+
+  def self.get_post_code_priority
+    prio = PluginModule::SIGNATURE_PLUGIN_POST_CODE_PRIORITY + 1000
+    dbgPrint "TECSInfoPlugin: get_post_code_priority: #{prio}\n"
+    return prio
   end
 end

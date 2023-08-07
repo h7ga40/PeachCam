@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id$
+#   $Id: plugin.rb 2633 2017-04-02 06:02:05Z okuma-top $
 #++
 
 #== Plugin クラス
@@ -180,16 +180,16 @@ class Plugin < Node
       arg.sub!( /\A\s*(?:\\\n)*\s*(.*)/, '\1')
 
       # 右辺文字列
-      if arg =~ /\A\\"(.*?)\\"\s*,/ then      # \"  \" で囲まれている場合
+      if arg =~ /\A\\"(.*?)\\"\s*,/ then      # \"  \" で囲まれている場合 (末尾に',' あり)
         rhs = $1
         remain = $'
-      elsif arg =~ /\A%(.*?)%\s*,/ then      # %   % で囲まれている場合
+      elsif arg =~ /\A%(.*?)%\s*,/ then      # %   % で囲まれている場合 (末尾に',' あり)
         rhs = $1
         remain = $'
-      elsif arg =~ /\A!(.*?)!\s*,/ then    # $   $ で囲まれている場合
+      elsif arg =~ /\A!(.*?)!\s*,/ then    # !  ! で囲まれている場合 (末尾に',' あり)
         rhs = $1
         remain = $'
-      elsif arg =~ /\A'(.*?)'\s*,/ then    # $   $ で囲まれている場合
+      elsif arg =~ /\A'(.*?)'\s*,/ then    # '  ' で囲まれている場合 (末尾に',' あり)
         rhs = $1
         remain = $'
       elsif  arg =~ /\A\\"(.*?)\\"\s*,/ then  # || にも [,$] にもできなかった
@@ -202,10 +202,10 @@ class Plugin < Node
       elsif arg =~ /\A%(.*?)%\s*\z/ then      # %   % で囲まれている場合
         rhs = $1
         remain = $'
-      elsif arg =~ /\A!(.*?)!\s*\z/ then    # $   $ で囲まれている場合
+      elsif arg =~ /\A!(.*?)!\s*\z/ then    # !  ! で囲まれている場合
         rhs = $1
         remain = $'
-      elsif arg =~ /\A'(.*?)'\s*\z/ then    # $   $ で囲まれている場合
+      elsif arg =~ /\A'(.*?)'\s*\z/ then    # '  ' で囲まれている場合
         rhs = $1
         remain = $'
       elsif  arg =~ /\A\\"(.*?)\\"\s*\z/ then  # || にも [,$] にもできなかった
@@ -300,14 +300,12 @@ class CFile
   end
 
   def initialize( path, mode )
-    if $b_no_kcode then 
-      mode += ":" + $Ruby19_File_Encode
-    end
+    mode += ":" + $Ruby19_File_Encode
     @file = File.open( path, mode )
   end
 
   def print str
-    if $b_no_kcode && $KCONV_CONSOLE == Kconv::BINARY then 
+    if $KCONV_CONSOLE == Kconv::BINARY then 
       @file.print( str )
     else
       @file.print( str.kconv( $KCONV_CDL, $KCONV_TECSGEN ) )
@@ -315,7 +313,7 @@ class CFile
   end
 
   def puts str
-    if $b_no_kcode && $KCONV_CONSOLE == Kconv::BINARY then 
+    if $KCONV_CONSOLE == Kconv::BINARY then 
       @file.print( str )
     else
       @file.print( str.kconv( $KCONV_CDL, $KCONV_TECSGEN ) )
@@ -324,7 +322,7 @@ class CFile
   end
 
   def printf( format, *arg )
-    if $b_no_kcode && $KCONV_CONSOLE == Kconv::BINARY then 
+    if $KCONV_CONSOLE == Kconv::BINARY then 
       @file.print( sprintf( format, *arg ) )
     else
       @file.print( sprintf( format, *arg ).kconv( $KCONV_CDL, $KCONV_TECSGEN ) )

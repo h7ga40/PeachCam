@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id$
+#   $Id: DomainPlugin.rb 3159 2020-07-05 10:25:24Z okuma-top $
 #++
 
 #== ドメインプラグインの親クラス
@@ -86,6 +86,6 @@ class DomainPlugin < Plugin
 
   #== factory 生成
   # DomainPlugin の factory は特定のファイルへの出力が想定されていない
-  def gen_factory
+  def gen_factory node_root
   end
 end

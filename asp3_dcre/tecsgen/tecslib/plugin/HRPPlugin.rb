@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2014-2018 by TOPPERS Project
+#   Copyright (C) 2014-2020 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,15 +34,18 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#  $Id$
+#  $Id: HRPPlugin.rb 3191 2020-12-20 10:56:56Z okuma-top $
 #++
 
-
 require_tecsgen_lib "HRPKernelObjectManager.rb"
+require_tecsgen_lib "lib/GenAttMod.rb"
+
 #
 # 各メソッドの役割りは、DomainPlugin.rb を参照のこと
 # HRPカーネル用ドメインプラグイン
 class HRPPlugin < DomainPlugin
+  include GenAttMod
+  include GenDefSvc
   
   def initialize( region, name, option )
     super
@@ -54,7 +57,7 @@ class HRPPlugin < DomainPlugin
       # OK
       @option = option
     else
-      cdl_error( "HRPPlugin: '$1' is unacceptable domain kind, specify 'kernel' or 'user'", option )
+      cdl_error( "HRPPlugin: '$1' is unacceptable domain kind, specify 'kernel', 'user' or 'OutOfDomain'", option )
       @option = "kernel"   # とりあえず kernel を設定しておく
     end
   end
@@ -109,8 +112,9 @@ class HRPPlugin < DomainPlugin
         # ユーザドメインからカーネルドメインへの結合
         # @plugin_body = HRP2SVCPlugin.new(cell_name, plugin_arg, next_cell, next_cell_port_name, signature, celltype, caller_cell)
         # puts "***** svc"
-        return [ :HRPSVCPlugin, "" ]
-    elsif current_domain != next_domain
+        # return [ :HRPSVCPlugin, "" ]
+        return [ :HRPSVCThroughPlugin, "" ]
+      elsif current_domain != next_domain
         # 別のユーザドメインへの結合
         # @plugin_body = HRP2RPCPlugin.new(cell_name, plugin_arg, next_cell, next_cell_port_name, signature, celltype, caller_cell)
         # puts "***** rpc"
@@ -143,133 +147,35 @@ class HRPPlugin < DomainPlugin
   end
 
   # ATT_MODを生成済みかどうか                   # 2017.8.27
-  @@generate_memory_module = false
+  @@generate_memory_module = {}
 
   @@include_extsvc_fncd = false  # 17.07.26 暫定
   # 
   #  ATT_MODの生成
   #  gen_factory実行時には，すべてのセルタイププラグインを生成済みのはずなので，
   #  カーネルAPIコードのメモリ保護を省略できる．
-  #
-  def gen_factory
-    super
 
+  #node_root::Region : ノードのルート
+  def gen_factory node_root
+    super
+    dbgPrint "HRPPlugin: $generating_region=#{$generating_region.get_name} $gen=#{$gen}\n"
     if @@include_extsvc_fncd == false
       file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-      file.print "/* HRPPlugin 001 */\n"
+      file.print "/* HRP001 */\n"
       file.print "#include \"extsvc_fncode.h\"\n"   ## 2017.7.26
       file.close
       @@include_extsvc_fncd = true
     end
 
-    if @@generate_memory_module == false
+    if @@generate_memory_module[ node_root ] == nil
+      @@generate_memory_module[ node_root ] = true
 
-      # INCLUDE を出力
-      #  すべてのドメインに対する cfg を先に生成しておく
-      #  もし、ドメインに属するカーネルオブジェクトも、モジュールもない場合でも、cfg が出力される
-      regions = DomainType.get_domain_regions[ :HRP ]
-      file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-      file.print "/* HRPPlugin 002 */\n"
-      regions.each{ |region|
-        if ! region.is_root? then
-          nsp = "#{region.get_global_name}"
-          file2 = AppFile.open( "#{$gen}/tecsgen_#{nsp}.cfg" )
-          file2.close
-          case region.get_domain_type.get_kind
-          when :kernel
-            pre = "KERNEL_DOMAIN{\n    "
-            post = "}\n"
-          when :user
-            pre = "DOMAIN(#{region.get_name}){\n    "
-            post = "}\n"
-          when :OutOfDomain
-            pre = ""
-            post = "\n"
-          end
-          file.puts "#{pre}INCLUDE(\"#{$gen}/tecsgen_#{nsp}.cfg\");\n#{post}"
-        end
-      }
-      file.print "/* HRPPlugin 002 end */\n\n"
-      file.close
-
-      check_celltype_list = []
-
-      # 
-      #  ATT_MODの生成
-      #
-      Cell.get_cell_list2.each { |cell|
-        # すべてのセルを走査してセルタイプをチェック
-        ct = cell.get_celltype
-        if ct.class == Celltype && check_celltype_list.include?( ct ) == false
-          # チェック済みセルタイプに登録
-          check_celltype_list << ct
-
-          # 未チェックのセルタイプだった場合
-          # puts "check for ATT_MOD : #{ct.classget_global_name}"
-          # puts "check for ATT_MOD : #{ct.get_global_name}"
-
-          # カーネルAPIのコード，データはメモリ保護しない # HRP3 oyama delete by Takada's request
-          # next if HRPKernelObjectManager.include_celltype?( ct.get_name )
-
-          # 必要のないセルタイプのコード，データはメモリ保護しない
-          next if ! ct.need_generate?
-
-          # HRPのドメインリージョンを取得
-          regions = ct.get_domain_roots
-          regions_hrp = regions[ :HRP ]
-          dbgPrint "HRP domain in #{ct.get_name}: "
-          regions_hrp.each { |reg|
-            dbgPrint reg.get_name
-          }
-          # puts ""
-
-          # セル管理ブロックとスケルトンのメモリ保護
-          # gen_celltype_names_domain 相当の処理
-          if regions_hrp.include?( Region.get_root ) == false && regions_hrp.length > 1
-            # ドメインが複数で，OutOfDomainにセルが存在しないセルタイプの場合
-            # 共有のセル管理ブロックとスケルトンコードを登録する
-            file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-            file.printf "%-60s/* HRPPlugin 003 */\n", "ATT_MOD(\"#{ct.get_global_name}_tecsgen.o\");"
-            file.close
-          end
-
-          regions_hrp.each { |reg|
-            if reg.is_root? 
-              nsp = ""
-            else
-              nsp = "_#{reg.get_global_name}"
-            end
-            file = AppFile.open( "#{$gen}/tecsgen#{nsp}.cfg" )
-            file.printf "%-50s/* HRPPlugin 004 */\n", "ATT_MOD(\"#{ct.get_global_name}#{nsp}_tecsgen.o\");"
-            file.close
-          }
-
-          # セルタイプコードがない場合はスキップ
-          next if ct.is_all_entry_inline? && ! ct.is_active?
-
-          # セルタイプコードのメモリ保護
-          # gen_celltype_names_domain2 相当の処理
-          if regions_hrp.include?( Region.get_root ) == true || regions_hrp.length > 1
-            # OutOfDomainにセルが存在するセルタイプの場合
-            # または，複数のドメインにセルが存在するセルタイプの場合
-            # セルタイプコードを共有するように登録する
-            file = AppFile.open( "#{$gen}/tecsgen.cfg" )
-          else
-            # OutOfDomainでない単一のドメインにセルが存在するセルタイプの場合
-            # セルタイプコードを専有するように登録する
-            file = AppFile.open( "#{$gen}/tecsgen_#{regions_hrp[0].get_global_name}.cfg" )
-          end
-
-          file.printf "%-50s/* HRPPlugin 005 */\n", "ATT_MOD(\"#{ct.get_global_name}.o\");"
-          file.close
-        else
-          # 何もしない
-        end
-      }
-
-      @@generate_memory_module = true
-    else
-      # 何もしない
+      # INCLUDE の生成
+      gen_include
+      # ATT_MOD の生成
+      gen_att_mod node_root
+      # DEF_SVC の生成
+      gen_def_svc node_root
     end
   end
 

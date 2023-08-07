@@ -69,7 +69,6 @@ RANLIB  = arm-none-eabi-ranlib
 
 
 C_FLAGS += -std=gnu11
-C_FLAGS += -mcpu=cortex-a9
 C_FLAGS += -march=armv7-a
 C_FLAGS += -marm
 C_FLAGS += -mthumb-interwork
@@ -94,7 +93,6 @@ C_FLAGS += --include ../../mbed-os/mbed_config.h
 C_FLAGS += -DHAVE_EXPAT_CONFIG_H
 
 CXX_FLAGS += -std=gnu++11
-CXX_FLAGS += -mcpu=cortex-a9
 CXX_FLAGS += -march=armv7-a
 CXX_FLAGS += -marm
 CXX_FLAGS += -mthumb-interwork
@@ -120,7 +118,6 @@ CXX_FLAGS += --include ../../mbed-os/mbed_config.h
 
 ASM_FLAGS += -x
 ASM_FLAGS += assembler-with-cpp
-ASM_FLAGS += -mcpu=cortex-a9
 ASM_FLAGS += -march=armv7-a
 ASM_FLAGS += -marm
 ASM_FLAGS += -mthumb-interwork

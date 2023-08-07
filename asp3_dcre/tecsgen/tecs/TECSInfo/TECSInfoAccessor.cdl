@@ -30,26 +30,33 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id$
+ *  @(#) $Id: TECSInfo.cdl 2850 2018-04-01 12:38:45Z okuma-top $
  */
 
-// mruby からアクセスできるようなシグニチャにした、アクセス用セルタイプの定義
-// つまり、シグニチャから Descriptor 型をなくし、名前を指定して動的結合させるセルタイプを用意する
+/*
+ * mruby からアクセスできるようなシグニチャにした、アクセス用セルタイプの定義
+ * つまり、シグニチャから Descriptor 型をなくし、名前を指定して動的結合させるセルタイプを用意する
+ */ 
 
 import( <TECSInfo.cdl> );
 
-//namespace nTECSInfo {
+namespace nTECSInfo {
     signature sAccessor{
+        // 1st step selector
         ER   selectNamespaceInfoByName( [in,string]const char_t *namespacePath );
-        ER   selectCelltypeInfoByName(  [in,string]const char_t *namespacePath );
-        ER   selectSignatureInfoByName( [in,string]const char_t *namespacePath );
+        ER   selectCelltypeInfoByName(  [in,string]const char_t *celltypePath );
+        ER   selectSignatureInfoByName( [in,string]const char_t *signaturePath );
         ER   selectRegionInfoByName(    [in,string]const char_t *regionPath );
         ER   selectCellInfoByName(      [in,string]const char_t *cellPath );
+        ER   getSignatureNameOfCellEntry( [in,string]const char_t *cellEntryPath, [out,string(max_len)]char_t *signatureGlobalName, [in]int_t max_len);
+           // この関数は内部で、セル情報、セルタイプ情報、受け口情報、シグニチャ情報を選択する
+           // MrubyInfoBridgePlugin で使用する目的で設けられた関数
 
         // namespace
         ER   getSelectedNamespaceInfo( [out,string(max_len)]char_t *name, [in]int_t max_len, [out]int_t *num_namespace, [out]int_t *num_celltype, [out]int_t *num_signature );
         ER   selectCelltypeInfo( [in]int_t ith );
         ER   selectSignatureInfo( [in]int_t ith );
+        ER   selectNamespaceInfo( [in]int_t ith );
 
         // celltype
         ER   getSelectedCelltypeInfo( [out,string(max_len)]char_t *name, [in]int_t max_len,
@@ -104,8 +111,9 @@ import( <TECSInfo.cdl> );
         ER   selectTypeInfoOfType(void);
 
         // region
-        ER   getSelectedRegionInfo( [out,string(max_len)]char_t *name, [in]int_t max_len, [out]int_t *num_cell );
+        ER   getSelectedRegionInfo( [out,string(max_len)]char_t *name, [in]int_t max_len, [out]int_t *num_cell, [out]int_t *num_region );
         ER   selectCellInfo( [in]int_t ith );
+        ER   selectRegionInfo( [in]int_t ith );
 
         // cell
         ER   getSelectedCellInfo( [out,string(max_len)]char_t *name, [in]int_t max_len);
@@ -140,6 +148,8 @@ import( <TECSInfo.cdl> );
         [dynamic,optional]
             call  nTECSInfo::sVarDeclInfo   cVarInfo;
         [dynamic,optional]
+            call  nTECSInfo::sVarDeclInfo   cVarDeclInfo;
+        [dynamic,optional]
             call  nTECSInfo::sTypeInfo      cTypeInfo;
 
         [dynamic,optional]
@@ -157,8 +167,24 @@ import( <TECSInfo.cdl> );
                 char_t  *name2;
             int8_t      *selectedCbp;
             int8_t      *selectedInibp;
+            Descriptor( sTypeInfo )  TDesc;
         };
     };
-//};
 
-
+    [singleton, generate( TECSInfoCompoPlugin,"")]
+        composite tTECSInfoCompo {
+        entry sAccessor            eAccessor;
+        entry sTECSInfo            eTECSInfo;
+        call  nTECSInfo::sTECSInfo cTECSInfo;
+        // entry nTECSInfo::sTECSInfo eTECSInfo;
+        cell nTECSInfo::tTECSInfo TECSInfo {
+            cTECSInfo => composite.cTECSInfo;
+        };
+        cell tTECSInfoAccessor TECSInfoAccessor {
+            cTECSInfo = TECSInfo.eTECSInfo;
+        };
+        composite.eAccessor => TECSInfoAccessor.eSelector;
+        composite.eTECSInfo => TECSInfo.eTECSInfo;
+        // composite.eTECSInfo => TECSInfo.eTECSInfo;
+    };
+};

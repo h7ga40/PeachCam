@@ -30,7 +30,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id$
+ *  @(#) $Id: nTECSInfo_tTECSInfo_inline.h 2663 2017-07-08 23:09:53Z okuma-top $
  */
 
 #ifndef nTECSInfo_tTECSInfo__INLINE_H
@@ -126,9 +126,9 @@ eTECSInfo_findCell(const char_t* namespace_path, Descriptor( nTECSInfo_sCellInfo
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 Inline ER
-eTECSInfo_findRawEntryDescriptor(const char_t* namespace_path, int_t ith, Descriptor( nTECSInfo_sRawEntryDescriptorInfo )* rawEntryDescDesc, Descriptor( nTECSInfo_sEntryInfo )* entryDesc)
+eTECSInfo_findRawEntryDescriptor(const char_t* namespace_path, Descriptor( nTECSInfo_sRawEntryDescriptorInfo )* rawEntryDescDesc, Descriptor( nTECSInfo_sEntryInfo )* entryDesc)
 {
-    return cTECSInfo_findRawEntryDescriptor(namespace_path, ith, rawEntryDescDesc, entryDesc);
+    return cTECSInfo_findRawEntryDescriptor(namespace_path, rawEntryDescDesc, entryDesc);
 }
 
 /* #[<ENTRY_FUNC>]# eTECSInfo_findRawEntryDescriptor_unsafe
@@ -137,9 +137,9 @@ eTECSInfo_findRawEntryDescriptor(const char_t* namespace_path, int_t ith, Descri
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 Inline ER
-eTECSInfo_findRawEntryDescriptor_unsafe(const char_t* namespace_path, void** rawDesc)
+eTECSInfo_findRawEntryDescriptor_unsafe(const char_t* namespace_path, uint32_t subsc, void** rawDesc)
 {
-    return cTECSInfo_findRawEntryDescriptor_unsafe(namespace_path, rawDesc);
+    return cTECSInfo_findRawEntryDescriptor_unsafe(namespace_path, subsc, rawDesc);
 }
 
 /* #[<POSTAMBLE>]#

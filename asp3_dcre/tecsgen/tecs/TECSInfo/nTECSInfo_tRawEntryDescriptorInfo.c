@@ -31,16 +31,16 @@
 uint16_t
 eRawEntryDescriptor_getNRawEntryDescriptorInfo(CELLIDX idx)
 {
-	CELLCB	*p_cellcb;
-	if (VALID_IDX(idx)) {
-		p_cellcb = GET_CELLCB(idx);
-	}
-	else {
-		/* エラー処理コードをここに記述します */
-	} /* end if VALID_IDX(idx) */
+    CELLCB	*p_cellcb;
+    if (VALID_IDX(idx)) {
+        p_cellcb = GET_CELLCB(idx);
+    }
+    else {
+        /* エラー処理コードをここに記述します */
+    } /* end if VALID_IDX(idx) */
 
-	/* ここに処理本体を記述します #_TEFB_# */
-
+    /* ここに処理本体を記述します #_TEFB_# */
+    return ATTR_size;
 }
 
 /* #[<ENTRY_FUNC>]# eRawEntryDescriptor_getRawDescriptor
@@ -62,7 +62,7 @@ eRawEntryDescriptor_getRawDescriptor(CELLIDX idx, int_t ith, void** rawDesc)
 
 	/* ここに処理本体を記述します #_TEFB_# */
   if( 0 <= ith && ith < ATTR_size ){
-      *rawDesc = ATTR_rawEntryDescriptor[ ith ];
+      *rawDesc = (void *)ATTR_rawEntryDescriptor[ ith ];
   }
   else {
       ercd = E_ID;

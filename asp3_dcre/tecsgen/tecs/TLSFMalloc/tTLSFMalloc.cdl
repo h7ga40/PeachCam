@@ -30,14 +30,23 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id$
+ *  @(#) $Id: tTLSFMalloc.cdl 2665 2017-07-24 08:59:28Z okuma-top $
  */
 
 import( <sMalloc.cdl> );
 
+signature sTLSFStatistics {
+    size_t getUsed( void );
+    size_t getMaxUsed( void );
+};
+
 celltype tTLSFMalloc {
     [inline]
         entry  sMalloc  eMalloc;
+
+    [inline]
+        entry sTLSFStatistics eStatistics;
+
     attr {
         /* memory pool size in bytes */
         size_t  memoryPoolSize;

@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id$
+#   $Id: tool_info.rb 2640 2017-06-03 11:27:12Z okuma-top $
 #++
 
 #= TOOL_INFO class
@@ -67,7 +67,6 @@ class TOOL_INFO
     @@tool_info[name] = val
 
     # __tool_info__( "tecsgen" ): validate & reflect immediately
-    p "tool_info: tecsgen #{name}"
     if name == :tecsgen then
       set_tecsgen_tool_info
     end

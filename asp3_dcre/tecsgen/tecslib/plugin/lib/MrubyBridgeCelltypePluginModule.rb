@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id$
+#   $Id: MrubyBridgeCelltypePluginModule.rb 3077 2019-06-09 07:23:31Z okuma-top $
 #++
 
 #== celltype プラグインの共通の親クラス
@@ -72,8 +72,6 @@ module MrubyBridgeCelltypePluginModule
     @plugin_arg_check_proc_tab = MrubyBridgePluginArgProc
     @plugin_arg_str = CDLString.remove_dquote option
     parse_plugin_arg
-
-    MrubyBridgeCellPlugin.set_gen_post_code_by_dependent
   end
 
   #=== 新しいセル
@@ -177,7 +175,7 @@ EOT
 
     if @@b_gen_post_code_called == false then
       @@b_gen_post_code_called = true
-      MrubyBridgeCellPlugin.gen_post_code_body file
+      # MrubyBridgeCellPlugin.gen_post_code_body file
     end
 
 #    この段階で生成すると、同じポストコードで出力される mruby の初期化コードに反映されない

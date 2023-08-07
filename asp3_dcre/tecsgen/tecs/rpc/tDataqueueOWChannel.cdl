@@ -33,7 +33,7 @@
  *   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *   の責任を負わない．
  *  
- *   $Id$
+ *   $Id: tDataqueueOWChannel.cdl 2640 2017-06-03 11:27:12Z okuma-top $
  */
 
 
@@ -60,7 +60,8 @@ composite tDataqueueOWChannel {
 	};
 
 	cell  tDataqueue Dataqueue{
-		count = composite.queueSize;
+		// count = composite.queueSize;	// Gen1
+		dataCount = composite.queueSize;		// Gen3
 
 	};
 	cell  tEventflag Eventflag{

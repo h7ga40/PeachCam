@@ -32,11 +32,15 @@
  *   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *   の責任を負わない．
  *  
- *   $Id$ 
+ *   $Id: TECSPointer.h 2637 2017-05-08 10:30:59Z okuma-top $ 
  */
 
 #ifndef TECSPointer_h__
 #define TECSPointer_h__
+
+// もし mruby 関連のヘッダ取り込みでエラーが出るようなら仮の定義で TECS ジェネレータを通す
+#ifndef TECSGEN
+// #if 1
 
 #include <string.h>
 #include <stdint.h>
@@ -580,6 +584,17 @@ CharPointer_from_s( mrb_state *mrb, mrb_value self )
 
 /* Initialize TECSPointer classes */
 void	init_TECSPointer( mrb_state *mrb, struct RClass *TECS );
+
+#else /*TECSGEN */
+
+#define GET_SET_BOOL( Type, type )
+#define GET_SET_CHAR( Type, type )
+#define GET_SET_INT( Type, type )
+#define GET_SET_FLOAT( Type, type )
+#define POINTER_CLASS( Type, type )
+#define CHECK_AND_GET_POINTER( Type, type )
+
+#endif /*TECSGEN */
 
 #endif /* TECSPointer_h__ */
 

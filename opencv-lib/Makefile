@@ -403,18 +403,20 @@ RANLIB  = arm-none-eabi-ranlib
 
 
 C_FLAGS += -std=gnu11
-C_FLAGS += -mcpu=cortex-a9
 C_FLAGS += -march=armv7-a
 C_FLAGS += -marm
 C_FLAGS += -mthumb-interwork
 C_FLAGS += -mlittle-endian
 C_FLAGS += -mfloat-abi=hard
 C_FLAGS += -mfpu=neon-fp16
+C_FLAGS += -mno-unaligned-access
 C_FLAGS += -Og
 C_FLAGS += -fmessage-length=0
 C_FLAGS += -fsigned-char
 C_FLAGS += -ffunction-sections
 C_FLAGS += -fdata-sections
+C_FLAGS += -fabi-version=0
+C_FLAGS += -fno-common
 C_FLAGS += -Wall
 C_FLAGS += -Wextra
 C_FLAGS += -Wno-unused-parameter
@@ -431,18 +433,21 @@ C_FLAGS += -D__ARM_NEON__
 C_FLAGS += -D_GNU_SOURCE
 
 CXX_FLAGS += -std=gnu++11
-CXX_FLAGS += -mcpu=cortex-a9
 CXX_FLAGS += -march=armv7-a
 CXX_FLAGS += -marm
 CXX_FLAGS += -mthumb-interwork
 CXX_FLAGS += -mlittle-endian
 CXX_FLAGS += -mfloat-abi=hard
 CXX_FLAGS += -mfpu=neon-fp16
+CXX_FLAGS += -mno-unaligned-access
 CXX_FLAGS += -Og
 CXX_FLAGS += -fmessage-length=0
 CXX_FLAGS += -fsigned-char
 CXX_FLAGS += -ffunction-sections
 CXX_FLAGS += -fdata-sections
+CXX_FLAGS += -fabi-version=0
+CXX_FLAGS += -fno-common
+CXX_FLAGS += -fpermissive
 CXX_FLAGS += -Wall
 CXX_FLAGS += -Wextra
 CXX_FLAGS += -Wno-unused-parameter
@@ -463,18 +468,19 @@ CXX_FLAGS += -D_GCC_MAX_ALIGN_T
 
 ASM_FLAGS += -x
 ASM_FLAGS += assembler-with-cpp
-ASM_FLAGS += -mcpu=cortex-a9
 ASM_FLAGS += -march=armv7-a
 ASM_FLAGS += -marm
 ASM_FLAGS += -mthumb-interwork
 ASM_FLAGS += -mlittle-endian
 ASM_FLAGS += -mfloat-abi=hard
 ASM_FLAGS += -mfpu=neon-fp16
+ASM_FLAGS += -mno-unaligned-access
 ASM_FLAGS += -Og
 ASM_FLAGS += -fmessage-length=0
 ASM_FLAGS += -fsigned-char
 ASM_FLAGS += -ffunction-sections
 ASM_FLAGS += -fdata-sections
+CXX_FLAGS += -fabi-version=0
 ASM_FLAGS += -Wall
 ASM_FLAGS += -Wextra
 ASM_FLAGS += -Wno-unused-parameter

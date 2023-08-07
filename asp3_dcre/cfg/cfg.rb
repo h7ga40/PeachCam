@@ -4,7 +4,7 @@
 #  TOPPERS Configurator by Ruby
 #
 #  Copyright (C) 2015 by FUJI SOFT INCORPORATED, JAPAN
-#  Copyright (C) 2015-2019 by Embedded and Real-Time Systems Laboratory
+#  Copyright (C) 2015-2022 by Embedded and Real-Time Systems Laboratory
 #              Graduate School of Information Science, Nagoya Univ., JAPAN
 #
 #  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -36,7 +36,7 @@
 #  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #  の責任を負わない．
 #
-#  $Id: cfg.rb 175 2019-06-19 01:51:58Z ertl-hiro $
+#  $Id: cfg.rb 203 2023-03-14 04:25:39Z ertl-hiro $
 #
 
 if $0 == __FILE__
@@ -55,7 +55,7 @@ require "SRecord.rb"
 #  定数定義
 #
 # 共通
-VERSION = "1.4.1"
+VERSION = "1.7.0"
 
 # cfg1_out関係
 CFG1_PREFIX         = "TOPPERS_cfg_"
@@ -66,6 +66,7 @@ CFG1_SIZEOF_CHARPTR = "TOPPERS_sizeof_char_ptr_t"
 CFG1_OUT_C          = "cfg1_out.c"
 CFG1_OUT_DB         = "cfg1_out.db"
 CFG1_OUT_SREC       = "cfg1_out.srec"
+CFG1_OUT_DUMP       = "cfg1_out.dump"
 CFG1_OUT_SYMS       = "cfg1_out.syms"
 CFG1_OUT_TIMESTAMP  = "cfg1_out.timestamp"
 CFG1_OUT_TARGET_H   = "target_cfg1_out.h"
@@ -106,15 +107,18 @@ end
 # システムコンフィギュレーションファイルの構文解析時のエラー
 $noParseError = 0
 def parse_error(cfgFile, message)
-  error(message, "#{cfgFile.getFileName()}:#{cfgFile.getLineNo}:")
+  error(message, "#{cfgFile.getFileName}:#{cfgFile.getLineNo}:")
   if ($noParseError += 1) >= 10
     abort("too many errors emitted, stopping now")
   end
 end
+def parse_error_fatal(cfgFile, message)
+  error_exit(message, "#{cfgFile.getFileName}:#{cfgFile.getLineNo}:")
+end
 
 # システムコンフィギュレーションファイルの構文解析時の警告
 def parse_warning(cfgFile, message)
-  warning(message, "#{cfgFile.getFileName()}:#{cfgFile.getLineNo}:")
+  warning(message, "#{cfgFile.getFileName}:#{cfgFile.getLineNo}:")
 end
 
 #
@@ -141,51 +145,53 @@ def expand_message(message, params)
   return(result)
 end
 
-# 静的API処理時のエラー
-def error_api(params, message)
-  error(expand_message(message, params), \
-			"#{params[:_file_]}:#{params[:_line_]}:")
-end
-
 # 静的API処理時の警告
 def warning_api(params, message)
-  warning(expand_message(message, params), \
+  warning(expand_message(message, params),
 			"#{params[:_file_]}:#{params[:_line_]}:")
 end
 
-# 静的API処理時のエラー（エラーコード付き）
+# 静的API処理時のエラー
 def error_ercd(errorCode, params, message)
-  error_api(params, "#{errorCode}: #{message}")
+  error(expand_message((errorCode.nil? ? "" : "#{errorCode}: ") + message,
+						params), "#{params[:_file_]}:#{params[:_line_]}:")
+end
+
+# 静的API処理時のエラー（静的API名付き）
+def error_sapi(errorCode, params, message, objid = nil, objlabel = false)
+  error_ercd(errorCode, params, message + " in %apiname" \
+		+ (objid.nil? ? "" : (objlabel ? " of %%#{objid}" : " of %#{objid}")))
 end
 
 # パラメータのエラー
-def error_wrong(errorCode, params, symbol, wrong)
-  error_ercd(errorCode, params, "%%#{symbol} is #{wrong} in %apiname")
-end
-
-def error_wrong_id(errorCode, params, symbol, objid, wrong)
-  error_ercd(errorCode, params, "%%#{symbol} is #{wrong} " \
-	             					"in %apiname of %#{objid}")
-end
-
-def error_wrong_sym(errorCode, params, symbol, symbol2, wrong)
-  error_ercd(errorCode, params, "%%#{symbol} is #{wrong} " \
-									"in %apiname of %%#{symbol2}")
+def error_wrong(errorCode, params, symbol, wrong, objid = nil, objlabel = false)
+  error_sapi(errorCode, params, "%%#{symbol} is #{wrong}", objid, objlabel)
 end
 
 # パラメータ不正のエラー
-def error_illegal(errorCode, params, symbol)
-  error_ercd(errorCode, params, "illegal %%#{symbol} in %apiname")
+def error_illegal(errorCode, params, symbol, objid = nil, objlabel = false)
+  error_sapi(errorCode, params, "illegal %%#{symbol}", objid, objlabel)
+end
+
+# 過去のバージョンと互換性のための関数
+def error_api(params, message)
+  error_ercd(nil, params, message)
+end
+
+def error_wrong_id(errorCode, params, symbol, objid, wrong)
+  error_wrong(errorCode, params, symbol, wrong, objid)
+end
+
+def error_wrong_sym(errorCode, params, symbol, symbol2, wrong)
+  error_wrong(errorCode, params, symbol, wrong, symbol2, true)
 end
 
 def error_illegal_id(errorCode, params, symbol, objid)
-  error_ercd(errorCode, params, "illegal %%#{symbol} " \
-	             					"in %apiname of %#{objid}")
+  error_illegal(errorCode, params, symbol, objid)
 end
 
 def error_illegal_sym(errorCode, params, symbol, symbol2)
-  error_ercd(errorCode, params, "illegal %%#{symbol} " \
-									"in %apiname of %%#{symbol2}")
+  error_illegal(errorCode, params, symbol, symbol2, true)
 end
 
 #
@@ -510,20 +516,19 @@ end
 #
 #  生成スクリプト（trbファイル）向けの関数
 #
-def SYMBOL(symbol)
+def SYMBOL(symbol, contFlag = false)
   if !$romSymbol.nil? && $romSymbol.has_key?($asmLabel + symbol)
     return $romSymbol[$asmLabel + symbol]
-  else
+  elsif contFlag
     return nil
+  else
+    error_exit("E_SYS: symbol `#{symbol}' not found")
   end
 end
 
 def BCOPY(fromAddress, toAddress, size)
   if !$romImage.nil?
-    copyData = $romImage.get_data(fromAddress, size)
-    if !copyData.nil?
-      $romImage.set_data(toAddress, copyData)
-    end
+    $romImage.copy_data(fromAddress, toAddress, size)
   end
 end
 
@@ -548,6 +553,7 @@ $kernel = nil
 $pass = nil
 $includeDirectories = []
 $trbFileNames = []
+$classFileNames = []
 $apiTableFileNames = []
 $symvalTableFileNames = []
 $romImageFileName = nil
@@ -572,12 +578,16 @@ OptionParser.new("Usage: cfg.rb [options] CONFIG-FILE", 40) do |opt|
     $pass = val
   end
   opt.on("-I DIRECTORY", "--include-directory DIRECTORY",
-										 "include directory") do |val|
+										"include directory") do |val|
     $includeDirectories.push(val)
   end
   opt.on("-T TRB-FILE", "--trb-file TRB-FILE",
          "generation script (trb file)") do |val|
     $trbFileNames.push(val)
+  end
+  opt.on("-C TRB-FILE", "--class-file TRB-FILE",
+         "class definition (trb file)") do |val|
+    $classFileNames.push(val)
   end
   opt.on("--api-table API-TABLE-FILE", "static API table file") do |val|
     $apiTableFileNames.push(val)
@@ -585,7 +595,7 @@ OptionParser.new("Usage: cfg.rb [options] CONFIG-FILE", 40) do |opt|
   opt.on("--symval-table SYMVAL-TABLE-FILE", "symbol-value table file") do |val|
     $symvalTableFileNames.push(val)
   end
-  opt.on("--rom-image SREC-FILE", "rom image file (s-record)") do |val|
+  opt.on("--rom-image DUMP-FILE", "rom image file (s-record or dump)") do |val|
     $romImageFileName = val
   end
   opt.on("--rom-symbol SYMS-FILE", "rom symbol table file (nm)") do |val|
@@ -605,10 +615,10 @@ OptionParser.new("Usage: cfg.rb [options] CONFIG-FILE", 40) do |opt|
     $omitOutputDb = true
   end
   opt.on("--enable-domain", "enable DOMAIN support") do
-	$supportDomain = true
+    $supportDomain = true
   end
   opt.on("--enable-class", "enable CLASS support") do
-	$supportClass = true
+    $supportClass = true
   end
   opt.on("-v", "--version", "show version number") do
     puts(opt.ver)
@@ -647,12 +657,12 @@ end
 #
 case $kernel
 when /^hrp/
-	$supportDomain = true
+  $supportDomain = true
 when /^fmp/
-	$supportClass = true
+  $supportClass = true
 when /^hrmp/
-	$supportDomain = true
-	$supportClass = true
+  $supportDomain = true
+  $supportClass = true
 end
 
 #
@@ -690,7 +700,11 @@ end
 #
 if !$romImageFileName.nil?
   if File.exist?($romImageFileName)
-    $romImage = SRecord.new($romImageFileName)
+    if $romImageFileName =~ /\.srec$/
+      $romImage = SRecord.new($romImageFileName, :srec)
+    else
+      $romImage = SRecord.new($romImageFileName, :dump)
+    end
   else
     error_exit("`#{$romImageFileName}' not found")
   end

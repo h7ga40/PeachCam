@@ -30,7 +30,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id$
+ *  @(#) $Id: nTECSInfo_tNamespaceInfo.c 2656 2017-06-24 11:57:31Z okuma-top $
  */
 
 /* #[<PREAMBLE>]#
@@ -190,6 +190,7 @@ eNamespaceInfo_getNamespaceInfo(CELLIDX idx, uint32_t ith, Descriptor( nTECSInfo
 
 	/* Put statements here #_TEFB_# */
   *des = cNamespaceInfo_refer_to_descriptor( ith );
+  return E_OK;
 }
 
 /* #[<ENTRY_FUNC>]# eNamespaceInfo_getNSignature
@@ -230,6 +231,7 @@ eNamespaceInfo_getSignatureInfo(CELLIDX idx, uint32_t ith, Descriptor( nTECSInfo
 
 	/* Put statements here #_TEFB_# */
 	*des = cSignatureInfo_refer_to_descriptor( ith );
+  return E_OK;
 }
 
 /* #[<ENTRY_FUNC>]# eNamespaceInfo_getNCelltype
@@ -270,6 +272,8 @@ eNamespaceInfo_getCelltypeInfo(CELLIDX idx, uint32_t ith, Descriptor( nTECSInfo_
 
 	/* Put statements here #_TEFB_# */
 	*des = cCelltypeInfo_refer_to_descriptor( ith );
+
+  return E_OK;
 }
 
 /* #[<POSTAMBLE>]#

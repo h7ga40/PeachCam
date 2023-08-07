@@ -30,7 +30,7 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  * 
- *  @(#) $Id$
+ *  @(#) $Id: tTLSFMalloc_inline.h 2640 2017-06-03 11:27:12Z okuma-top $
  */
 
 #ifndef tTLSFMalloc__INLINE_H
@@ -143,6 +143,52 @@ eMalloc_free(CELLIDX idx, const void* ptr)
 	} /* end if VALID_IDX(idx) */
 
   return free_ex((void *)ptr, VAR_pool);
+}
+
+/* #[<ENTRY_PORT>]# eStatistics
+ * entry port: eStatistics
+ * signature:  sTLSFStatistics
+ * context:    task
+ * #[</ENTRY_PORT>]# */
+
+/* #[<ENTRY_FUNC>]# eStatistics_getUsed
+ * name:         eStatistics_getUsed
+ * global_name:  tTLSFMalloc_eStatistics_getUsed
+ * oneway:       false
+ * #[</ENTRY_FUNC>]# */
+Inline size_t
+eStatistics_getUsed(CELLIDX idx)
+{
+	CELLCB	*p_cellcb;
+	if (VALID_IDX(idx)) {
+		p_cellcb = GET_CELLCB(idx);
+	}
+	else {
+		/* Write error processing code here */
+	} /* end if VALID_IDX(idx) */
+
+	/* Put statements here #_TEFB_# */
+	return get_used_size(VAR_pool);
+}
+
+/* #[<ENTRY_FUNC>]# eStatistics_getMaxUsed
+ * name:         eStatistics_getMaxUsed
+ * global_name:  tTLSFMalloc_eStatistics_getMaxUsed
+ * oneway:       false
+ * #[</ENTRY_FUNC>]# */
+Inline size_t
+eStatistics_getMaxUsed(CELLIDX idx)
+{
+	CELLCB	*p_cellcb;
+	if (VALID_IDX(idx)) {
+		p_cellcb = GET_CELLCB(idx);
+	}
+	else {
+		/* Write error processing code here */
+	} /* end if VALID_IDX(idx) */
+
+	/* Put statements here #_TEFB_# */
+	return get_max_size(VAR_pool);
 }
 
 /* #[<POSTAMBLE>]#

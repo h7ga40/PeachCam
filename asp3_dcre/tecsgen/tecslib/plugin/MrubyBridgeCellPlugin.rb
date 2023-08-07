@@ -3,7 +3,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2017 by TOPPERS Project
+#   Copyright (C) 2008-2021 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id$
+#   $Id: MrubyBridgeCellPlugin.rb 3225 2021-09-26 05:08:38Z okuma-top $
 #++
 
 #== celltype プラグインの共通の親クラス
@@ -47,7 +47,6 @@ class MrubyBridgeCellPlugin < CellPlugin
       "exclude_port_func" => Proc.new { |obj,rhs| obj.set_exclude_port_func rhs },
       "auto_exclude" => Proc.new { |obj,rhs| obj.set_auto_exclude rhs },
   }
-  @@b_gen_post_code_by_dependent = false  # true if gen_post_code is called by MrubyBridgeCelltypePlugin
   @@cell_list = {}      # gen_cdl_file'ed list to avoid duplicate generation
   @@signature_list = {}
 
@@ -71,7 +70,6 @@ class MrubyBridgeCellPlugin < CellPlugin
     @exclude_port = []
     @exclude_port_func = {}
     @b_auto_exclude = true     # auto_exclude = true by default 
-    MrubyBridgeSignaturePlugin.set_gen_post_code_by_dependent
 
     @plugin_arg_str = CDLString.remove_dquote option
     # @plugin_arg_str = option.gsub( /\A"(.*)/, '\1' )    # 前後の "" を取り除く
@@ -147,7 +145,7 @@ EOT
       end
 
       if port.get_port_type == :ENTRY then
-        print "  MrubyBridgeCellPlugin: [cell.port] #{@cell.get_name}.#{port.get_name} => [mruby instance] TECS::T#{port.get_signature.get_name}.new( '#{@cell.get_name}#{port.get_name}Bridge' ) \n"
+        print "  MrubyBridgeCellPlugin: [cell.port] #{@cell.get_name}.#{port.get_name} => [mruby instance] TECS::T#{port.get_signature.get_global_name}.new( '#{@cell.get_name}#{port.get_name}Bridge' ) \n"
         if @@signature_list[ port.get_signature ] == nil then
           opt_str = "ignoreUnsigned=#{@b_ignoreUnsigned}, auto_exclude=#{@b_auto_exclude}, " + opt_str
           # p "opt_str=#{opt_str}"
@@ -166,7 +164,7 @@ EOT
 
         file.print <<EOT
 #{nest_str}/* BridgeCell */
-#{nest_str}cell nMruby::t#{port.get_signature.get_name} #{@cell.get_name}#{port.get_name}Bridge {
+#{nest_str}cell nMruby::t#{port.get_signature.get_global_name} #{@cell.get_name}#{port.get_name}Bridge {
 #{nest_str}    cTECS = #{@cell.get_namespace_path}.#{port.get_name};
 #{nest_str}};
 EOT
@@ -180,22 +178,14 @@ EOT
   #file:: File: 
   def self.gen_post_code( file )
     dbgPrint "#{self.name}: gen_post_code\n"
-    if ! @@b_gen_post_code_by_dependent then
-      gen_post_code_body file
-    end
-  end
-
-  def self.set_gen_post_code_by_dependent # by MrubyBridgeCelltypePlugin
-    dbgPrint "#{self.name}: set_gen_post_code_by_dependent\n"
-    @@b_gen_post_code_by_dependent = true
-    MrubyBridgeSignaturePlugin.set_gen_post_code_by_dependent
+    gen_post_code_body file
   end
 
   def self.gen_post_code_body file
     # 複数のプラグインの post_code が一つのファイルに含まれるため、以下のような見出しをつけること
     # file.print "/* '#{self.class.name}' post code */\n"
     dbgPrint "#{self.name}: gen_post_code_body\n"
-    MrubyBridgeSignaturePlugin.gen_post_code_body file
+    # MrubyBridgeSignaturePlugin.gen_post_code_body file
   end
 
   #=== プラグイン引数 ignoreUnsigned
@@ -251,6 +241,7 @@ EOT
       end
     }
   end
+
   #=== プラグイン引数 auto_exclude
   def set_auto_exclude rhs
     # print "MrubyBridgeCellPlugin: auto_exclude=#{rhs}\n"
