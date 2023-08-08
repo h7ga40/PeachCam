@@ -199,7 +199,7 @@ endif
 ifdef OMIT_TECS
 	CDEFS := -DTOPPERS_OMIT_TECS $(CDEFS)
 endif
-CDEFS := $(CDEFS) -DUSE_ARM_FPU_SELECTIVE
+CDEFS := $(CDEFS) 
 INCLUDES := -I. -I$(SRCDIR)/include $(INCLUDES) -I$(SRCDIR)
 LDFLAGS := $(LDFLAGS) -L.
 LIBS := $(CXXLIBS) $(LIBS) $(SRCDIR)/../musl-1.1.18/Debug/libmusl.a
