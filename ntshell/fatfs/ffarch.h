@@ -41,11 +41,11 @@
 #define FFARCH_STACK_SIZE		512
 
 void ffarch_init(void);
-void ffarch_task(intptr_t exinf);
+void ffarch_task(EXINF exinf);
 int ffarch_get_timer(void);
 void ffarch_progress(int elapse);
 void ffarch_timeout(void);
 
-void sdfs_cychdr(intptr_t exinf);
+void sdfs_cychdr(EXINF exinf);
 
 #endif	/* of #ifndef _FFARCH_H_ */

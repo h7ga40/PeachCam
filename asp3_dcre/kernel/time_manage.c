@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2017 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2020 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -80,6 +80,14 @@
 #ifndef LOG_ADJ_TIM_LEAVE
 #define LOG_ADJ_TIM_LEAVE(ercd)
 #endif /* LOG_ADJ_TIM_LEAVE */
+
+#ifndef LOG_SET_DFT_ENTER
+#define LOG_SET_DFT_ENTER(drift)
+#endif /* LOG_SET_DFT_ENTER */
+
+#ifndef LOG_SET_DFT_LEAVE
+#define LOG_SET_DFT_LEAVE(ercd)
+#endif /* LOG_SET_DFT_LEAVE */
 
 #ifndef LOG_FCH_HRT_ENTER
 #define LOG_FCH_HRT_ENTER()
@@ -201,6 +209,39 @@ adj_tim(int32_t adjtim)
 #endif /* TOPPERS_adj_tim */
 
 /*
+ *  ドリフト量の設定［NGKI3596］
+ */
+#ifdef TOPPERS_set_dft
+
+ER
+set_dft(int32_t drift)
+{
+	ER		ercd;
+
+	LOG_SET_DFT_ENTER(drift);
+	CHECK_UNL();								/*［NGKI3598］*/
+	CHECK_PAR(TMIN_DRIFT <= drift && drift <= TMAX_DRIFT);
+												/*［NGKI3599］*/
+	lock_cpu();
+	update_current_evttim();
+
+	drift_rate = (uint32_t)(1000000U + drift);	/*［NGKI3601］*/
+
+	evttim_step = (TSTEP_HRTCNT * drift_rate + 999999U) / 1000000U;
+	evttim_step_frac = (TSTEP_HRTCNT * drift_rate + 999999U) % 1000000U;
+
+	set_hrt_event();
+	ercd = E_OK;
+	unlock_cpu();
+
+  error_exit:
+	LOG_SET_DFT_LEAVE(ercd);
+	return(ercd);
+}
+
+#endif /* TOPPERS_set_dft */
+
+/*
  *  高分解能タイマの参照［NGKI3569］
  *
  *  任意の状態から呼び出せるようにするために，SILの全割込みロック状態の
@@ -316,7 +357,7 @@ check_nfyinfo(const T_NFYINFO *p_nfyinfo)
 #ifdef TOPPERS_nfyhdr
 
 void
-notify_handler(intptr_t exinf)
+notify_handler(EXINF exinf)
 {
 	T_NFYINFO	*p_nfyinfo = (T_NFYINFO *) exinf;
 	ER			ercd;

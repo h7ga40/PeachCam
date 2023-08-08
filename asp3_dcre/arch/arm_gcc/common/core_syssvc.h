@@ -3,7 +3,7 @@
  *      Toyohashi Open Platform for Embedded Real-Time Systems/
  *      Advanced Standard Profile Kernel
  * 
- *  Copyright (C) 2006-2016 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2006-2020 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -53,47 +53,42 @@
 #include "arm.h"
 
 /*
+ *  計測前のキャッシュと分岐予測の無効化
+ *
+ *  実行時間を計測する前に，キャッシュ，TLB，分岐予測を無効化する．
+ */
+#ifdef HIST_INVALIDATE_CACHE
+
+Inline void
+arm_invalidate_all(void)
+{
+	uint32_t	reg;
+
+	arm_invalidate_bp();
+	arm_invalidate_tlb();
+	CP15_READ_SCTLR(reg);
+	if ((reg & CP15_SCTLR_DCACHE) == 0U) {
+		arm_invalidate_dcache();
+	}
+	else {
+		arm_clean_and_invalidate_dcache();
+	}
+	arm_invalidate_icache();
+}
+
+#define HIST_BM_HOOK()		arm_invalidate_all()
+
+#endif /* HIST_INVALIDATE_CACHE */
+
+/*
  *  パフォーマンスモニタによる性能評価
  */
-#if defined(USE_ARM_PM_HIST) && __TARGET_ARCH_ARM == 7
+#if defined(USE_ARM_PMCNT) && __TARGET_ARCH_ARM == 7
 
 /*
  *  パフォーマンスモニタのカウンタのデータ型
  */
 typedef uint32_t	PMCNT;
-
-/*
- *  パフォーマンスモニタの初期化
- */
-Inline void
-arm_init_pmcnt(void)
-{
-	uint32_t	reg;
-
-	/*
-	 *  パフォーマンスモニタの有効化
-	 *
-	 *  TOPPERS_ARM_PMCNT_DIV64が定義されている場合は，64クロック毎にカ
-	 *  ウントアップする（長い時間を計測したい場合に有効）．
-	 */
-	CP15_READ_PMCR(reg);
-	reg |= CP15_PMCR_ALLCNTR_ENABLE;
-
-#ifdef TOPPERS_ARM_PMCNT_DIV64
-	reg |= CP15_PMCR_PMCCNTR_DIVIDER;
-#else /* !TOPPERS_ARM_PMCNT_DIV64 */
-	reg &= ~CP15_PMCR_PMCCNTR_DIVIDER;
-#endif /* TOPPERS_ARM_PMCNT_DIV64 */
-
-	CP15_WRITE_PMCR(reg);
-
-	/*
-	 *  パフォーマンスモニタのカウンタの有効化
-	 */
-	CP15_READ_PMCNTENSET(reg);
-	reg |= CP15_PMCNTENSET_CCNTR_ENABLE;
-	CP15_WRITE_PMCNTENSET(reg);
-}
 
 /*
  *  パフォーマンスモニタのカウンタの読み込み
@@ -111,11 +106,11 @@ arm_get_pmcnt(PMCNT *p_count)
  */
 Inline uint_t
 arm_conv_pmcnt(PMCNT count) {
-#ifdef TOPPERS_ARM_PMCNT_DIV64
+#ifdef USE_ARM_PMCNT_DIV64
 	return(((uint_t) count) * (10 * 64) / CORE_CLK_MHZ);
-#else /* TOPPERS_ARM_PMCNT_DIV64 */
+#else /* USE_ARM_PMCNT_DIV64 */
 	return(((uint_t) count) * 10 / CORE_CLK_MHZ);
-#endif /* TOPPERS_ARM_PMCNT_DIV64 */
+#endif /* USE_ARM_PMCNT_DIV64 */
 }
 
 /*
@@ -124,7 +119,6 @@ arm_conv_pmcnt(PMCNT count) {
 #define HISTTIM					PMCNT
 #define HIST_GET_TIM(p_time)	(arm_get_pmcnt(p_time))
 #define HIST_CONV_TIM(time)		(arm_conv_pmcnt(time))
-#define HIST_BM_HOOK()			((void) 0)
 
-#endif /* defined(USE_ARM_PM_HIST) && __TARGET_ARCH_ARM == 7 */
+#endif /* defined(USE_ARM_PMCNT) && __TARGET_ARCH_ARM == 7 */
 #endif /* TOPPERS_CORE_SYSSVC_H */

@@ -2007,7 +2007,7 @@ callback_nblk_dhcp4_cli (ID cepid, FN fncd, void *p_parblk)
  */
 
 void
-dhcp4_cli_task (intptr_t exinf)
+dhcp4_cli_task (EXINF exinf)
 {
 	T_DHCP4_CLI_CONTEXT	*ct;
 	ID			tskid;

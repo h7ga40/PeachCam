@@ -46,7 +46,7 @@ extern void lcd_cls (void);
 /*
  *  lcd_initialize -- LCD 初期化
  */
-extern void lcd_initialize (intptr_t exinf);
+extern void lcd_initialize (EXINF exinf);
 
 /*
  *  lcd_putc -- LCD 出力

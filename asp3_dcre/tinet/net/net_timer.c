@@ -164,7 +164,7 @@ static char const tinet_banner[] =
 "                    Tomakomai National College of Technology, JAPAN\n";
 
 void
-net_timer_task(intptr_t exinf)
+net_timer_task(EXINF exinf)
 {
 	ID		tskid;
 	int_t		ix;
@@ -227,7 +227,7 @@ net_timer_task(intptr_t exinf)
  */
 
 void
-net_timer_handler(intptr_t exinf)
+net_timer_handler(EXINF exinf)
 {
 	int_t	ix, count = 0;
 

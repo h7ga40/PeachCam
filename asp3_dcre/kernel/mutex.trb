@@ -61,7 +61,7 @@ class MutexObject < KernelObject
       # 優先度上限ミューテックスの場合
       # ceilpriの記述が省略されている場合［NGKI2035］
       if !params.has_key?(:ceilpri)
-        error_api(params, "ceilpri must be specified in %apiname of %mtxid")
+        error_sapi(nil, params, "ceilpri must be specified", :mtxid)
 
       # ceilpriが有効範囲外の場合（E_PAR）［NGKI2037］
       #（TMIN_TPRI <= ceilpri && ceilpri <= TMAX_TPRIでない場合）

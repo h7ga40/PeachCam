@@ -26,7 +26,6 @@ task_terminate
 
 # taskhook.c
 mtxhook_check_ceilpri
-mtxhook_scan_ceilmtx
 mtxhook_release_all
 
 # wait.c
@@ -41,8 +40,12 @@ init_wait_queue
 # time_event.c
 boundary_evttim
 current_evttim
+current_evttim_frac
 current_hrtcnt
 monotonic_evttim
+drift_rate
+evttim_step
+evttim_step_frac
 systim_offset
 in_signal_time
 initialize_tmevt
@@ -88,8 +91,6 @@ receive_pridata
 free_mtxcb
 initialize_mutex
 mutex_check_ceilpri
-mutex_scan_ceilmtx
-mutex_drop_priority
 mutex_acquire
 mutex_release
 mutex_release_all

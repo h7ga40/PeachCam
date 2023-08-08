@@ -95,7 +95,7 @@ lcd_newline (void)
  */
 
 void
-lcd_initialize (intptr_t exinf)
+lcd_initialize (EXINF exinf)
 {
 	target_lcd_initialize();
 	lcd_cls();

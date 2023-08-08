@@ -734,7 +734,7 @@ ini_pdq(ID pdqid)
 {
 	PDQCB	*p_pdqcb;
 	ER		ercd;
-    
+
 	LOG_INI_PDQ_ENTER(pdqid);
 	CHECK_TSKCTX_UNL();
 	CHECK_ID(VALID_PDQID(pdqid));
@@ -775,7 +775,7 @@ ref_pdq(ID pdqid, T_RPDQ *pk_rpdq)
 {
 	PDQCB	*p_pdqcb;
 	ER		ercd;
-    
+
 	LOG_REF_PDQ_ENTER(pdqid, pk_rpdq);
 	CHECK_TSKCTX_UNL();
 	CHECK_ID(VALID_PDQID(pdqid));

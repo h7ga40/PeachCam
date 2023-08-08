@@ -37,7 +37,6 @@
  *  taskhook.c
  */
 #define mtxhook_check_ceilpri		_kernel_mtxhook_check_ceilpri
-#define mtxhook_scan_ceilmtx		_kernel_mtxhook_scan_ceilmtx
 #define mtxhook_release_all			_kernel_mtxhook_release_all
 
 /*
@@ -56,8 +55,12 @@
  */
 #define boundary_evttim				_kernel_boundary_evttim
 #define current_evttim				_kernel_current_evttim
+#define current_evttim_frac			_kernel_current_evttim_frac
 #define current_hrtcnt				_kernel_current_hrtcnt
 #define monotonic_evttim			_kernel_monotonic_evttim
+#define drift_rate					_kernel_drift_rate
+#define evttim_step					_kernel_evttim_step
+#define evttim_step_frac			_kernel_evttim_step_frac
 #define systim_offset				_kernel_systim_offset
 #define in_signal_time				_kernel_in_signal_time
 #define initialize_tmevt			_kernel_initialize_tmevt
@@ -113,8 +116,6 @@
 #define free_mtxcb					_kernel_free_mtxcb
 #define initialize_mutex			_kernel_initialize_mutex
 #define mutex_check_ceilpri			_kernel_mutex_check_ceilpri
-#define mutex_scan_ceilmtx			_kernel_mutex_scan_ceilmtx
-#define mutex_drop_priority			_kernel_mutex_drop_priority
 #define mutex_acquire				_kernel_mutex_acquire
 #define mutex_release				_kernel_mutex_release
 #define mutex_release_all			_kernel_mutex_release_all

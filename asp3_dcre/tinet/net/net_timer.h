@@ -112,7 +112,7 @@ extern void untimeout (callout_func func, void *arg);
  *  ネットワークタイマタスクと周期ハンドラ
  */
 
-extern void net_timer_task(intptr_t exinf);
-extern void net_timer_handler(intptr_t exinf);
+extern void net_timer_task(EXINF exinf);
+extern void net_timer_handler(EXINF exinf);
 
 #endif	/* of #ifndef _NET_TIMER_H_ */

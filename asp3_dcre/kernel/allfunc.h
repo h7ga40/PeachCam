@@ -3,7 +3,7 @@
  *      Toyohashi Open Platform for Embedded Real-Time Systems/
  *      Advanced Standard Profile Kernel
  * 
- *  Copyright (C) 2005-2018 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2022 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -181,8 +181,6 @@
 /* mutex.c */
 #define TOPPERS_mtxini
 #define TOPPERS_mtxchk
-#define TOPPERS_mtxscan
-#define TOPPERS_mtxdrop
 #define TOPPERS_mtxacq
 #define TOPPERS_mtxrel
 #define TOPPERS_mtxrela
@@ -211,6 +209,7 @@
 #define TOPPERS_set_tim
 #define TOPPERS_get_tim
 #define TOPPERS_adj_tim
+#define TOPPERS_set_dft
 #define TOPPERS_fch_hrt
 #define TOPPERS_chknfy
 #define TOPPERS_nfyhdr

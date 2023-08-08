@@ -307,7 +307,7 @@ ppp_cp_output (uint8_t code, uint8_t id, T_NET_BUF *output)
  */
 
 void
-ppp_input_task(intptr_t exinf)
+ppp_input_task(EXINF exinf)
 {
 	T_NET_BUF	*input;
 	T_PPP_PROTENT	*proto;
@@ -401,7 +401,7 @@ ppp_input_task(intptr_t exinf)
  */
 
 void
-ppp_output_task(intptr_t exinf)
+ppp_output_task(EXINF exinf)
 {
 	T_NET_BUF	*output;
 	ID		tskid;

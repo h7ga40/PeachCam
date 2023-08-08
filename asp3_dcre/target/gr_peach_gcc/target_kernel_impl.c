@@ -3,7 +3,7 @@
  *      Toyohashi Open Platform for Embedded Real-Time Systems/
  *      Advanced Standard Profile Kernel
  * 
- *  Copyright (C) 2007-2018 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2007-2022 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -46,7 +46,6 @@
 #include <sil.h>
 #include "arm.h"
 #include "rza1.h"
-#include "scif.h"
 
 /*
  * C++のグローバルコンストラクタ呼び出し
@@ -82,7 +81,8 @@ void __libc_fini_array()
 /*
  *  MMUの設定情報（メモリエリアの情報）
  */
-ARM_MMU_CONFIG arm_memory_area[] = {
+__attribute__((weak))
+const ARM_MMU_CONFIG arm_memory_area[] = {
 	{ SPI_ADDR, SPI_ADDR, SPI_SIZE, MMU_ATTR_RAM },
 	{ SRAM_ADDR, SRAM_ADDR, SRAM_SIZE, MMU_ATTR_RAM },
 	{ IO1_ADDR, IO1_ADDR, IO1_SIZE, MMU_ATTR_IODEV },
@@ -92,6 +92,7 @@ ARM_MMU_CONFIG arm_memory_area[] = {
 /*
  *  MMUの設定情報の数（メモリエリアの数）
  */
+__attribute__((weak))
 const uint_t arm_tnum_memory_area
 					= sizeof(arm_memory_area) / sizeof(ARM_MMU_CONFIG);
 
@@ -267,12 +268,25 @@ target_initialize(void)
 }
 
 /*
+ *  デフォルトのsoftware_term_hook（weak定義）
+ */
+__attribute__((weak))
+void software_term_hook(void)
+{
+}
+
+/*
  *  ターゲット依存の終了処理
  */
 void
 target_exit(void)
 {
 	static int first = 1;
+
+	/*
+	 *  software_term_hookの呼出し
+	 */
+	software_term_hook();
 
 	/*
 	 *  チップ依存の終了処理

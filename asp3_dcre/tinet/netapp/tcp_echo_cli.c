@@ -292,7 +292,7 @@ getcomd (ID cepid, bool_t retry, char *apip)
 #define ADDR_IPV4	'4'
 
 void
-tcp_echo_cli_snd_task (intptr_t exinf)
+tcp_echo_cli_snd_task (EXINF exinf)
 {
 	ID		tskid, cepid;
 	ER		error;

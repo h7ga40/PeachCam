@@ -239,7 +239,7 @@ udp6_echo_srv (ID cepid)
 #ifdef USE_UDP_EXTENTIONS
 
 void
-udp6_echo_srv_task (intptr_t exinf)
+udp6_echo_srv_task (EXINF exinf)
 {
 	ID		tskid, cepid;
 	ER		error;
@@ -282,7 +282,7 @@ udp6_echo_srv_task (intptr_t exinf)
 #else	/* of #ifdef USE_UDP_EXTENTIONS */
 
 void
-udp6_echo_srv_task (intptr_t exinf)
+udp6_echo_srv_task (EXINF exinf)
 {
 	ID	tskid;
 	ER	error = E_OK;

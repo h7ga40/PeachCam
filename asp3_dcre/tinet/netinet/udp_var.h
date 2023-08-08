@@ -331,6 +331,6 @@ extern void udp4_input_select (T_UDP4_CEP *cep, T_NET_BUF *input, uint_t off);
 
 /* ノンブロッキングコールを行う場合に組み込むタスク */
 
-extern void	udp_output_task(intptr_t exinf);
+extern void	udp_output_task(EXINF exinf);
 
 #endif	/* of #ifndef _UDP_VAR_H_ */

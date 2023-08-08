@@ -70,7 +70,7 @@ extern ENODADRB _echonet_enodadrb_table[];
 /*
  *  ECHONET Lite タスクの本体
  */
-void echonet_task(intptr_t exinf);
+void echonet_task(EXINF exinf);
 
 /* ECHONET Lite インスタンスリストの1アナウンス当たり最大ノード数 */
 #define ECN_IST_LST_EOJ_MAX_CT (84)

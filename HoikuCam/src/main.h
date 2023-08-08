@@ -66,7 +66,7 @@
 #ifndef TOPPERS_MACRO_ONLY
 
 /* HoikuCamタスク */
-extern void hoikucam_task(intptr_t exinf);
+extern void hoikucam_task(EXINF exinf);
 
 #endif /* TOPPERS_MACRO_ONLY */
 

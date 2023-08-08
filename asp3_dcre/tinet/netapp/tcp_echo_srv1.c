@@ -510,7 +510,7 @@ err_fin:
  */
 
 void
-tcp_echo_srv_task(intptr_t exinf)
+tcp_echo_srv_task(EXINF exinf)
 {
 	ID	tskid, cepid;
 	ER	error;

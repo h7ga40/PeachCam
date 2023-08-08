@@ -591,7 +591,7 @@ tsnd_dtq(ID dtqid, intptr_t data, TMO tmout)
 ER
 fsnd_dtq(ID dtqid, intptr_t data)
 {
-	DTQCB	*p_dtqcb;	
+	DTQCB	*p_dtqcb;
 	ER		ercd;
 
 	LOG_FSND_DTQ_ENTER(dtqid, data);
@@ -780,7 +780,7 @@ ini_dtq(ID dtqid)
 {
 	DTQCB	*p_dtqcb;
 	ER		ercd;
-    
+
 	LOG_INI_DTQ_ENTER(dtqid);
 	CHECK_TSKCTX_UNL();
 	CHECK_ID(VALID_DTQID(dtqid));
@@ -820,7 +820,7 @@ ref_dtq(ID dtqid, T_RDTQ *pk_rdtq)
 {
 	DTQCB	*p_dtqcb;
 	ER		ercd;
-    
+
 	LOG_REF_DTQ_ENTER(dtqid, pk_rdtq);
 	CHECK_TSKCTX_UNL();
 	CHECK_ID(VALID_DTQID(dtqid));

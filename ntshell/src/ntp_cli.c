@@ -507,7 +507,7 @@ callback_nblk_ntp_cli (ID cepid, FN fncd, void *p_parblk)
  */
 
 void
-ntp_cli_task (intptr_t exinf)
+ntp_cli_task (EXINF exinf)
 {
 	T_NTP_CLI_CONTEXT *nc = &ntp_cli;
 	ER		error, ret;

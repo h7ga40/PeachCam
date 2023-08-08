@@ -67,7 +67,7 @@
 
 #ifndef HIST_BM_HOOK				/* 実行時間計測直前に行うべき処理 */
 #define HIST_BM_HOOK()			((void) 0)
-#endif
+#endif /* HIST_BM_HOOK */
 
 /*
  *  実行時間計測用の時刻のデータ型の定義

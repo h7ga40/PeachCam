@@ -1,10 +1,10 @@
-#!/usr/bin/env ruby -Eutf-8
+#!/usr/bin/env ruby
 # -*- coding: utf-8 -*-
 #
 #  TOPPERS Software
 #      Toyohashi Open Platform for Embedded Real-Time Systems
 # 
-#  Copyright (C) 2006-2019 by Embedded and Real-Time Systems Laboratory
+#  Copyright (C) 2006-2020 by Embedded and Real-Time Systems Laboratory
 #              Graduate School of Information Science, Nagoya Univ., JAPAN
 # 
 #  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -41,7 +41,6 @@
 
 require "optparse"
 require "fileutils"
-require "shell"
 
 #
 #  オプションの定義
@@ -125,8 +124,8 @@ def readFile(inFileName)
       readFile(canonicalPath(baseDirectory + $1))
     else
       fileName = $prefix + "/" + canonicalPath(baseDirectory + line)
-      if !File.file?("../" + fileName)
-        abort("#{fileName} is not a file.")
+      if !File.file?("../" + fileName) && !File.directory?("../" + fileName)
+        abort("#{fileName} is not a file or a directory.")
       elsif $fileList.index(fileName)
         abort("#{fileName} is duplicated.")
       else 
@@ -147,8 +146,7 @@ $fileList = []
 #
 #  プリフィックス（./カレントディレクトリ名）の取り出し
 #
-cwd = Shell.new.cwd
-$prefix = "./" + File.basename(cwd)
+$prefix = "./" + File.basename(Dir.pwd)
 
 #
 #  パラメータの取り出し

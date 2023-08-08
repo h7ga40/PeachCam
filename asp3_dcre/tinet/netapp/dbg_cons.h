@@ -45,7 +45,7 @@
  *  タスク
  */
 
-extern void	dbg_con_task (intptr_t exinf);
+extern void	dbg_con_task (EXINF exinf);
 
 /*
  *  関数

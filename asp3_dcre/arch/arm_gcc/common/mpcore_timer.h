@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2018 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2020 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -103,15 +103,19 @@
 /*
  *  高分解能タイマの起動処理
  */
-extern void	target_hrt_initialize(intptr_t exinf);
+extern void	target_hrt_initialize(EXINF exinf);
 
 /*
  *  高分解能タイマの停止処理
  */
-extern void	target_hrt_terminate(intptr_t exinf);
+extern void	target_hrt_terminate(EXINF exinf);
 
 /*
  *  高分解能タイマの現在のカウント値の読出し
+ *
+ *  この関数はシステムログへのログ情報の出力時に呼び出されるため，この
+ *  関数内でsyslogやassertを使ってはならない（無限の再帰呼出しが起こ
+ *  る）．
  */
 Inline HRTCNT
 target_hrt_get_current(void)
@@ -145,7 +149,7 @@ target_hrt_set_event(HRTCNT hrtcnt)
 Inline void
 target_hrt_raise_event(void)
 {
-	raise_int(INTNO_TIMER);
+	raise_int(MPCORE_IRQNO_TMR);
 }
 
 /*
@@ -210,7 +214,6 @@ mpcore_gtc_get_count(void)
 Inline void
 mpcore_gtc_set_cvr(uint64_t cvr)
 {
-
 	uint32_t	cvr_l, cvr_u;
 	uint32_t	reg;
 
@@ -239,22 +242,26 @@ mpcore_gtc_set_cvr(uint64_t cvr)
 /*
  *  高分解能タイマの起動処理
  */
-extern void	target_hrt_initialize(intptr_t exinf);
+extern void	target_hrt_initialize(EXINF exinf);
 
 /*
  *  高分解能タイマの停止処理
  */
-extern void	target_hrt_terminate(intptr_t exinf);
+extern void	target_hrt_terminate(EXINF exinf);
 
 /*
  *  高分解能タイマの現在のカウント値の読出し
+ *
+ *  この関数はシステムログへのログ情報の出力時に呼び出されるため，この
+ *  関数内でsyslogやassertを使ってはならない（無限の再帰呼出しが起こ
+ *  る）．
  */
 Inline HRTCNT
 target_hrt_get_current(void)
 {
 	/*
 	 *  グローバルタイマのカウント値（64ビット）を読み出し，
-	 *  MPCORE_GTC_FREQで除し，32ビットに切り詰めた値を返す．
+	 *  MPCORE_GTC_FREQで除し，HRTCNTのサイズに切り詰めた値を返す．
 	 */
 	return((HRTCNT)(mpcore_gtc_get_count() / MPCORE_GTC_FREQ));
 }
@@ -277,22 +284,45 @@ target_hrt_set_event(HRTCNT hrtcnt)
 }
 
 /*
+ *  高分解能タイマへの割込みタイミングのクリア
+ */
+#ifdef USE_64BIT_HRTCNT
+
+Inline void
+target_hrt_clear_event(void)
+{
+	sil_wrw_mem(MPCORE_GTC_CTRL,
+					sil_rew_mem(MPCORE_GTC_CTRL) & ~(MPCORE_GTC_CTRL_ENACOMP));
+#ifdef ARM_CA9_GTC_ERRATA
+	/* ARM Cortex-A9 Errata 740657への対策 */
+	sil_wrw_mem(MPCORE_GTC_ISR, MPCORE_GTC_ISR_EVENTFLAG);
+	clear_int(MPCORE_IRQNO_GTC);
+#endif /* ARM_CA9_GTC_ERRATA */
+}
+
+#endif /* USE_64BIT_HRTCNT */
+
+/*
  *  高分解能タイマ割込みの要求
  */
 Inline void
 target_hrt_raise_event(void)
 {
-	raise_int(INTNO_TIMER);
+	raise_int(MPCORE_IRQNO_GTC);
 }
 
 /*
  *  割込みタイミングに指定する最大値
  */
+#ifndef USE_64BIT_HRTCNT
+
 #if !defined(TCYC_HRTCNT) || (TCYC_HRTCNT > 4002000002U)
 #define HRTCNT_BOUND		4000000002U
 #else
 #define HRTCNT_BOUND		(TCYC_HRTCNT - 2000000U)
 #endif
+
+#endif /* USE_64BIT_HRTCNT */
 
 /*
  *  高分解能タイマ割込みハンドラ
@@ -328,12 +358,12 @@ extern void	target_hrt_handler(void);
 /*
  *  オーバランタイマの初期化処理
  */
-extern void target_ovrtimer_initialize(intptr_t exinf);
+extern void target_ovrtimer_initialize(EXINF exinf);
 
 /*
  *  オーバランタイマの終了処理
  */
-extern void target_ovrtimer_terminate(intptr_t exinf);
+extern void target_ovrtimer_terminate(EXINF exinf);
 
 /*
  *  オーバランタイマの動作開始

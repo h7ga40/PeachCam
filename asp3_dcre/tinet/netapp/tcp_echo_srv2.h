@@ -99,8 +99,8 @@ extern uint8_t tcp_echo_srv_rwbuf[NUM_TCP_ECHO_SRV_TASKS][TCP_ECHO_SRV_RWBUF_SIZ
  *  タスク
  */
 
-extern void	tcp_echo_srv_rcv_task(intptr_t exinf);
-extern void	tcp_echo_srv_snd_task(intptr_t exinf);
+extern void	tcp_echo_srv_rcv_task(EXINF exinf);
+extern void	tcp_echo_srv_snd_task(EXINF exinf);
 
 /*
  *  関数

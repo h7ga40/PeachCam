@@ -159,7 +159,7 @@ lb_except:
 /*
  *  ECHONET UDP通信処理タスク
  */
-void echonet_udp_task(intptr_t exinf)
+void echonet_udp_task(EXINF exinf)
 {
 	T_IN4_ADDR	a_src;
 	ER			a_ret, a_ret2;

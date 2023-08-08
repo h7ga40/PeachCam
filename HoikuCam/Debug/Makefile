@@ -11,21 +11,21 @@
 #  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
 #  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
 #  変・再配布（以下，利用と呼ぶ）することを無償で許諾する．
-#   (1) 本ソフトウェアをソースコードの形で利用する場合には，上記の著作
-#       権表示，この利用条件および下記の無保証規定が，そのままの形でソー
-#       スコード中に含まれていること．
-#   (2) 本ソフトウェアを，ライブラリ形式など，他のソフトウェア開発に使
-#       用できる形で再配布する場合には，再配布に伴うドキュメント（利用
-#       者マニュアルなど）に，上記の著作権表示，この利用条件および下記
-#       の無保証規定を掲載すること．
-#   (3) 本ソフトウェアを，機器に組み込むなど，他のソフトウェア開発に使
+#  (1) 本ソフトウェアをソースコードの形で利用する場合には，上記の著作
+#      権表示，この利用条件および下記の無保証規定が，そのままの形でソー
+#      スコード中に含まれていること．
+#  (2) 本ソフトウェアを，ライブラリ形式など，他のソフトウェア開発に使
+#      用できる形で再配布する場合には，再配布に伴うドキュメント（利用
+#      者マニュアルなど）に，上記の著作権表示，この利用条件および下記
+#      の無保証規定を掲載すること．
+#  (3) 本ソフトウェアを，機器に組み込むなど，他のソフトウェア開発に使
 #      用できない形で再配布する場合には，次のいずれかの条件を満たすこ
 #      と．
-#     (a) 再配布に伴うドキュメント（利用者マニュアルなど）に，上記の著
-#         作権表示，この利用条件および下記の無保証規定を掲載すること．
-#     (b) 再配布の形態を，別に定める方法によって，TOPPERSプロジェクトに
+#    (a) 再配布に伴うドキュメント（利用者マニュアルなど）に，上記の著
+#        作権表示，この利用条件および下記の無保証規定を掲載すること．
+#    (b) 再配布の形態を，別に定める方法によって，TOPPERSプロジェクトに
 #        報告すること．
-#   (4) 本ソフトウェアの利用により直接的または間接的に生じるいかなる損
+#  (4) 本ソフトウェアの利用により直接的または間接的に生じるいかなる損
 #      害からも，上記著作権者およびTOPPERSプロジェクトを免責すること．
 #      また，本ソフトウェアのユーザまたはエンドユーザからのいかなる理
 #      由に基づく請求からも，上記著作権者およびTOPPERSプロジェクトを
@@ -55,30 +55,12 @@ TARGET = gr_peach_gcc
 #
 SRCLANG = c
 ifeq ($(SRCLANG),c)
-	LIBS = -lgcc\
-		$(SRCDIR)/../musl-1.1.18/Debug/libmusl.a \
-		$(SRCDIR)/../libcxx/Debug/liblibcxx.a \
-		$(SRCDIR)/../libcxxabi/Debug/liblibcxxabi.a \
-		$(SRCDIR)/../zlib-1.2.11/Debug/libzlib.a \
-		$(SRCDIR)/../wolfssl-3.15.7/Debug/libwolfssl.a \
-		$(SRCDIR)/../curl-7.57.0/Debug/libcurl.a \
-		$(SRCDIR)/../expat-2.2.5/Debug/libexpat.a \
-		$(SRCDIR)/../FLIR_Lepton/Debug/libFLIR_Lepton.a \
-		$(SRCDIR)/../opencv-lib/Debug/libopencv-lib.a \
-		$(SRCDIR)/../mbed-os/Debug/libmbed-os.a \
-		$(SRCDIR)/../mbed-gr-libs/Debug/libmbed-gr-libs.a \
-		$(SRCDIR)/../mbed-gr-libs/GraphicsFramework/TARGET_RZA1H/RGA/TOOLCHAIN_GCC_ARM/libRGAH.a \
-		$(SRCDIR)/../mbed-gr-libs/GraphicsFramework/TARGET_RZA1H/RGA/TOOLCHAIN_GCC_ARM/libRGA.a \
-		$(SRCDIR)/../utilities/Debug/libutilities.a \
-		$(SRCDIR)/../zxing/Debug/libzxing.a \
-		$(SRCDIR)/../HoikuCamApp/Debug/libHoikuCamApp.a
-	LDFLAGS = -L"${TCINSTALL}/lib/gcc/arm-none-eabi/${GCC_VERSION}/armv7-ar/thumb/fpu" \
-		-L"${TCINSTALL}/arm-none-eabi/lib/armv7-ar/thumb/fpu"
+	LIBS := $(LIBS) 
 endif
 ifeq ($(SRCLANG),c++)
 	USE_CXX = true
-	CXXLIBS = -lstdc++ $(SRCDIR)/../musl-1.1.18/Debug/libmusl.a
-	CXXRTS = cxxrt.o newlibrt.o
+	CXXLIBS := $(CXXLIBS) -lstdc++ 
+	CXXRTS := $(CXXRTS) cxxrt.o newlibrt.o
 endif
 
 #
@@ -96,6 +78,12 @@ OBJEXT = elf
 #  （カーネルライブラリもmake対象にする時は，空に定義する）
 #
 KERNEL_LIB = ../../asp3_dcre/Debug
+
+#
+#  システムサービスコールライブラリ（libsyssvc.a）のディレクトリ名
+#  （システムサービスコールライブラリもmake対象にする時は，空に定義する）
+#
+SYSSVC_LIB = 
 
 #
 #  カーネルを関数単位でコンパイルするかどうかの定義
@@ -141,6 +129,13 @@ else
 endif
 
 #
+#  ダンプファイルの拡張子
+#
+ifndef DUMP
+	DUMP = srec
+endif
+
+#
 #  中間オブジェクトファイルと依存関係ファイルを置くディレクトリの定義
 #
 OBJDIR = obj
@@ -173,6 +168,16 @@ ifndef OMIT_TECS
 	-include $(TECSGENDIR)/Makefile.tecsgen
 endif
 
+#
+#  コンパイルオプションに関する定義
+#
+ifndef OMIT_WARNING_ALL
+	OMIT_WARNING_ALL = @(OMIT_WARNING_ALL)
+endif
+ifndef OMIT_OPTIMIZATION
+	OMIT_OPTIMIZATION = @(OMIT_OPTIMIZATION)
+endif
+
 TINETDIR = tinet
 
 #
@@ -194,7 +199,7 @@ endif
 ifdef OMIT_TECS
 	CDEFS := -DTOPPERS_OMIT_TECS $(CDEFS)
 endif
-CDEFS := $(CDEFS) -DDHCP4_CLI_CFG -DUSE_PING -DUSE_RESOLVER -DUSE_NETAPP_SUBR -DNOUSE_MPF_NET_BUF -DECHONET_USE_MALLOC -DHAVE_CONFIG_H -DWOLFSSL_USER_SETTINGS -DRamDisk=_binary_______ntshell_src_rom_fs_bin_start
+CDEFS := $(CDEFS) -DUSE_ARM_FPU_SELECTIVE -DDHCP4_CLI_CFG -DUSE_PING -DUSE_RESOLVER -DUSE_NETAPP_SUBR -DNOUSE_MPF_NET_BUF -DECHONET_USE_MALLOC -DHAVE_CONFIG_H -DWOLFSSL_USER_SETTINGS -DRamDisk=_binary_______ntshell_src_rom_fs_bin_start
 INCLUDES := -I. -I$(SRCDIR)/include -I$(SRCDIR) \
 	-I$(SRCDIR)/../zlib-1.2.11/src \
 	-I$(SRCDIR)/../wolfssl-3.15.7/wolfssl \
@@ -205,9 +210,26 @@ INCLUDES := -I. -I$(SRCDIR)/include -I$(SRCDIR) \
 	-I$(SRCDIR)/../expat-2.2.5/src \
 	-I$(SRCDIR)/../FLIR_Lepton/src \
 	$(INCLUDES)
-LDFLAGS := $(LDFLAGS) -L.
+LDFLAGS := $(LDFLAGS) -L. -L"${TCINSTALL}/lib/gcc/arm-none-eabi/${GCC_VERSION}/armv7-ar/thumb/fpu" \
+		-L"${TCINSTALL}/arm-none-eabi/lib/armv7-ar/thumb/fpu"
 OBJ_LDFLAGS := $(OBJ_LDFLAGS) -Wl,-wrap=exit,-wrap=atexit,-wrap=main,-wrap=_malloc_r,-wrap=_realloc_r,-wrap=_free_r,-wrap=_calloc_r,-wrap=RGAH_finish,-wrap=R_GRAPHICS_EndHardwareRendering,-wrap=R_GRAPHICS_EndRenderingInFin,-wrap=R_GRAPHICS_Finish,-wrap=R_GRAPHICS_FlushSoftRender_Sub,-wrap=R_GRAPHICS_IMAGE_GetImageFormat,-wrap=R_GRAPHICS_DrawImage,-wrap=GraphicsClass_drawImage_JCU_JPEG
-LIBS := $(LIBS) $(CXXLIBS)
+LIBS := $(LIBS) $(CXXLIBS) \
+	$(SRCDIR)/../musl-1.1.18/Debug/libmusl.a \
+	$(SRCDIR)/../libcxx/Debug/liblibcxx.a \
+	$(SRCDIR)/../libcxxabi/Debug/liblibcxxabi.a \
+	$(SRCDIR)/../zlib-1.2.11/Debug/libzlib.a \
+	$(SRCDIR)/../wolfssl-3.15.7/Debug/libwolfssl.a \
+	$(SRCDIR)/../curl-7.57.0/Debug/libcurl.a \
+	$(SRCDIR)/../expat-2.2.5/Debug/libexpat.a \
+	$(SRCDIR)/../FLIR_Lepton/Debug/libFLIR_Lepton.a \
+	$(SRCDIR)/../opencv-lib/Debug/libopencv-lib.a \
+	$(SRCDIR)/../mbed-os/Debug/libmbed-os.a \
+	$(SRCDIR)/../mbed-gr-libs/Debug/libmbed-gr-libs.a \
+	$(SRCDIR)/../mbed-gr-libs/GraphicsFramework/TARGET_RZA1H/RGA/TOOLCHAIN_GCC_ARM/libRGAH.a \
+	$(SRCDIR)/../mbed-gr-libs/GraphicsFramework/TARGET_RZA1H/RGA/TOOLCHAIN_GCC_ARM/libRGA.a \
+	$(SRCDIR)/../utilities/Debug/libutilities.a \
+	$(SRCDIR)/../zxing/Debug/libzxing.a \
+	$(SRCDIR)/../HoikuCamApp/Debug/libHoikuCamApp.a
 CFLAGS = $(COPTS) $(CDEFS) $(INCLUDES)
 
 APPLDIRS := $(APPLDIRS) $(SRCDIR)/$(TINETDIR)/netapp
@@ -300,11 +322,11 @@ ifndef OMIT_TECS
 all: tecs | $(DEPDIR)
 #	@$(MAKE) check
 	@$(MAKE) check $(OBJNAME).bin
-#	@$(MAKE) check $(OBJNAME).srec
+#	@$(MAKE) check $(OBJNAME).$(DUMP)
 else
 #all: check
 all: check $(OBJNAME).bin
-#all: check $(OBJNAME).srec
+#all: check $(OBJNAME).$(DUMP)
 endif
 
 ##### 以下は編集しないこと #####
@@ -382,6 +404,7 @@ endif
 #  ソースファイルのあるディレクトリに関する定義
 #
 vpath %.c $(KERNEL_DIRS) $(SYSSVC_DIRS) $(APPL_DIRS)
+vpath %.cpp $(APPL_DIRS)
 vpath %.S $(KERNEL_DIRS) $(SYSSVC_DIRS) $(APPL_DIRS)
 vpath %.cfg $(APPL_DIRS)
 vpath %.cdl $(APPL_DIRS)
@@ -420,6 +443,14 @@ ifdef KERNEL_LIB
 	REALCLEAN_FILES := libkernel.a $(REALCLEAN_FILES)
 else
 	LIBS_DEP = libkernel.a $(filter %.a,$(LIBS))
+	OBJ_LDFLAGS := $(OBJ_LDFLAGS) -L.
+endif
+ifdef SYSSVC_LIB
+	LIBS_DEP := $(LIBS_DEP) $(SYSSVC_LIB)/libsyssvc.a
+	OBJ_LDFLAGS := $(OBJ_LDFLAGS) -L$(SYSSVC_LIB)
+	REALCLEAN_FILES := $(REALCLEAN_FILES) libsyssvc.a
+else
+	LIBS_DEP := $(LIBS_DEP) libsyssvc.a
 	OBJ_LDFLAGS := $(OBJ_LDFLAGS) -L.
 endif
 
@@ -464,17 +495,20 @@ cfg1_out.syms: $(CFG1_OUT)
 cfg1_out.srec: $(CFG1_OUT)
 	$(OBJCOPY) -O srec -S $(CFG1_OUT) cfg1_out.srec
 
+cfg1_out.dump: $(CFG1_OUT)
+	$(OBJDUMP) -s $(DUMPOPTS) $(CFG1_OUT) > cfg1_out.dump
+
 $(CFG2_OUT_SRCS) cfg2_out.db: kernel_cfg.timestamp ;
-kernel_cfg.timestamp: cfg1_out.db cfg1_out.syms cfg1_out.srec
+kernel_cfg.timestamp: cfg1_out.db cfg1_out.syms cfg1_out.$(DUMP)
 	$(CFG) --pass 2 $(CFG_KERNEL) $(INCLUDES) $(CFG_TRB)
 
 #
 #  オフセットファイル（offset.h）の生成規則
 #
 $(OFFSET_H): offset.timestamp ;
-offset.timestamp: cfg1_out.db cfg1_out.syms cfg1_out.srec
+offset.timestamp: cfg1_out.db cfg1_out.syms cfg1_out.$(DUMP)
 	$(CFG) --pass 2 -O $(CFG_KERNEL) $(INCLUDES) -T $(TARGET_OFFSET_TRB) \
-				--rom-symbol cfg1_out.syms --rom-image cfg1_out.srec
+				--rom-symbol cfg1_out.syms --rom-image cfg1_out.$(DUMP)
 
 #
 #  カーネルライブラリファイルの生成
@@ -483,6 +517,14 @@ libkernel.a: $(OFFSET_H) $(KERNEL_LIB_OBJS)
 	rm -f libkernel.a
 	$(AR) -rcs libkernel.a $(KERNEL_LIB_OBJS)
 	$(RANLIB) libkernel.a
+
+#
+#  システムサービスコールライブラリファイルの生成
+#
+libsyssvc.a: $(filter-out tBannerMain.o, $(SYSSVC_OBJS))
+	rm -f libsyssvc.a
+	$(AR) -rcs libsyssvc.a $(filter-out tBannerMain.o, $(SYSSVC_OBJS))
+	$(RANLIB) libsyssvc.a
 
 #
 #  並列makeのための依存関係の定義
@@ -526,19 +568,22 @@ $(OBJNAME).bin: $(OBJFILE)
 	$(SIZE) $(OBJFILE)
 
 #
-#  Sレコードファイルの生成
+#  ダンプファイルの生成
 #
 $(OBJNAME).srec: $(OBJFILE)
 	$(OBJCOPY) -O srec -S $(OBJFILE) $(OBJNAME).srec
+
+$(OBJNAME).dump: $(OBJFILE)
+	$(OBJDUMP) -s $(DUMPOPTS) $(OBJFILE) > $(OBJNAME).dump
 
 #
 #  エラーチェック処理
 #
 .PHONY: check
 check: check.timestamp ;
-check.timestamp: cfg2_out.db $(OBJNAME).syms $(OBJNAME).srec
+check.timestamp: cfg2_out.db $(OBJNAME).syms $(OBJNAME).$(DUMP)
 	$(CFG) --pass 3 $(CFG_KERNEL) -O $(INCLUDES) -T $(TARGET_CHECK_TRB) \
-				--rom-symbol $(OBJNAME).syms --rom-image $(OBJNAME).srec
+				--rom-symbol $(OBJNAME).syms --rom-image $(OBJNAME).$(DUMP)
 	@echo "configuration check passed"
 
 #
@@ -547,20 +592,28 @@ check.timestamp: cfg2_out.db $(OBJNAME).syms $(OBJNAME).srec
 .PHONY: clean
 clean:
 	rm -f \#* *~ $(OBJDIR)/*.o $(DEPDIR)/*.d $(CLEAN_FILES) check.timestamp
-	rm -f $(OBJFILE) $(OBJNAME).syms $(OBJNAME).srec $(OBJNAME).bin
+	rm -f $(OBJFILE) $(OBJNAME).syms $(OBJNAME).$(DUMP) $(OBJNAME).bin
 	rm -f kernel_cfg.timestamp $(CFG2_OUT_SRCS) cfg2_out.db
 	rm -f offset.timestamp $(OFFSET_H)
-	rm -f cfg1_out.syms cfg1_out.srec $(CFG1_OUT)
+	rm -f cfg1_out.syms cfg1_out.$(DUMP) $(CFG1_OUT)
 	rm -f cfg1_out.timestamp cfg1_out.c cfg1_out.db
 	rm -rf $(TECSGENDIR)
 ifndef KERNEL_LIB
 	rm -f libkernel.a
+endif
+ifndef SYSSVC_LIB
+	rm -f libsyssvc.a
 endif
 
 .PHONY: cleankernel
 cleankernel:
 	rm -f $(OFFSET_H) $(KERNEL_LIB_OBJS)
 	rm -f $(KERNEL_LIB_OBJS:$(OBJDIR)/%.o=$(DEPDIR)/%.d)
+
+.PHONY: cleansyssvc
+cleansyssvc:
+	rm -f $(SYSSVC_OBJS)
+	rm -f $(SYSSVC_OBJS:$(OBJDIR)/%.o=$(DEPDIR)/%.d)
 
 .PHONY: realclean
 realclean: clean

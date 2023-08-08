@@ -4,7 +4,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2004-2015 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2004-2023 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -105,6 +105,7 @@ typedef	uint_t			STAT;		/* オブジェクトの状態 */
 typedef	uint_t			MODE;		/* サービスコールの動作モード */
 typedef	int_t			PRI;		/* 優先度 */
 typedef	uint32_t		TMO;		/* タイムアウト指定 */
+typedef intptr_t		EXINF;		/* 拡張情報 */
 typedef	uint32_t		RELTIM;		/* 相対時間［NGKI0550］*/
 #ifdef UINT64_MAX
 typedef	uint64_t		SYSTIM;		/* システム時刻［NGKI0548］*/
@@ -112,7 +113,14 @@ typedef	uint64_t		SYSTIM;		/* システム時刻［NGKI0548］*/
 typedef	uint32_t		SYSTIM;		/* システム時刻［NGKI0548］*/
 #endif /* UINT64_MAX */
 typedef	uint32_t		PRCTIM;		/* プロセッサ時間［NGKI0573］*/
+#ifndef USE_64BIT_HRTCNT
 typedef	uint32_t		HRTCNT;		/* 高分解能タイマのカウント値 */
+#else /* USE_64BIT_HRTCNT */
+#ifndef UINT64_MAX
+#error 64bit data types are required when USE_64BIT_HRTCNT.
+#endif
+typedef	uint64_t		HRTCNT;		/* 高分解能タイマのカウント値 */
+#endif /* USE_64BIT_HRTCNT */
 
 typedef	TOPPERS_fp		FP;			/* プログラムの起動番地 */
 

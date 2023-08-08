@@ -39,6 +39,13 @@
 #define default_exc_handler			_kernel_default_exc_handler
 
 /*
+ *  core_kernel_impl.h
+ */
+#define lock_cpu					_kernel_lock_cpu
+#define unlock_cpu					_kernel_unlock_cpu
+#define sense_lock					_kernel_sense_lock
+
+/*
  *  mpcore_kernel_impl.c
  */
 #define mpcore_initialize			_kernel_mpcore_initialize

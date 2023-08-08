@@ -202,7 +202,7 @@ struct echonet_property_initialization_block
 	uint8_t		eprpcd;			/* ECHONET Lite プロパティコード */
 	ATR			eprpatr;		/* ECHONET Lite プロパティ属性 */
 	uint8_t		eprpsz;			/* ECHONET Lite プロパティのサイズ */
-	intptr_t	exinf;			/* ECHONET Lite プロパティの拡張情報 */
+	EXINF		exinf;			/* ECHONET Lite プロパティの拡張情報 */
 	EPRP_SETTER	*eprpset;		/* ECHONET Lite プロパティの設定関数 */
 	EPRP_GETTER	*eprpget;		/* ECHONET Lite プロパティの取得関数 */
 };
@@ -216,7 +216,7 @@ typedef struct echonet_object_initialization_block
 {
 	ATR			eobjatr;		/* ECHONET Lite オブジェクト属性 */
 	ID			enodid;			/* ECHONET Lite ノードプロファイルオブジェクトID */
-	intptr_t	exinf;			/* ECHONET Lite オブジェクトの拡張情報 */
+	EXINF		exinf;			/* ECHONET Lite オブジェクトの拡張情報 */
 	uint8_t		eojx1;			/* ECHONET Lite オブジェクトのクラスグループコード */
 	uint8_t		eojx2;			/* ECHONET Lite オブジェクトのクラスコード */
 	uint8_t		eojx3;			/* ECHONET Lite オブジェクトのインスタンスコード */

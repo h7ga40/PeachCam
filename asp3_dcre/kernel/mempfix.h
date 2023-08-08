@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2014 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2023 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -50,6 +50,12 @@
 #include "kernel_impl.h"
 #include <queue.h>
 #include "wait.h"
+
+/*
+ *  特殊なインデックス値の定義
+ */
+#define INDEX_NULL		(~0U)		/* 空きブロックリストの最後 */
+#define INDEX_ALLOC		(~1U)		/* 割当て済みのブロック */
 
 /*
  *  固定長メモリブロック管理ブロック

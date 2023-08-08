@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2018 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2019 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -49,6 +49,13 @@
 
 #include "kernel_impl.h"
 #include "target_timer.h"
+
+/*
+ *  USE_64BIT_HRTCNTの場合には，USE_64BIT_OPSを定義する
+ */
+#ifdef USE_64BIT_HRTCNT
+#define USE_64BIT_OPS
+#endif /* USE_64BIT_HRTCNT */
 
 /*
  *  イベント時刻のデータ型の定義［ASPD1001］
@@ -106,7 +113,8 @@ extern EVTTIM	boundary_evttim;
 /*
  *  最後に現在時刻を算出した時点でのイベント時刻［ASPD1012］
  */
-extern EVTTIM	current_evttim;
+extern EVTTIM	current_evttim;			/* 現在のイベント時刻 */
+extern uint32_t	current_evttim_frac;	/* 現在のイベント時刻の端数 */
 
 /*
  *  最後に現在時刻を算出した時点での高分解能タイマのカウント値［ASPD1012］
@@ -117,6 +125,17 @@ extern HRTCNT	current_hrtcnt;
  *  最も進んでいた時のイベント時刻［ASPD1041］
  */
 extern EVTTIM	monotonic_evttim;
+
+/*
+ *  ドリフト率
+ */
+extern uint32_t	drift_rate;
+
+/*
+ *  イベント時間を遅い方に丸めるための補正値
+ */
+extern EVTTIM	evttim_step;
+extern uint32_t	evttim_step_frac;
 
 /*
  *  システム時刻のオフセット［ASPD1043］
@@ -190,7 +209,7 @@ extern void		tmevtb_dequeue(TMEVTB *p_tmevtb);
  *  調整してはならない場合にtrue，そうでない場合にfalseを返す．現在のイ
  *  ベント時刻を取得した後に呼び出すことを想定している．
  */
-extern bool_t	check_adjtim(int_t adjtim);
+extern bool_t	check_adjtim(int32_t adjtim);
 
 /*
  *  タイムイベントが発生するまでの時間の計算

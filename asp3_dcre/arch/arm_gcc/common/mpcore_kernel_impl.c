@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2006-2018 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2006-2022 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -55,11 +55,6 @@ void
 mpcore_initialize(void)
 {
 	/*
-	 *  キャッシュをディスエーブル
-	 */
-	arm_disable_cache();
-
-	/*
 	 *  コア依存の初期化
 	 */
 	core_initialize();
@@ -73,14 +68,23 @@ mpcore_initialize(void)
 	mpcore_enable_smp();
 
 	/*
-	 *  SCUをイネーブル
+	 *  SCUのイネーブル
 	 */
 	mpcore_enable_scu();
 
 	/*
-	 *  キャッシュをイネーブル
+	 *  L2キャッシュの無効化とイネーブル
 	 */
-	arm_enable_cache();
+	arm_enable_outer_cache();
+	arm_invalidate_outer_cache();
+
+	/*
+	 *  L1キャッシュの無効化とイネーブル
+	 */
+	arm_invalidate_dcache();
+	arm_invalidate_icache();
+	arm_enable_dcache();
+	arm_enable_icache();
 
 	/*
 	 * GICのディストリビュータの初期化
@@ -105,18 +109,6 @@ mpcore_initialize(void)
 void
 mpcore_terminate(void)
 {
-	extern void    software_term_hook(void);
-	void (*volatile fp)(void) = software_term_hook;
-
-	/*
-	 *  software_term_hookへのポインタを，一旦volatile指定のあるfpに代
-	 *  入してから使うのは，0との比較が最適化で削除されないようにするた
-	 *  めである．
-	 */
-	if (fp != 0) {
-		(*fp)();
-	}
-
 	/*
 	 *  GICのCPUインタフェースの終了処理
 	 */

@@ -11,15 +11,11 @@ MEMORY {
 	RAM (xrw) : ORIGIN = 0x20100000, LENGTH = 9M
 }
 
-PROVIDE(hardware_init_hook = 0);
-PROVIDE(software_init_hook = 0);
-PROVIDE(software_term_hook = 0);
-
 SECTIONS {
 	.text : {
 		__start_text = .;
-		*(.vector)
-		*(.text)
+		KEEP(*(.vector))
+		*(.text .text.*)
 		*(.glue_7t)
 		*(.glue_7)
 		__end_kernel = .;
@@ -29,7 +25,7 @@ SECTIONS {
 
 	.rodata ALIGN(4) : {
 		__start_rodata = .;
-		*(.rodata)
+		KEEP(*(.rodata .rodata.*))
 		__end_rodata = .;
 	} > ROM
 	.preinit_array ALIGN(4) : {
@@ -57,7 +53,7 @@ SECTIONS {
 
 	.data : ALIGN(4) {
 		__start_data = .;
-		*(.data)
+		*(.data .data.*)
 		__end_data = .;
 	} > RAM AT > ROM
 	__start_idata = LOADADDR(.data);
@@ -67,7 +63,7 @@ SECTIONS {
 
 	.bss ALIGN(4) : {
 		__start_bss = .;
-		*(.bss)
+		*(.bss .bss.*)
 		*(COMMON)
 		__end_bss = .;
 	} > RAM

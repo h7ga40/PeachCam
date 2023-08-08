@@ -48,6 +48,6 @@
 
 /* タスク */
 
-extern void	net_misc_task(intptr_t exinf);
+extern void	net_misc_task(EXINF exinf);
 
 #endif	/* of #ifndef _NET_MISC_H_ */

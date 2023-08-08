@@ -3200,7 +3200,7 @@ dbg_parse (ID portid, char *line)
  */
 
 void
-dbg_con_task (intptr_t exinf)
+dbg_con_task (EXINF exinf)
 {
 	static char line[DBG_LINE_SIZE + 1];
 

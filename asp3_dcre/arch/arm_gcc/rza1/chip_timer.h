@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2018 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2020 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -112,15 +112,19 @@
 /*
  *  高分解能タイマの起動処理
  */
-extern void	target_hrt_initialize(intptr_t exinf);
+extern void	target_hrt_initialize(EXINF exinf);
 
 /*
  *  高分解能タイマの停止処理
  */
-extern void	target_hrt_terminate(intptr_t exinf);
+extern void	target_hrt_terminate(EXINF exinf);
 
 /*
  *  高分解能タイマの現在のカウント値の読出し
+ *
+ *  この関数はシステムログへのログ情報の出力時に呼び出されるため，この
+ *  関数内でsyslogやassertを使ってはならない（無限の再帰呼出しが起こ
+ *  る）．
  */
 Inline HRTCNT
 target_hrt_get_current(void)
@@ -185,12 +189,12 @@ extern void	target_hrt_handler(void);
 /*
  *  オーバランタイマの初期化処理
  */
-extern void target_ovrtimer_initialize(intptr_t exinf);
+extern void target_ovrtimer_initialize(EXINF exinf);
 
 /*
  *  オーバランタイマの停止処理
  */
-extern void target_ovrtimer_terminate(intptr_t exinf);
+extern void target_ovrtimer_terminate(EXINF exinf);
 
 /*
  *  オーバランタイマの動作開始

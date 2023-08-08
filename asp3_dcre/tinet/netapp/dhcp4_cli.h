@@ -241,7 +241,7 @@ extern ER callback_nblk_dhcp4_cli (ID cepid, FN fncd, void *p_parblk);
  *  タスク
  */
 
-extern void	dhcp4_cli_task(intptr_t exinf);
+extern void	dhcp4_cli_task(EXINF exinf);
 
 /*
  *  関数

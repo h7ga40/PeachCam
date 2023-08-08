@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2018 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2019 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -48,6 +48,13 @@
 #include "time_event.h"
 
 /*
+ *  TCYC_HRTCNTの定義のチェック
+ */
+#if defined(USE_64BIT_HRTCNT) && defined(TCYC_HRTCNT)
+#error TCYC_HRTCNT must not be defined when USE_64BIT_HRTCNT.
+#endif
+
+/*
  *  TSTEP_HRTCNTの範囲チェック
  */
 #if TSTEP_HRTCNT > 4000U
@@ -55,8 +62,10 @@
 #endif /* TSTEP_HRTCNT > 4000U */
 
 /*
- *  HRTCNT_BOUNDの範囲チェック
+ *  HRTCNT_BOUNDの定義のチェック
  */
+#ifndef USE_64BIT_HRTCNT
+
 #if HRTCNT_BOUND >= 4294000000U
 #error HRTCNT_BOUND is too large.
 #endif /* HRTCNT_BOUND >= 4294000000U */
@@ -66,6 +75,14 @@
 #error HRTCNT_BOUND is too large.
 #endif /* HRTCNT_BOUND >= TCYC_HRTCNT */
 #endif /* TCYC_HRTCNT */
+
+#else /* USE_64BIT_HRTCNT */
+
+#ifdef HRTCNT_BOUND
+#error USE_64BIT_HRTCNT is not supported on this target.
+#endif /* HRTCNT_BOUND */
+
+#endif /* USE_64BIT_HRTCNT */
 
 /*
  *  タイムイベントヒープ操作マクロ
@@ -106,7 +123,8 @@ EVTTIM	boundary_evttim;
 /*
  *  最後に現在時刻を算出した時点でのイベント時刻［ASPD1012］
  */
-EVTTIM	current_evttim;
+EVTTIM		current_evttim;			/* 現在のイベント時刻 */
+uint32_t	current_evttim_frac;	/* 現在のイベント時刻の端数 */
 
 /*
  *  最後に現在時刻を算出した時点での高分解能タイマのカウント値［ASPD1012］
@@ -117,6 +135,17 @@ HRTCNT	current_hrtcnt;
  *  最も進んでいた時のイベント時刻［ASPD1041］
  */
 EVTTIM	monotonic_evttim;
+
+/*
+ *  ドリフト率
+ */
+uint32_t	drift_rate;
+
+/*
+ *  イベント時間を遅い方に丸めるための補正値
+ */
+EVTTIM		evttim_step;
+uint32_t	evttim_step_frac;
 
 /*
  *  システム時刻のオフセット［ASPD1043］
@@ -135,9 +164,13 @@ void
 initialize_tmevt(void)
 {
 	current_evttim = 0U;							/*［ASPD1047］*/
+	current_evttim_frac = 0U;
 	boundary_evttim = current_evttim - BOUNDARY_MARGIN;
 													/*［ASPD1048］*/
 	monotonic_evttim = 0U;							/*［ASPD1046］*/
+	drift_rate = 1000000U;
+	evttim_step = (EVTTIM) TSTEP_HRTCNT;
+	evttim_step_frac = 999999U;
 	systim_offset = 0U;								/*［ASPD1044］*/
 	in_signal_time = false;							/*［ASPD1033］*/
 	p_last_tmevtn = tmevt_heap;
@@ -357,7 +390,7 @@ void
 update_current_evttim(void)
 {
 	HRTCNT	new_hrtcnt, hrtcnt_advance;
-	EVTTIM	previous_evttim;
+	EVTTIM	previous_evttim, evttim_advance;
 
 	new_hrtcnt = target_hrt_get_current();			/*［ASPD1013］*/
 	hrtcnt_advance = new_hrtcnt - current_hrtcnt;	/*［ASPD1014］*/
@@ -366,13 +399,42 @@ update_current_evttim(void)
 		hrtcnt_advance += TCYC_HRTCNT;
 	}
 #endif /* TCYC_HRTCNT */
+	current_hrtcnt = new_hrtcnt;					/*［ASPD1016］*/
+
+#ifdef USE_64BIT_OPS
+	evttim_advance = ((uint64_t) hrtcnt_advance) * drift_rate / 1000000U;
+	current_evttim_frac += ((uint64_t) hrtcnt_advance) * drift_rate % 1000000U;
+	if (current_evttim_frac >= 1000000U) {
+		evttim_advance += 1U;
+		current_evttim_frac -= 1000000U;
+	}
+#else /* USE_64BIT_OPS */
+	{
+		uint32_t	s1, c1, s2, c2, s3;
+
+		s1 = hrtcnt_advance / 1000000U * drift_rate;
+		c1 = hrtcnt_advance % 1000000U;
+		s2 = c1 / 1000U * drift_rate;
+		c2 = c1 % 1000U;
+		s3 = c2 * drift_rate;
+		evttim_advance = s1 + s2 / 1000 + s3 / 1000000U;
+		current_evttim_frac += s2 % 1000U * 1000U + s3 % 1000000U;
+	}
+	if (current_evttim_frac >= 2000000U) {
+		evttim_advance += 2U;
+		current_evttim_frac -= 2000000U;
+	}
+	else if (current_evttim_frac >= 1000000U) {
+		evttim_advance += 1U;
+		current_evttim_frac -= 1000000U;
+	}
+#endif /* USE_64BIT_OPS */
 
 	previous_evttim = current_evttim;
-	current_evttim += (EVTTIM) hrtcnt_advance;		/*［ASPD1015］*/
-	current_hrtcnt = new_hrtcnt;					/*［ASPD1016］*/
+	current_evttim += evttim_advance;
 	boundary_evttim = current_evttim - BOUNDARY_MARGIN;	/*［ASPD1011］*/
 
-	if (monotonic_evttim - previous_evttim < (EVTTIM) hrtcnt_advance) {
+	if (monotonic_evttim - previous_evttim < evttim_advance) {
 #ifdef UINT64_MAX
 		if (current_evttim < monotonic_evttim) {
 			systim_offset += 1LLU << 32;			/*［ASPD1045］*/
@@ -392,7 +454,13 @@ update_current_evttim(void)
 Inline EVTTIM
 calc_current_evttim_ub(void)
 {
-	return(current_evttim + ((EVTTIM) TSTEP_HRTCNT));
+	EVTTIM	current_evttim_ub;
+
+	current_evttim_ub = current_evttim + evttim_step;
+	if (current_evttim_frac + evttim_step_frac >= 1000000U) {
+		current_evttim_ub += 1U;
+	}
+	return(current_evttim_ub);
 }
 
 /*
@@ -403,22 +471,75 @@ calc_current_evttim_ub(void)
 void
 set_hrt_event(void)
 {
+	EVTTIM	evttim_advance;
 	HRTCNT	hrtcnt;
 
-	if (p_last_tmevtn < p_top_tmevtn) {
-		target_hrt_set_event(HRTCNT_BOUND);			/*［ASPD1007］*/
-	}
-	else if (EVTTIM_LE(top_evttim, current_evttim)) {
-		target_hrt_raise_event();					/*［ASPD1017］*/
+	if (p_last_tmevtn >= p_top_tmevtn
+						&& EVTTIM_LE(top_evttim, current_evttim)) {
+		target_hrt_raise_event();
 	}
 	else {
-		hrtcnt = (HRTCNT)(top_evttim - current_evttim);
-		if (hrtcnt > HRTCNT_BOUND) {
-			target_hrt_set_event(HRTCNT_BOUND);		/*［ASPD1006］*/
+#ifdef USE_64BIT_HRTCNT
+		/*
+		 *  HRTCNTが64ビットの場合
+		 */
+		if (p_last_tmevtn < p_top_tmevtn) {
+			/*
+			 *  タイムイベントがない場合
+			 */
+			target_hrt_clear_event();
 		}
 		else {
-			target_hrt_set_event(hrtcnt);			/*［ASPD1002］*/
+			evttim_advance = top_evttim - current_evttim;
+			hrtcnt = (((uint64_t) evttim_advance) * 1000000U
+						- current_evttim_frac + drift_rate - 1U) / drift_rate;
+			target_hrt_set_event(hrtcnt);
 		}
+
+#else /* USE_64BIT_HRTCNT */
+		/*
+		 *  HRTCNTが32ビットの場合
+		 */
+		if (p_last_tmevtn >= p_top_tmevtn) {
+			evttim_advance = top_evttim - current_evttim;
+		}
+		else {
+			evttim_advance = TMAX_RELTIM;
+		}
+
+#ifdef USE_64BIT_OPS
+		hrtcnt = (((uint64_t) evttim_advance) * 1000000U
+						- current_evttim_frac + drift_rate - 1U) / drift_rate;
+		if (hrtcnt > HRTCNT_BOUND) {
+			hrtcnt = HRTCNT_BOUND;
+		}
+#else /* USE_64BIT_OPS */
+		{
+			uint32_t	c1, s1, c2, s2, c3;
+
+			c1 = evttim_advance / drift_rate;
+			if (c1 > HRTCNT_BOUND / 1000000U) {
+				hrtcnt = HRTCNT_BOUND;
+			}
+			else {
+				s1 = evttim_advance % drift_rate * 1000U;
+				c2 = s1 / drift_rate;
+				s2 = s1 % drift_rate * 1000U + (drift_rate - 1U);
+				if (s2 >= current_evttim_frac) {
+					c3 = (s2 - current_evttim_frac) / drift_rate;
+					hrtcnt = c1 * 1000000U + c2 * 1000U + c3;
+				}
+				else {
+					hrtcnt = c1 * 1000000U + c2 * 1000U - 1U;
+				}
+				if (hrtcnt > HRTCNT_BOUND) {
+					hrtcnt = HRTCNT_BOUND;
+				}
+			}
+		}
+#endif /* USE_64BIT_OPS */
+		target_hrt_set_event(hrtcnt);
+#endif /* USE_64BIT_HRTCNT */
 	}
 }
 
@@ -501,11 +622,11 @@ tmevtb_dequeue(TMEVTB *p_tmevtb)
 #ifdef TOPPERS_tmechk
 
 bool_t
-check_adjtim(int_t adjtim)
+check_adjtim(int32_t adjtim)
 {
 	if (adjtim > 0) {
 		return(p_last_tmevtn >= p_top_tmevtn	/*［NGKI3588］*/
-					&& EVTTIM_LE(top_evttim, current_evttim - TMAX_ADJTIM));
+					&& EVTTIM_LE(top_evttim + TMAX_ADJTIM, current_evttim));
 	}
 	else if (adjtim < 0) {						/*［NGKI3589］*/
 		return(monotonic_evttim - current_evttim >= -TMIN_ADJTIM);

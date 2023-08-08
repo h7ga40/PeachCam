@@ -209,7 +209,7 @@ int custom_rand_generate_seed(uint8_t* output, int32_t sz)
 
 void init_cmsis_os(uint32_t stack_size);
 
-void hoikucam_task(intptr_t exinf)
+void hoikucam_task(EXINF exinf)
 {
 	init_cmsis_os((uint32_t)exinf);
 }

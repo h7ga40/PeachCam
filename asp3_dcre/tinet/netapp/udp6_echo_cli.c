@@ -331,7 +331,7 @@ getcomd (ID cepid, bool_t retry)
  */
 
 void
-udp6_echo_cli_task (intptr_t exinf)
+udp6_echo_cli_task (EXINF exinf)
 {
 	static char msg[sizeof(MESSAGE_FORMAT)] = MESSAGE_FORMAT;
 

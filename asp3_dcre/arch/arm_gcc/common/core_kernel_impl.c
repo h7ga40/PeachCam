@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2006-2018 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2006-2023 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -72,12 +72,14 @@ static uint32_t section_table[ARM_SECTION_TABLE_ENTRY]
  *  MMUのセクションテーブルエントリの設定
  */
 Inline void
-config_section_entry(ARM_MMU_CONFIG *p_ammuc)
+config_section_entry(const ARM_MMU_CONFIG *p_ammuc)
 {
 	uint32_t	vaddr = p_ammuc->vaddr;
 	uint32_t	paddr = p_ammuc->paddr;
 	uint32_t	size = p_ammuc->size;
+#ifdef USE_ARM_SSECTION
 	uint_t		i;
+#endif /* USE_ARM_SSECTION */
 
 	assert(vaddr % ARM_SECTION_SIZE == 0);
 	assert(paddr % ARM_SECTION_SIZE == 0);
@@ -163,6 +165,7 @@ arm_mmu_initialize(void)
 #if __TARGET_ARCH_ARM == 6
 	reg |= (CP15_SCTLR_MMU|CP15_SCTLR_EXTPAGE);
 #else /* __TARGET_ARCH_ARM == 6 */
+	reg &= ~(CP15_SCTLR_AFE|CP15_SCTLR_TRE|CP15_SCTLR_UWXN|CP15_SCTLR_WXN);
 	reg |= CP15_SCTLR_MMU;
 #endif /* __TARGET_ARCH_ARM == 6 */
 	CP15_WRITE_SCTLR(reg);
@@ -172,29 +175,41 @@ arm_mmu_initialize(void)
 #endif /* USE_ARM_MMU */
 
 /*
- *  FPUの初期化
+ *  パフォーマンスモニタの初期化
  */
-#ifdef USE_ARM_FPU
+#if defined(USE_ARM_PMCNT) && __TARGET_ARCH_ARM == 7
 
 void
-arm_fpu_initialize(void)
+arm_pmcnt_initialize(void)
 {
 	uint32_t	reg;
 
 	/*
-	 *  CP10とCP11をアクセス可能に設定する．
+	 *  パフォーマンスモニタをイネーブル
+	 *
+	 *  USE_ARM_PMCNT_DIV64が定義されている場合は，64クロック毎にカウ
+	 *  ントアップする（長い時間を計測したい場合に有効）．
 	 */
-	CP15_READ_CPACR(reg);
-	reg |= (CP15_CPACR_CP10_FULLACCESS | CP15_CPACR_CP11_FULLACCESS);
-	CP15_WRITE_CPACR(reg);
+	CP15_READ_PMCR(reg);
+	reg |= CP15_PMCR_ALLCNTR_ENABLE;
+
+#ifdef USE_ARM_PMCNT_DIV64
+	reg |= CP15_PMCR_PMCCNTR_DIVIDER;
+#else /* USE_ARM_PMCNT_DIV64 */
+	reg &= ~CP15_PMCR_PMCCNTR_DIVIDER;
+#endif /* USE_ARM_PMCNT_DIV64 */
+
+	CP15_WRITE_PMCR(reg);
 
 	/*
-	 *  FPUをディスエーブルする．
+	 *  パフォーマンスモニタのサイクルカウンタをイネーブル
 	 */
-	set_fpexc(current_fpexc() & ~FPEXC_ENABLE);
+	CP15_READ_PMCNTENSET(reg);
+	reg |= CP15_PMCNTENSET_CCNTR_ENABLE;
+	CP15_WRITE_PMCNTENSET(reg);
 }
 
-#endif /* USE_ARM_FPU */
+#endif /* defined(USE_ARM_PMCNT) && __TARGET_ARCH_ARM == 7 */
 
 /*
  *  コア依存の初期化
@@ -216,18 +231,11 @@ core_initialize(void)
 #endif /* USE_ARM_MMU */
 
 	/*
-	 *  FPUの初期化
-	 */
-#ifdef USE_ARM_FPU
-	arm_fpu_initialize();
-#endif /* USE_ARM_FPU */
-
-	/*
 	 *  パフォーマンスモニタの初期化
 	 */
-#if defined(USE_ARM_PM_HIST) && __TARGET_ARCH_ARM == 7
-	arm_init_pmcnt();
-#endif /* defined(USE_ARM_PM_HIST) && __TARGET_ARCH_ARM == 7 */
+#if defined(USE_ARM_PMCNT) && __TARGET_ARCH_ARM == 7
+	arm_pmcnt_initialize();
+#endif /* defined(USE_ARM_PMCNT) && __TARGET_ARCH_ARM == 7 */
 }
 
 /*
@@ -340,10 +348,14 @@ default_exc_handler(void *p_excinf, EXCNO excno)
 	case EXCNO_FIQ:
 		syslog_0(LOG_EMERG, "FIQ exception occurs.");
 		break;
+	case EXCNO_FATAL:
+		syslog_0(LOG_EMERG, "Fatal Data Abort exception occurs.");
+		break;
 	}
 	xlog_sys(p_excinf);
 
-	if (excno == EXCNO_PABORT || excno == EXCNO_DABORT) {
+	if (excno == EXCNO_PABORT || excno == EXCNO_DABORT
+										|| excno == EXCNO_FATAL) {
 		uint32_t	fsr, far;
 
 #if __TARGET_ARCH_ARM >= 6

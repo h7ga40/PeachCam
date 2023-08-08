@@ -38,7 +38,6 @@
  *  taskhook.c
  */
 #undef mtxhook_check_ceilpri
-#undef mtxhook_scan_ceilmtx
 #undef mtxhook_release_all
 
 /*
@@ -57,8 +56,12 @@
  */
 #undef boundary_evttim
 #undef current_evttim
+#undef current_evttim_frac
 #undef current_hrtcnt
 #undef monotonic_evttim
+#undef drift_rate
+#undef evttim_step
+#undef evttim_step_frac
 #undef systim_offset
 #undef in_signal_time
 #undef initialize_tmevt
@@ -114,8 +117,6 @@
 #undef free_mtxcb
 #undef initialize_mutex
 #undef mutex_check_ceilpri
-#undef mutex_scan_ceilmtx
-#undef mutex_drop_priority
 #undef mutex_acquire
 #undef mutex_release
 #undef mutex_release_all

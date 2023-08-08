@@ -146,8 +146,8 @@ ER looutput (T_NET_BUF *output, TMO tmout);
  *  ローカルループバックインタフェース・処理タスク
  */
 
-extern void	if_loop_output_task(intptr_t exinf);
-extern void	if_loop_input_task(intptr_t exinf);
+extern void	if_loop_output_task(EXINF exinf);
+extern void	if_loop_input_task(EXINF exinf);
 
 #endif	/* of #ifdef SUPPORT_LOOP */
 

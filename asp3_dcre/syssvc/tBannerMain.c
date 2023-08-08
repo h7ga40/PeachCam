@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2004-2019 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2004-2023 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -55,7 +55,7 @@ static const char banner[] = "\n"
 " (" __DATE__ ", " __TIME__ ")\n"
 "Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory\n"
 "                            Toyohashi Univ. of Technology, JAPAN\n"
-"Copyright (C) 2004-2019 by Embedded and Real-Time Systems Laboratory\n"
+"Copyright (C) 2004-2023 by Embedded and Real-Time Systems Laboratory\n"
 "            Graduate School of Information Science, Nagoya Univ., JAPAN\n"
 "%s";
 
@@ -63,7 +63,7 @@ static const char banner[] = "\n"
  *  カーネル起動メッセージの出力（受け口関数）
  */
 void
-eBannerInitialize_main(intptr_t exinf)
+eBannerInitialize_main(EXINF exinf)
 {
 	syslog_5(LOG_NOTICE, banner,
 				(TKERNEL_PRVER >> 12) & 0x0fU,

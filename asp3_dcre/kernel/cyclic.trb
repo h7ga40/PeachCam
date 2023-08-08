@@ -70,7 +70,8 @@ class CyclicObject < KernelObject
     end
 
     # 通知情報の処理
-    params[:nfyhdr] = generateNotifyHandler(key, params, :cycid)
+    params[:nfyhdr] = "_kernel_cychdr_#{params[:cycid]}"
+    generateNotifyHandler(key, params, :cycid)
   end
 
   def generateInib(key, params)

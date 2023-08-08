@@ -221,7 +221,7 @@ int cmd_execute(const char *text, void *extobj)
 /*
  *  ntshellタスク
  */
-void ntshell_task(intptr_t exinf)
+void ntshell_task(EXINF exinf)
 {
 	struct ntshell_obj_t *obj = (struct ntshell_obj_t *)&ntshell_obj;
 
@@ -414,7 +414,7 @@ void netif_link_callback(T_IFNET *ether)
 /*
  *  shellcmdタスク
  */
-void shellcmd_task(intptr_t exinf)
+void shellcmd_task(EXINF exinf)
 {
 	shellcmd_state = 1;
 

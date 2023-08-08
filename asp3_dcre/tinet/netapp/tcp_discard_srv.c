@@ -283,7 +283,7 @@ get_tcp_cep (ID *cepid)
  */
 
 void
-tcp_discard_srv_task (intptr_t exinf)
+tcp_discard_srv_task (EXINF exinf)
 {
 	ID	tskid, cepid, repid;
 	ER	error = E_OK;
@@ -329,7 +329,7 @@ tcp_discard_srv_task (intptr_t exinf)
 #else	/* of #ifdef USE_TCP_EXTENTIONS */
 
 void
-tcp_discard_srv_task(intptr_t exinf)
+tcp_discard_srv_task(EXINF exinf)
 {
 	ID	tskid;
 

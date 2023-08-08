@@ -173,7 +173,7 @@ looutput (T_NET_BUF *output, TMO tmout)
  */
 
 void
-if_loop_output_task (intptr_t exinf)
+if_loop_output_task (EXINF exinf)
 {
 	T_NET_BUF	*output;
 	ER		error;
@@ -196,7 +196,7 @@ if_loop_output_task (intptr_t exinf)
  */
 
 void
-if_loop_input_task (intptr_t exinf)
+if_loop_input_task (EXINF exinf)
 {
 	T_NET_BUF	*input;
 	ID		tskid;

@@ -380,7 +380,7 @@ ether_output (T_NET_BUF *output, const void *dst, T_IF_ADDR *gw, TMO tmout)
  */
 
 void
-ether_output_task(intptr_t exinf)
+ether_output_task(EXINF exinf)
 {
 	T_IF_SOFTC	*ic;
 	T_NET_BUF	*output;
@@ -434,7 +434,7 @@ ether_output_task(intptr_t exinf)
  */
 
 void
-ether_input_task(intptr_t exinf)
+ether_input_task(EXINF exinf)
 {
 	T_IF_SOFTC	*ic;
 	T_NET_BUF	*input;

@@ -51,23 +51,11 @@ extern "C" {
 #include <t_stddef.h>
 
 /*
- *  実行時間分布計測の初期化
+ *  実行時間分布集計サービスのサービスコール
  */
 extern ER	init_hist(ID histid);
-
-/*
- *  実行時間計測の開始
- */
 extern ER	begin_measure(ID histid);
-
-/*
- *  実行時間計測の終了
- */
 extern ER	end_measure(ID histid);
-
-/*
- *  実行時間分布計測の表示
- */
 extern ER	print_hist(ID histid);
 
 #ifdef __cplusplus

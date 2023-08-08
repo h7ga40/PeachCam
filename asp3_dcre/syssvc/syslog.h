@@ -53,20 +53,6 @@ extern "C" {
 #include <t_stddef.h>
 #include <t_syslog.h>
 
-#ifdef TOPPERS_OMIT_TECS
-/*
- *  ログバッファのサイズ
- */
-#ifndef TCNT_SYSLOG_BUFFER
-#define TCNT_SYSLOG_BUFFER	32		/* ログバッファのサイズ */
-#endif /* TCNT_SYSLOG_BUFFER */
-
-/*
- *  システムログ機能の初期化
- */
-extern void	syslog_initialize(intptr_t exinf) throw();
-#endif
-
 /*
  *  ログ情報の重要度のビットマップを作るためのマクロ
  */
@@ -84,28 +70,12 @@ typedef struct t_syslog_rlog {
 } T_SYSLOG_RLOG;
 
 /*
- *  ログ情報の出力
+ *  システムログ機能のサービスコール
  */
-extern ER	syslog_wri_log(uint_t prio, const SYSLOG *p_syslog) throw();
-
-/*
- *  ログバッファからのログ情報の読出し
- */
+extern ER		syslog_wri_log(uint_t prio, const SYSLOG *p_syslog) throw();
 extern ER_UINT	syslog_rea_log(SYSLOG *p_syslog) throw();
-
-/*
- *  出力すべきログ情報の重要度の設定
- */
 extern ER		syslog_msk_log(uint_t logmask, uint_t lowmask) throw();
-
-/*
- *  ログバッファの状態参照
- */
 extern ER		syslog_ref_log(T_SYSLOG_RLOG *pk_rlog) throw();
-
-/*
- *  低レベル出力によるすべてのログ情報の出力
- */
 extern ER		syslog_fls_log(void) throw();
 
 #ifdef __cplusplus

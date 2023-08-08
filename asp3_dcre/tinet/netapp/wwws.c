@@ -1872,7 +1872,7 @@ www_srv (uint_t six, char apip)
  */
 
 void
-www_srv_task(intptr_t exinf)
+www_srv_task(EXINF exinf)
 {
 	ID	tskid;
 	ER	error = E_OK;
@@ -1985,7 +1985,7 @@ wakeup_www_srv (char apip)
  */
 
 void
-www_srv_task(intptr_t exinf)
+www_srv_task(EXINF exinf)
 {
 	ID	tskid, cepid;
 	uint_t	six;

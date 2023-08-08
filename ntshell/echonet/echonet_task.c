@@ -172,7 +172,7 @@ static uint16_t		g_current_tid = 1;
 /*
  *  ECHONET Lite タスクの初期化（コンストラクタ相当）
  */
-void echonet_task_init(intptr_t exinf)
+void echonet_task_init(EXINF exinf)
 {
 	if (m_eobjlist_need_init)
 		_ecn_tsk_int_module_init(exinf);
@@ -181,7 +181,7 @@ void echonet_task_init(intptr_t exinf)
 /*
  * モジュール初期化
  */
-static void _ecn_tsk_int_module_init(intptr_t exinf)
+static void _ecn_tsk_int_module_init(EXINF exinf)
 {
 	ID	tskid;
 

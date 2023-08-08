@@ -108,8 +108,8 @@ extern void ppp_cp_output(uint8_t code, uint8_t id, T_NET_BUF *data);
  *  PPP 処理タスク
  */
 
-extern void	ppp_input_task(intptr_t exinf);
-extern void	ppp_output_task(intptr_t exinf);
+extern void	ppp_input_task(EXINF exinf);
+extern void	ppp_output_task(EXINF exinf);
 
 #endif	/* of #ifdef SUPPORT_PPP */
 

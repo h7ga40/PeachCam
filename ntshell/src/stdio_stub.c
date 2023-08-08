@@ -103,7 +103,7 @@ typedef struct stdio_sio_t {
 
 stdio_sio_t stdio_sio;
 
-void sys_init(intptr_t exinf)
+void sys_init(EXINF exinf)
 {
 	serial_t *serial = &stdio_sio.serial;
 	ntstdio_t *ntstdio = &stdio_sio.ntstdio;

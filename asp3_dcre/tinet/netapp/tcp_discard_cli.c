@@ -374,7 +374,7 @@ getcomd (ID cepid, bool_t retry)
 #endif	/* of #ifdef TCP_DISCARD_CLI_AUTO_RUN_STR */
 
 void
-tcp_discard_cli_task (intptr_t exinf)
+tcp_discard_cli_task (EXINF exinf)
 {
 	ID		tskid, cepid;
 	T_IN_ADDR	addr;

@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2015 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2020 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -56,7 +56,7 @@
  */
 typedef struct cyclic_handler_initialization_block {
 	ATR			cycatr;			/* 周期通知属性 */
-	intptr_t	exinf;			/* 通知ハンドラの拡張情報 */
+	EXINF		exinf;			/* 通知ハンドラの拡張情報 */
 	NFYHDR		nfyhdr;			/* 通知ハンドラの起動番地 */
 	RELTIM		cyctim;			/* 周期通知の起動周期 */
 	RELTIM		cycphs;			/* 周期通知の起動位相 */

@@ -3148,7 +3148,7 @@ callback_nblk_dhcp6_cli (ID cepid, FN fncd, void *p_parblk)
  */
 
 void
-dhcp6_cli_task (intptr_t exinf)
+dhcp6_cli_task (EXINF exinf)
 {
 	T_DHCP6_CLI_CONTEXT	*ct;
 	ID			tskid;

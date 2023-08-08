@@ -111,7 +111,7 @@
 #ifdef USE_COPYSAVE_API
 
 void
-tcp_echo_cli_rcv_task (intptr_t exinf)
+tcp_echo_cli_rcv_task (EXINF exinf)
 {
 	ID		tskid, cepid;
 	ER		error;
@@ -197,7 +197,7 @@ tcp_echo_cli_rcv_task (intptr_t exinf)
 #else	/* of #ifdef USE_COPYSAVE_API */
 
 void
-tcp_echo_cli_rcv_task (intptr_t exinf)
+tcp_echo_cli_rcv_task (EXINF exinf)
 {
 	static char rmsg[RCV_BUF_SIZE];
 
@@ -277,7 +277,7 @@ tcp_echo_cli_rcv_task (intptr_t exinf)
 #ifdef USE_COPYSAVE_API
 
 void
-tcp_echo_cli_rcv_task (intptr_t exinf)
+tcp_echo_cli_rcv_task (EXINF exinf)
 {
 	ID		tskid, cepid;
 	ER_UINT		rlen;
@@ -361,7 +361,7 @@ tcp_echo_cli_rcv_task (intptr_t exinf)
 #else	/* of #ifdef USE_COPYSAVE_API */
 
 void
-tcp_echo_cli_rcv_task (intptr_t exinf)
+tcp_echo_cli_rcv_task (EXINF exinf)
 {
 	static char rmsg[RCV_BUF_SIZE];
 

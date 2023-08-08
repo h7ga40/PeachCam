@@ -3,7 +3,7 @@
  *      Toyohashi Open Platform for Embedded Real-Time Systems/
  *      Advanced Standard Profile Kernel
  * 
- *  Copyright (C) 2005-2014 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2022 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -52,7 +52,6 @@
 #ifdef TOPPERS_mtxhook
 
 bool_t	(*mtxhook_check_ceilpri)(TCB *p_tcb, uint_t bpriority) = NULL;
-bool_t	(*mtxhook_scan_ceilmtx)(TCB *p_tcb) = NULL;
 void	(*mtxhook_release_all)(TCB *p_tcb) = NULL;
 
 #endif /* TOPPERS_mtxhook */

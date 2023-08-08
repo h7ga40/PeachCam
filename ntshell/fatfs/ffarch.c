@@ -69,7 +69,7 @@ static void ffarch_initialize();
 /*
  * FatFSタスク
  */
-void ffarch_task(intptr_t exinf)
+void ffarch_task(EXINF exinf)
 {
 	ER ret, ret2;
 	SYSTIM prev, now;
@@ -327,7 +327,7 @@ DRESULT sdfs_ioctl(BYTE ctrl, void *buff)
 	return res;
 }
 
-void sdfs_cychdr(intptr_t exinf)
+void sdfs_cychdr(EXINF exinf)
 {
 	BYTE s = 0;
              

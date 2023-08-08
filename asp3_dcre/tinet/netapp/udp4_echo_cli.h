@@ -48,7 +48,7 @@ extern bool_t	udp4_echo_cli_valid;
 
 /* タスク */
 
-extern void	udp4_echo_cli_task(intptr_t exinf);
+extern void	udp4_echo_cli_task(EXINF exinf);
 
 /* 関数 */
 

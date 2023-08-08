@@ -18,27 +18,32 @@ TOOL = gcc
 #  フラッシュメモリ（ROM）に書き込むか，RAMにロードして実行するかを選択
 #  する．
 #
-ifndef EXECUTE_ON
 EXECUTE_ON = ROM
-endif
+#EXECUTE_ON = RAM
 
 #
 #  ブートローダの組込み
 #
 ifeq ($(EXECUTE_ON),ROM)
+	#SYSSVC_COBJS := $(SYSSVC_COBJS) sf_boot.o
 	SYSSVC_COBJS := $(SYSSVC_COBJS)
 endif
 
 #
-#  FPUサポートとコーリングコンベンション
+#  FPUサポートとABI
 #
-#  FPUを使用する場合は，USE_ARM_FPUをマクロ定義し，使用するコーリング
-#  コンベンションに応じて，-mfloat-abi=softfpまたは-mfloat-abi=hardオ
-#  プションをつける．
+#  FPUを使用する場合は，USE_ARM_FPU_ALWAYSまたはUSE_ARM_FPU_SELECTIVE
+#  をマクロ定義する．
+#  USE_ARM_FPU_ALWAYSの場合には，FPUを使用する場合に最適化されたABIを
+#  用いるのが良いため，-mfloat-abi=hardオプションを付ける．また，使用
+#  するFPUを指定するために，-mfpu=vfpv3-d16オプションを付ける．
+#  USE_ARM_FPU_SELECTIVEの場合には，FPUを使用しない場合と互換のABIを用
+#  いる必要があるため，-mfloat-abi=softfpを付ける．-mfpu=vfpv3-d16オプ
+#  ションは，FPUを使用する処理単位をコンパイルする場合にのみ付けること
+#  が必要である．
 #
-#CDEFS := $(CDEFS) -DUSE_ARM_FPU
-#COPTS := $(COPTS) -mfloat-abi=softfp
-COPTS := $(COPTS) -mfloat-abi=hard
+COPTS := $(COPTS) -DUSE_ARM_FPU_ALWAYS -mfpu=vfpv3-d16 -mfloat-abi=hard
+#COPTS := $(COPTS) -DUSE_ARM_FPU_SELECTIVE -mfloat-abi=softfp
 
 #
 #  コンパイルオプション
@@ -50,9 +55,14 @@ LDFLAGS := $(LDFLAGS) -mlittle-endian
 #
 #  カーネルに関する定義
 #
+#  target_start.oをKERNEL_ASMOBJSに追加すると，start.oの中にある
+#  hardware_init_hookのweak定義のために，リンクされない．そのため，
+#  START_OBJSに追加している．
+#
 KERNEL_DIRS := $(KERNEL_DIRS) $(TARGETDIR)
 KERNEL_COBJS := $(KERNEL_COBJS) target_kernel_impl.o
-KERNEL_ASMOBJS := $(KERNEL_ASMOBJS) target_support.o
+KERNEL_ASMOBJS := $(KERNEL_ASMOBJS) target_start.o
+START_OBJS := target_start.o
 
 #
 #  コンパイルオプションとリンカスクリプトの定義

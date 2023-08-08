@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2004-2019 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2004-2022 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -165,11 +165,11 @@ ulong_t	task_loop;		/* タスク内でのループ回数 */
  *  並行実行されるタスク
  */
 void
-task(intptr_t exinf)
+task(EXINF exinf)
 {
 	int_t		n = 0;
 	int_t		tskno = (int_t) exinf;
-	const char	*graph[] = { "|", "  +", "    *" };
+	char *const	graph[] = { "|", "  +", "    *" };
 	char		c;
 
 	while (true) {
@@ -230,7 +230,7 @@ task(intptr_t exinf)
 #ifdef INTNO1
 
 void
-intno1_isr(intptr_t exinf)
+intno1_isr(EXINF exinf)
 {
 	intno1_clear();
 	SVC_PERROR(rot_rdq(HIGH_PRIORITY));
@@ -281,7 +281,7 @@ cpuexc_handler(void *p_excinf)
  *  を回転させる．
  */
 void
-cyclic_handler(intptr_t exinf)
+cyclic_handler(EXINF exinf)
 {
 	SVC_PERROR(rot_rdq(HIGH_PRIORITY));
 	SVC_PERROR(rot_rdq(MID_PRIORITY));
@@ -295,7 +295,7 @@ cyclic_handler(intptr_t exinf)
  *  を回転させる．
  */
 void
-alarm_handler(intptr_t exinf)
+alarm_handler(EXINF exinf)
 {
 	SVC_PERROR(rot_rdq(HIGH_PRIORITY));
 	SVC_PERROR(rot_rdq(MID_PRIORITY));
@@ -306,7 +306,7 @@ alarm_handler(intptr_t exinf)
  *  例外処理タスク
  */
 void
-exc_task(intptr_t exinf)
+exc_task(EXINF exinf)
 {
 	SVC_PERROR(ras_ter(cpuexc_tskid));
 }
@@ -315,7 +315,7 @@ exc_task(intptr_t exinf)
  *  メインタスク
  */
 void
-main_task(intptr_t exinf)
+main_task(EXINF exinf)
 {
 	char	c;
 	ID		tskid = TASK1;
@@ -530,7 +530,7 @@ main_task(intptr_t exinf)
 		case '$':
 			calm.almatr = TA_NULL;
 			calm.nfyinfo.nfymode = TNFY_HANDLER;
-			calm.nfyinfo.nfy.handler.exinf = (intptr_t) 0;
+			calm.nfyinfo.nfy.handler.exinf = (EXINF) 0;
 			calm.nfyinfo.nfy.handler.tmehdr = (TMEHDR) alarm_handler;
 			SVC_PERROR(ercd = acre_alm(&calm));
 			if (ercd >= 0) {
@@ -549,7 +549,7 @@ main_task(intptr_t exinf)
 			consume_time(1000LU);
 			hrtcnt2 = fch_hrt();
 			syslog(LOG_NOTICE, "hrtcnt1 = %tu, hrtcnt2 = %tu",
-											hrtcnt1, hrtcnt2);
+								(uint32_t) hrtcnt1, (uint32_t) hrtcnt2);
 			break;
 
 		case 'v':
@@ -560,21 +560,6 @@ main_task(intptr_t exinf)
 			SVC_PERROR(syslog_msk_log(LOG_UPTO(LOG_NOTICE),
 										LOG_UPTO(LOG_EMERG)));
 			break;
-
-#ifdef BIT_KERNEL
-		case ' ':
-			SVC_PERROR(loc_cpu());
-			{
-				extern ER	bit_kernel(void);
-
-				SVC_PERROR(ercd = bit_kernel());
-				if (ercd >= 0) {
-					syslog(LOG_NOTICE, "bit_kernel passed.");
-				}
-			}
-			SVC_PERROR(unl_cpu());
-			break;
-#endif /* BIT_KERNEL */
 
 		case '\003':
 		case 'Q':

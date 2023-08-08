@@ -40,8 +40,8 @@
  *  Ethernet 処理タスク
  */
 
-extern void ether_input_task(intptr_t exinf);
-extern void ether_output_task(intptr_t exinf);
+extern void ether_input_task(EXINF exinf);
+extern void ether_output_task(EXINF exinf);
 
 #endif	/* of #ifdef SUPPORT_ETHER */
 

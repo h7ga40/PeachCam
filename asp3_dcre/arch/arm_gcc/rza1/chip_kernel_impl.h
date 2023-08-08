@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2006-2018 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2006-2022 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -55,6 +55,7 @@
  *  RZ/A1のハードウェア資源の定義
  */
 #include "rza1.h"
+#include "pl310.h"
 
 /*
  *  デフォルトの非タスクコンテキスト用のスタック領域の定義
@@ -62,6 +63,11 @@
 #ifndef DEFAULT_ISTKSZ
 #define DEFAULT_ISTKSZ  0x2000U			/* 8KB */
 #endif /* DEFAULT_ISTKSZ */
+
+/*
+ *  FPUに関する設定
+ */
+#define ASM_ARM_FPU_TYPE	vfpv3
 
 /*
  *  GICのディストリビュータの割込みコンフィギュレーションレジスタに設定
@@ -95,6 +101,42 @@ extern void chip_initialize(void);
  *  チップ依存の終了処理
  */
 extern void chip_terminate(void);
+
+/*
+ *  L2キャッシュのイネーブル
+ */
+Inline void
+arm_enable_outer_cache(void) 
+{
+	pl310_initialize(0x0U, ~0x0U);
+}
+
+/*
+ *  L2キャッシュのディスエーブル
+*/
+Inline void
+arm_disable_outer_cache(void)
+{
+	pl310_disable();
+}
+
+/*
+ *  L2キャッシュの無効化
+ */
+Inline void
+arm_invalidate_outer_cache(void)
+{
+	pl310_invalidate_all();
+}
+
+/*
+ *  L2キャッシュのクリーン
+ */
+Inline void
+arm_clean_outer_cache(void) 
+{
+	pl310_clean_and_invalidate_all();
+}
 
 #endif /* TOPPERS_MACRO_ONLY */
 #endif /* TOPPERS_CHIP_KERNEL_IMPL_H */

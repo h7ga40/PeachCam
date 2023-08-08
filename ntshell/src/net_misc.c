@@ -85,7 +85,7 @@ extern T_NTP_CLI_CONTEXT ntp_cli;
  */
 
 void
-net_misc_task (intptr_t exinf)
+net_misc_task (EXINF exinf)
 {
 	T_DHCP4_CLI_CONTEXT *ct;
 	T_NTP_CLI_CONTEXT *nc = &ntp_cli;

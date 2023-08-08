@@ -18,3 +18,5 @@ rza1.h
 scif.h
 tSCIF.c
 tSCIF.cdl
+tSIOPortRZA1.cdl
+tSIOPortRZA1Main_inline.h

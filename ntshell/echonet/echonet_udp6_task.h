@@ -77,7 +77,7 @@ extern "C" {
 /*
  *  ECHONET Lite タスクの本体
  */
-void echonet_udp_task(intptr_t exinf);
+void echonet_udp_task(EXINF exinf);
 
 /*  ノンブロッキングコールのコールバック関数  */
 ER callback_nblk_udp(ID cepid, FN fncd, void *p_parblk);

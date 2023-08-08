@@ -44,7 +44,7 @@
 
 /* タスク */
 
-extern void	udp6_echo_srv_task(intptr_t exinf);
+extern void	udp6_echo_srv_task(EXINF exinf);
 
 /* 関数 */
 

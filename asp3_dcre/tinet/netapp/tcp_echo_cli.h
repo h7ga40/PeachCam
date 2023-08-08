@@ -104,8 +104,8 @@ extern uint8_t tcp_echo_cli_rwbuf[];
 
 /* タスク*/
 
-extern void	tcp_echo_cli_rcv_task(intptr_t exinf);
-extern void	tcp_echo_cli_snd_task(intptr_t exinf);
+extern void	tcp_echo_cli_rcv_task(EXINF exinf);
+extern void	tcp_echo_cli_snd_task(EXINF exinf);
 
 /* 関数 */
 

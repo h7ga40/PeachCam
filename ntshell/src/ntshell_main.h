@@ -87,7 +87,7 @@ extern void main_initialize();
 extern void main_finalize();
 
 /* ntshellの初期化 */
-void sys_init(intptr_t exinf);
+void sys_init(EXINF exinf);
 
 #define NTSHELL_EVENT_WAKEUP		0x00000001
 #define NTSHELL_EVENT_NETIF_CHANGED	0x00000002
@@ -98,10 +98,10 @@ void sys_init(intptr_t exinf);
 void ntshell_task_init(task_base_t **tasks, int task_count);
 
 /* ntshellタスク */
-void ntshell_task(intptr_t exinf);
+void ntshell_task(EXINF exinf);
 
 /* shellcmdタスク */
-void shellcmd_task(intptr_t exinf);
+void shellcmd_task(EXINF exinf);
 
 /* コマンド実行 */
 int cmd_execute(const char *text, void *extobj);

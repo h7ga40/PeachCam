@@ -75,7 +75,7 @@ signature sSysLog {
 	ER		mask([in] uint_t logMask, [in] uint_t lowMask);
 
 	/*
-	 *  低レベル出力によるすべてのログ情報の出力
+	 *  ログバッファの状態参照
 	 */
 	ER		refer([out] T_SYSLOG_RLOG *pk_rlog);
 

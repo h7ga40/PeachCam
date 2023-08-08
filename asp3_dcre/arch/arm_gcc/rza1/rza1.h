@@ -85,11 +85,6 @@
 #define MPCORE_PMR_BASE		0xf0000000
 
 /*
- *  CP15の補助制御レジスタ（ACTLR）の設定値
- */
-#define CP15_ACTLR_SMP		UINT_C(0x00000040)
-
-/*
  *  GIC依存部を使用するための定義
  */
 #ifndef GIC_TNUM_INTNO

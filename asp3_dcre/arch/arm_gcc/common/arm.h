@@ -4,7 +4,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2006-2018 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2006-2023 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -53,7 +53,7 @@
  */
 #ifndef TOPPERS_MACRO_ONLY
 #include "arm_insn.h"
-#endif /*  TOPPERS_MACRO_ONLY */
+#endif /* TOPPERS_MACRO_ONLY */
 
 /*
  *  ARM例外ベクタ
@@ -93,7 +93,7 @@
  *  CPSRのモードビット
  */
 #define CPSR_MODE_MASK	UINT_C(0x1f)
-#define CPSR_USER_MODE	UINT_C(0x10)
+#define CPSR_USR_MODE	UINT_C(0x10)
 #define CPSR_FIQ_MODE	UINT_C(0x11)
 #define CPSR_IRQ_MODE	UINT_C(0x12)
 #define CPSR_SVC_MODE	UINT_C(0x13)
@@ -103,12 +103,19 @@
 
 /*
  *  CP15のシステム制御レジスタ（SCTLR）の設定値
- *
- *  ARMv7では，CP15_SCTLR_EXTPAGEは常に1になっている．
  */
+#if __TARGET_ARCH_ARM >= 7
+#define CP15_SCTLR_AFE			UINT_C(0x20000000)
+#define CP15_SCTLR_TRE			UINT_C(0x10000000)
+#endif /* __TARGET_ARCH_ARM >= 7 */
 #if __TARGET_ARCH_ARM == 6
 #define CP15_SCTLR_EXTPAGE		UINT_C(0x00800000)
+/* ARMv7では，CP15_SCTLR_EXTPAGEは常に1になっている．*/
 #endif /* __TARGET_ARCH_ARM == 6 */
+#if __TARGET_ARCH_ARM >= 7
+#define CP15_SCTLR_UWXN			UINT_C(0x00100000)
+#define CP15_SCTLR_WXN			UINT_C(0x00080000)
+#endif /* __TARGET_ARCH_ARM >= 7 */
 #define CP15_SCTLR_VECTOR		UINT_C(0x00002000)
 #define CP15_SCTLR_ICACHE		UINT_C(0x00001000)
 #define CP15_SCTLR_BP			UINT_C(0x00000800)
@@ -212,12 +219,12 @@
 #else /* __TARGET_ARCH_ARM < 6 */
 
 #define ARMV6_MMU_DSCR1_NONGLOBAL	0x20000U	/* グローバルでない */
-#define ARMV6_MMU_DSCR1_AP001		0x00400		/* APビットが001 */
-#define ARMV6_MMU_DSCR1_AP010		0x00800		/* APビットが010 */
-#define ARMV6_MMU_DSCR1_AP011		0x00c00		/* APビットが011 */
-#define ARMV6_MMU_DSCR1_AP101		0x08400		/* APビットが101 */
-#define ARMV6_MMU_DSCR1_AP110		0x08800		/* APビットが110 */
-#define ARMV6_MMU_DSCR1_AP111		0x08c00		/* APビットが111 */
+#define ARMV6_MMU_DSCR1_AP001		0x00400U	/* APビットが001 */
+#define ARMV6_MMU_DSCR1_AP010		0x00800U	/* APビットが010 */
+#define ARMV6_MMU_DSCR1_AP011		0x00c00U	/* APビットが011 */
+#define ARMV6_MMU_DSCR1_AP101		0x08400U	/* APビットが101 */
+#define ARMV6_MMU_DSCR1_AP110		0x08800U	/* APビットが110 */
+#define ARMV6_MMU_DSCR1_AP111		0x08c00U	/* APビットが111 */
 #define ARMV6_MMU_DSCR1_ECC			0x00200U	/* ECCが有効（MPCore）*/
 #define ARMV6_MMU_DSCR1_NOEXEC		0x00010U	/* 実行不可 */
 
@@ -251,12 +258,12 @@
 
 #define ARMV6_MMU_DSCR2_NONGLOBAL	0x0800U		/* グローバルでない */
 #define ARMV6_MMU_DSCR2_SHARED		0x0400U		/* プロセッサ間で共有 */
-#define ARMV6_MMU_DSCR2_AP001		0x0010		/* APビットが001 */
-#define ARMV6_MMU_DSCR2_AP010		0x0020		/* APビットが010 */
-#define ARMV6_MMU_DSCR2_AP011		0x0030		/* APビットが011 */
-#define ARMV6_MMU_DSCR2_AP101		0x0210		/* APビットが101 */
-#define ARMV6_MMU_DSCR2_AP110		0x0220		/* APビットが110 */
-#define ARMV6_MMU_DSCR2_AP111		0x0230		/* APビットが111 */
+#define ARMV6_MMU_DSCR2_AP001		0x0010U		/* APビットが001 */
+#define ARMV6_MMU_DSCR2_AP010		0x0020U		/* APビットが010 */
+#define ARMV6_MMU_DSCR2_AP011		0x0030U		/* APビットが011 */
+#define ARMV6_MMU_DSCR2_AP101		0x0210U		/* APビットが101 */
+#define ARMV6_MMU_DSCR2_AP110		0x0220U		/* APビットが110 */
+#define ARMV6_MMU_DSCR2_AP111		0x0230U		/* APビットが111 */
 
 /* ラージページのディスクリプタ用 */
 #define ARMV6_MMU_DSCR2L_TEX000		0x0000U		/* TEXビットが000 */
@@ -273,6 +280,11 @@
 #define ARMV6_MMU_DSCR2S_NOEXEC		0x0001U		/* 実行不可 */
 
 #endif /* __TARGET_ARCH_ARM < 6 */
+
+/*
+ *  浮動小数点例外制御レジスタ（FPEXC）の設定値
+ */
+#define FPEXC_ENABLE		UINT_C(0x40000000)
 
 #ifndef TOPPERS_MACRO_ONLY
 
@@ -307,7 +319,7 @@ arm_set_low_vectors(void)
 }
 
 /*
- *  分岐予測をイネーブル
+ *  分岐予測のイネーブル
  */
 Inline void
 arm_enable_bp(void)
@@ -320,7 +332,7 @@ arm_enable_bp(void)
 }
 
 /*
- *  分岐予測をディスエーブル
+ *  分岐予測のディスエーブル
  */
 Inline void
 arm_disable_bp(void)
@@ -333,20 +345,61 @@ arm_disable_bp(void)
 }
 
 /*
- *  プロセッサ番号の取得
+ *  分岐予測の無効化
+ */
+Inline void
+arm_invalidate_bp(void)
+{
+	CP15_INVALIDATE_BP();
+	data_sync_barrier();
+	inst_sync_barrier();
+}
+
+/*
+ *  MMUのディスエーブル
+ */
+Inline void
+arm_disable_mmu(void)
+{
+	uint32_t	reg;
+
+	CP15_READ_SCTLR(reg);
+	reg &= ~CP15_SCTLR_MMU;
+	CP15_WRITE_SCTLR(reg);
+}
+
+/*
+ *  TLBの無効化
+ */
+Inline void
+arm_invalidate_tlb(void)
+{
+#ifndef TOPPERS_NONUNIFIED_TLB
+	CP15_INVALIDATE_TLB();
+#else /* TOPPERS_NONUNIFIED_TLB */
+	CP15_INVALIDATE_DATA_TLB();
+	CP15_INVALIDATE_INST_TLB();
+#endif /* TOPPERS_NONUNIFIED_TLB */
+	data_sync_barrier();
+	inst_sync_barrier();
+}
+
+/*
+ *  自プロセッサのインデックス（0オリジン）の取得
  *
- *  マルチプロセッサアフィニティレジスタを読んで，その下位8ビットを返す．
- *  ARMv6では，マルチプロセッサをサポートしている場合にのみ使用できる．
+ *  マルチプロセッサアフィニティレジスタを読んで，その下位8ビットを返
+ *  す．ARMv6では，マルチプロセッサをサポートしている場合にのみ使用で
+ *  きる．
  */
 #if __TARGET_ARCH_ARM >= 6
 
-Inline uint32_t
-arm_prc_index(void)
+Inline uint_t
+get_my_prcidx(void)
 {
 	uint32_t	reg;
 
 	CP15_READ_MPIDR(reg);
-	return(reg & 0xffU);
+	return((uint_t)(reg & 0xffU));
 }
 
 #endif /* __TARGET_ARCH_ARM >= 6 */
@@ -356,46 +409,184 @@ arm_prc_index(void)
  */
 
 /*
- *  命令／データキャッシュのイネーブル／ディスエーブル
- */
-extern void arm_enable_icache(void);
-extern void arm_disable_icache(void);
-extern void arm_enable_dcache(void);
-extern void arm_disable_dcache(void);
-
-/*
- *  キャッシュのイネーブル
+ *  データキャッシュのイネーブル
  */
 Inline void
-arm_enable_cache(void)
+arm_enable_dcache(void)
 {
-	arm_enable_icache();
-	arm_enable_dcache();
+	uint32_t	reg;
+
+	CP15_READ_SCTLR(reg);
+	reg |= CP15_SCTLR_DCACHE;
+	CP15_WRITE_SCTLR(reg);
 }
 
 /*
- *  キャッシュのディスエーブル
+ *  データキャッシュのディスエーブル
  */
 Inline void
-arm_disable_cache(void)
+arm_disable_dcache(void)
 {
-	arm_disable_icache();
-	arm_disable_dcache();
+	uint32_t	reg;
+
+	CP15_READ_SCTLR(reg);
+	reg &= ~CP15_SCTLR_DCACHE;
+	CP15_WRITE_SCTLR(reg);
 }
 
 /*
- *  ARMv5におけるデータキャッシュの無効化／クリーン
+ *  命令キャッシュのイネーブル
  */
-#if __TARGET_ARCH_ARM <= 5
-extern void armv5_clean_and_invalidate_dcache(void);
-#endif /* __TARGET_ARCH_ARM <= 5 */
+Inline void
+arm_enable_icache(void)
+{
+	uint32_t	reg;
+
+	CP15_READ_SCTLR(reg);
+	reg |= CP15_SCTLR_ICACHE;
+	CP15_WRITE_SCTLR(reg);
+}
 
 /*
- *  ARMv7におけるデータキャッシュの無効化／クリーン
+ *  命令キャッシュのディスエーブル
+ */
+Inline void
+arm_disable_icache(void)
+{
+	uint32_t	reg;
+
+	CP15_READ_SCTLR(reg);
+	reg &= ~CP15_SCTLR_ICACHE;
+	CP15_WRITE_SCTLR(reg);
+}
+
+/*
+ *  ARMv7におけるデータキャッシュの無効化
+ *
+ *  バリアを2か所に入れているのは，ARMアーキテクチャリファレンスマニュ
+ *  アルのサンプルコードを踏襲した．
  */
 #if __TARGET_ARCH_ARM == 7
-extern void armv7_invalidate_dcache(void);
-extern void armv7_clean_and_invalidate_dcache(void);
+
+Inline void
+armv7_invalidate_dcache(void)
+{
+	uint32_t	clidr, ccsidr;
+	uint32_t	level, no_levels;
+	uint32_t	way, no_ways, shift_way;
+	uint32_t	set, no_sets, shift_set;
+	uint32_t	waylevel, setwaylevel;
+
+	CP15_READ_CLIDR(clidr);
+	no_levels = (clidr >> 24) & 0x07U;
+	for (level = 0; level < no_levels; level++) {
+		if (((clidr >> (level * 3)) & 0x07U) >= 0x02U) {
+			CP15_WRITE_CSSELR(level << 1);
+			inst_sync_barrier();
+			CP15_READ_CCSIDR(ccsidr);
+			no_sets = ((ccsidr >> 13) & 0x7fffU) + 1;
+			shift_set = (ccsidr & 0x07U) + 4;
+			no_ways = ((ccsidr >> 3) & 0x3ffU) + 1;
+			shift_way = count_leading_zero(no_ways - 1);
+
+			for (way = 0; way < no_ways; way++) {
+				waylevel = (way << shift_way) | (level << 1);
+				for (set = 0; set < no_sets; set++) {
+					setwaylevel = waylevel | (set << shift_set);
+					CP15_WRITE_DCISW(setwaylevel);
+				}
+			}
+		}
+	}
+	data_sync_barrier();
+}
+
+#endif /* __TARGET_ARCH_ARM == 7 */
+
+/*
+ *  ARMv7におけるデータキャッシュのクリーン
+ *
+ *  バリアを2か所に入れているのは，ARMアーキテクチャリファレンスマニュ
+ *  アルのサンプルコードを踏襲した．
+ */
+#if __TARGET_ARCH_ARM == 7
+
+Inline void
+armv7_clean_dcache(void)
+{
+	uint32_t	clidr, ccsidr;
+	uint32_t	level, no_levels;
+	uint32_t	way, no_ways, shift_way;
+	uint32_t	set, no_sets, shift_set;
+	uint32_t	waylevel, setwaylevel;
+
+	CP15_READ_CLIDR(clidr);
+	no_levels = (clidr >> 24) & 0x07U;
+	for (level = 0; level < no_levels; level++) {
+		if (((clidr >> (level * 3)) & 0x07U) >= 0x02U) {
+			CP15_WRITE_CSSELR(level << 1);
+			inst_sync_barrier();
+			CP15_READ_CCSIDR(ccsidr);
+			no_sets = ((ccsidr >> 13) & 0x7fffU) + 1;
+			shift_set = (ccsidr & 0x07U) + 4;
+			no_ways = ((ccsidr >> 3) & 0x3ffU) + 1;
+			shift_way = count_leading_zero(no_ways - 1);
+
+			for (way = 0; way < no_ways; way++) {
+				waylevel = (way << shift_way) | (level << 1);
+				for (set = 0; set < no_sets; set++) {
+					setwaylevel = waylevel | (set << shift_set);
+					CP15_WRITE_DCCSW(setwaylevel);
+				}
+			}
+		}
+	}
+	data_sync_barrier();
+}
+
+#endif /* __TARGET_ARCH_ARM == 7 */
+
+/*
+ *  ARMv7におけるデータキャッシュのクリーンと無効化
+ *
+ *  バリアを2か所に入れているのは，ARMアーキテクチャリファレンスマニュ
+ *  アルのサンプルコードを踏襲した．
+ */
+#if __TARGET_ARCH_ARM == 7
+
+Inline void
+armv7_clean_and_invalidate_dcache(void)
+{
+	uint32_t	clidr, ccsidr;
+	uint32_t	level, no_levels;
+	uint32_t	way, no_ways, shift_way;
+	uint32_t	set, no_sets, shift_set;
+	uint32_t	waylevel, setwaylevel;
+
+	CP15_READ_CLIDR(clidr);
+	no_levels = (clidr >> 24) & 0x07U;
+	for (level = 0; level < no_levels; level++) {
+		if (((clidr >> (level * 3)) & 0x07U) >= 0x02U) {
+			CP15_WRITE_CSSELR(level << 1);
+			inst_sync_barrier();
+			CP15_READ_CCSIDR(ccsidr);
+			no_sets = ((ccsidr >> 13) & 0x7fffU) + 1;
+			shift_set = (ccsidr & 0x07U) + 4;
+			no_ways = ((ccsidr >> 3) & 0x3ffU) + 1;
+			shift_way = count_leading_zero(no_ways - 1);
+
+			for (way = 0; way < no_ways; way++) {
+				waylevel = (way << shift_way) | (level << 1);
+				for (set = 0; set < no_sets; set++) {
+					setwaylevel = waylevel | (set << shift_set);
+					CP15_WRITE_DCCISW(setwaylevel);
+				}
+			}
+		}
+	}
+	data_sync_barrier();
+}
+
 #endif /* __TARGET_ARCH_ARM == 7 */
 
 /*
@@ -413,13 +604,27 @@ arm_invalidate_dcache(void)
 }
 
 /*
+ *  データキャッシュと統合キャッシュのクリーン
+ */
+Inline void
+arm_clean_dcache(void)
+{
+#if __TARGET_ARCH_ARM <= 6
+	CP15_CLEAN_DCACHE();
+	CP15_CLEAN_UCACHE();
+#else /* __TARGET_ARCH_ARM <= 6 */
+	armv7_clean_dcache();
+#endif /* __TARGET_ARCH_ARM <= 6 */
+}
+
+/*
  *  データキャッシュと統合キャッシュのクリーンと無効化
  */
 Inline void
 arm_clean_and_invalidate_dcache(void)
 {
 #if __TARGET_ARCH_ARM <= 5
-	armv5_clean_and_invalidate_dcache();
+	ARMV5_CLEAN_AND_INVALIDATE_DCACHE();
 #elif __TARGET_ARCH_ARM == 6
 	CP15_CLEAN_AND_INVALIDATE_DCACHE();
 	CP15_CLEAN_AND_INVALIDATE_UCACHE();
@@ -437,32 +642,5 @@ arm_invalidate_icache(void)
 	CP15_INVALIDATE_ICACHE();
 }
 
-/*
- *  分岐予測の無効化
- */
-Inline void
-arm_invalidate_bp(void)
-{
-	CP15_INVALIDATE_BP();
-	data_sync_barrier();
-	inst_sync_barrier();
-}
-
-/*
- *  TLBの無効化
- */
-Inline void
-arm_invalidate_tlb(void)
-{
-	CP15_INVALIDATE_TLB();
-	data_sync_barrier();
-}
-
 #endif /* TOPPERS_MACRO_ONLY */
-
-/*
- *  浮動小数点例外制御レジスタ（FPEXC）の設定値
- */
-#define FPEXC_ENABLE		UINT_C(0x40000000)
-
 #endif /* TOPPERS_ARM_H */

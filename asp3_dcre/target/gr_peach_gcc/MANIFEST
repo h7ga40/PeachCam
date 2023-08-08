@@ -13,7 +13,6 @@ sf_boot.c
 tPutLogGRPeach.c
 tPutLogGRPeach.cdl
 tSIOPortGRPeach.cdl
-tSIOPortGRPeachMain_inline.h
 target.cdl
 target_cfg1_out.h
 target_check.trb
@@ -25,8 +24,8 @@ target_kernel_impl.h
 target_rename.def
 target_rename.h
 target_sil.h
+target_start.S
 target_stddef.h
-target_support.S
 target_syssvc.h
 target_test.h
 target_timer.cfg

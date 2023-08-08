@@ -55,12 +55,12 @@ TARGET = gr_peach_gcc
 #
 SRCLANG = c
 ifeq ($(SRCLANG),c)
-	LIBS = $(SRCDIR)/../musl-1.1.18/Debug/libmusl.a
+	LIBS := $(LIBS) 
 endif
 ifeq ($(SRCLANG),c++)
 	USE_CXX = true
-	CXXLIBS = -lstdc++ $(SRCDIR)/../musl-1.1.18/Debug/libmusl.a
-	CXXRTS = cxxrt.o newlibrt.o
+	CXXLIBS := $(CXXLIBS) -lstdc++ 
+	CXXRTS := $(CXXRTS) cxxrt.o newlibrt.o
 endif
 
 #
@@ -129,6 +129,13 @@ else
 endif
 
 #
+#  ダンプファイルの拡張子
+#
+ifndef DUMP
+	DUMP = srec
+endif
+
+#
 #  中間オブジェクトファイルと依存関係ファイルを置くディレクトリの定義
 #
 OBJDIR = obj
@@ -161,6 +168,16 @@ ifndef OMIT_TECS
 	-include $(TECSGENDIR)/Makefile.tecsgen
 endif
 
+#
+#  コンパイルオプションに関する定義
+#
+ifndef OMIT_WARNING_ALL
+	OMIT_WARNING_ALL = @(OMIT_WARNING_ALL)
+endif
+ifndef OMIT_OPTIMIZATION
+	OMIT_OPTIMIZATION = @(OMIT_OPTIMIZATION)
+endif
+
 TINETDIR = 
 
 #
@@ -182,10 +199,10 @@ endif
 ifdef OMIT_TECS
 	CDEFS := -DTOPPERS_OMIT_TECS $(CDEFS)
 endif
-CDEFS := $(CDEFS) 
+CDEFS := $(CDEFS) -DUSE_ARM_FPU_SELECTIVE
 INCLUDES := -I. -I$(SRCDIR)/include $(INCLUDES) -I$(SRCDIR)
 LDFLAGS := $(LDFLAGS) -L.
-LIBS := $(LIBS) $(CXXLIBS)
+LIBS := $(CXXLIBS) $(LIBS) $(SRCDIR)/../musl-1.1.18/Debug/libmusl.a
 CFLAGS = $(COPTS) $(CDEFS) $(INCLUDES)
 
 #
@@ -272,11 +289,11 @@ ifndef OMIT_TECS
 all: tecs | $(DEPDIR)
 #	@$(MAKE) check
 	@$(MAKE) check $(OBJNAME).bin
-#	@$(MAKE) check $(OBJNAME).srec
+#	@$(MAKE) check $(OBJNAME).$(DUMP)
 else
 #all: check
 all: check $(OBJNAME).bin
-#all: check $(OBJNAME).srec
+#all: check $(OBJNAME).$(DUMP)
 endif
 
 ##### 以下は編集しないこと #####
@@ -354,6 +371,7 @@ endif
 #  ソースファイルのあるディレクトリに関する定義
 #
 vpath %.c $(KERNEL_DIRS) $(SYSSVC_DIRS) $(APPL_DIRS)
+vpath %.cpp $(APPL_DIRS)
 vpath %.S $(KERNEL_DIRS) $(SYSSVC_DIRS) $(APPL_DIRS)
 vpath %.cfg $(APPL_DIRS)
 vpath %.cdl $(APPL_DIRS)
@@ -441,17 +459,20 @@ cfg1_out.syms: $(CFG1_OUT)
 cfg1_out.srec: $(CFG1_OUT)
 	$(OBJCOPY) -O srec -S $(CFG1_OUT) cfg1_out.srec
 
+cfg1_out.dump: $(CFG1_OUT)
+	$(OBJDUMP) -s $(DUMPOPTS) $(CFG1_OUT) > cfg1_out.dump
+
 $(CFG2_OUT_SRCS) cfg2_out.db: kernel_cfg.timestamp ;
-kernel_cfg.timestamp: cfg1_out.db cfg1_out.syms cfg1_out.srec
+kernel_cfg.timestamp: cfg1_out.db cfg1_out.syms cfg1_out.$(DUMP)
 	$(CFG) --pass 2 $(CFG_KERNEL) $(INCLUDES) $(CFG_TRB)
 
 #
 #  オフセットファイル（offset.h）の生成規則
 #
 $(OFFSET_H): offset.timestamp ;
-offset.timestamp: cfg1_out.db cfg1_out.syms cfg1_out.srec
+offset.timestamp: cfg1_out.db cfg1_out.syms cfg1_out.$(DUMP)
 	$(CFG) --pass 2 -O $(CFG_KERNEL) $(INCLUDES) -T $(TARGET_OFFSET_TRB) \
-				--rom-symbol cfg1_out.syms --rom-image cfg1_out.srec
+				--rom-symbol cfg1_out.syms --rom-image cfg1_out.$(DUMP)
 
 #
 #  カーネルライブラリファイルの生成
@@ -507,23 +528,25 @@ $(OBJNAME).syms: $(OBJFILE)
 #
 $(OBJNAME).bin: $(OBJFILE)
 	$(OBJCOPY) -O binary -S $(OBJFILE) $(OBJNAME).bin
-	$(OBJDUMP) -h $(OBJFILE)
 	$(SIZE) $(OBJFILE)
 
 #
-#  Sレコードファイルの生成
+#  ダンプファイルの生成
 #
 $(OBJNAME).srec: $(OBJFILE)
 	$(OBJCOPY) -O srec -S $(OBJFILE) $(OBJNAME).srec
+
+$(OBJNAME).dump: $(OBJFILE)
+	$(OBJDUMP) -s $(DUMPOPTS) $(OBJFILE) > $(OBJNAME).dump
 
 #
 #  エラーチェック処理
 #
 .PHONY: check
 check: check.timestamp ;
-check.timestamp: cfg2_out.db $(OBJNAME).syms $(OBJNAME).srec
+check.timestamp: cfg2_out.db $(OBJNAME).syms $(OBJNAME).$(DUMP)
 	$(CFG) --pass 3 $(CFG_KERNEL) -O $(INCLUDES) -T $(TARGET_CHECK_TRB) \
-				--rom-symbol $(OBJNAME).syms --rom-image $(OBJNAME).srec
+				--rom-symbol $(OBJNAME).syms --rom-image $(OBJNAME).$(DUMP)
 	@echo "configuration check passed"
 
 #
@@ -532,10 +555,10 @@ check.timestamp: cfg2_out.db $(OBJNAME).syms $(OBJNAME).srec
 .PHONY: clean
 clean:
 	rm -f \#* *~ $(OBJDIR)/*.o $(DEPDIR)/*.d $(CLEAN_FILES) check.timestamp
-	rm -f $(OBJFILE) $(OBJNAME).syms $(OBJNAME).srec $(OBJNAME).bin
+	rm -f $(OBJFILE) $(OBJNAME).syms $(OBJNAME).$(DUMP) $(OBJNAME).bin
 	rm -f kernel_cfg.timestamp $(CFG2_OUT_SRCS) cfg2_out.db
 	rm -f offset.timestamp $(OFFSET_H)
-	rm -f cfg1_out.syms cfg1_out.srec $(CFG1_OUT)
+	rm -f cfg1_out.syms cfg1_out.$(DUMP) $(CFG1_OUT)
 	rm -f cfg1_out.timestamp cfg1_out.c cfg1_out.db
 	rm -rf $(TECSGENDIR)
 ifndef KERNEL_LIB

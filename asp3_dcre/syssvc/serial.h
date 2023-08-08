@@ -60,18 +60,6 @@ typedef struct {
 	uint_t		wricnt;			/* 送信バッファ中の文字数 */
 } T_SERIAL_RPOR;
 
-#ifdef TOPPERS_OMIT_TECS
-/*
- *  シリアルインタフェースドライバの初期化ルーチン
- */
-extern void		serial_initialize(intptr_t exinf) throw();
-
-/*
- *  シリアルインタフェースドライバからの未送信文字の取出し
- */
-extern bool_t	serial_get_chr(ID portid, char *p_c) throw();
-#endif
-
 /*
  *  シリアルインタフェースドライバのサービスコール
  */

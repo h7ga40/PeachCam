@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2017 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2022 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -188,7 +188,7 @@ typedef struct mutex_control_block MTXCB;
  */
 typedef struct task_initialization_block {
 	ATR			tskatr;			/* タスク属性 */
-	intptr_t	exinf;			/* タスクの拡張情報 */
+	EXINF		exinf;			/* タスクの拡張情報 */
 	TASK		task;			/* タスクの起動番地 */
 	uint_t		ipriority;		/* タスクの起動時優先度（内部表現） */
 
@@ -216,7 +216,7 @@ typedef struct task_initialization_block {
  *  ・初期化後は常に有効：
  *  		p_tinib，tstat，actque
  *  ・休止状態以外で有効（休止状態では初期値になっている）：
- *  		bpriority，priority，wupque，raster，enater，p_lastmtx
+ *  		bpriority，priority，wupque，raster，enater，boosted，p_lastmtx
  *  ・待ち状態（二重待ち状態を含む）で有効：
  *  		p_winfo
  *  ・実行できる状態と同期・通信オブジェクトに対する待ち状態で有効：
@@ -235,12 +235,13 @@ typedef struct task_control_block {
 #else /* UINT8_MAX */
 	BIT_FIELD_UINT	tstat : 8;		/* タスク状態（内部表現）*/
 	BIT_FIELD_UINT	bpriority : 8;	/* ベース優先度（内部表現）*/
-	BIT_FIELD_UINT	priority : 8	/* 現在の優先度（内部表現）*/;
+	BIT_FIELD_UINT	priority : 8;	/* 現在の優先度（内部表現）*/
 #endif /* UINT8_MAX */
 	BIT_FIELD_BOOL	actque : 1;		/* 起動要求キューイング */
 	BIT_FIELD_BOOL	wupque : 1;		/* 起床要求キューイング */
-	BIT_FIELD_BOOL	raster : 1;		/* タスク終了要求状態 */
+	BIT_FIELD_BOOL	raster : 1;		/* タスク終了要求フラグ */
 	BIT_FIELD_BOOL	enater : 1;		/* タスク終了許可状態 */
+	BIT_FIELD_BOOL	boosted : 1;	/* 優先度上昇状態 */
 
 	WINFO			*p_winfo;		/* 待ち情報ブロックへのポインタ */
 	MTXCB			*p_lastmtx;		/* 最後にロックしたミューテックス */

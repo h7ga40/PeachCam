@@ -2,7 +2,7 @@
  *  TOPPERS Software
  *      Toyohashi Open Platform for Embedded Real-Time Systems
  * 
- *  Copyright (C) 2006-2018 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2006-2019 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -280,6 +280,9 @@ gicd_raise_sgi(INTNO intno)
 
 /*
  *  割込みのコンフィグレーション
+ *
+ *  この関数は，カーネルの初期化中に呼び出すことを想定しているため，
+ *  GICの操作後にメモリ同期バリアを入れていない．
  */
 Inline void
 gicd_config(INTNO intno, uint_t config)
@@ -297,6 +300,9 @@ gicd_config(INTNO intno, uint_t config)
 
 /*
  *  割込みグループの設定（セキュリティ拡張）
+ *
+ *  この関数は，カーネルの初期化中に呼び出すことを想定しているため，
+ *  GICの操作後にメモリ同期バリアを入れていない．
  */
 Inline void
 gicd_config_group(INTNO intno, uint_t group)
@@ -312,6 +318,9 @@ gicd_config_group(INTNO intno, uint_t group)
 
 /*
  *  割込み要求ラインに対する割込み優先度の設定（priは内部表現）
+ *
+ *  この関数は，カーネルの初期化中に呼び出すことを想定しているため，
+ *  GICの操作後にメモリ同期バリアを入れていない．
  */
 Inline void
 gicd_set_priority(INTNO intno, uint_t pri)
@@ -328,22 +337,25 @@ gicd_set_priority(INTNO intno, uint_t pri)
 /*
  *  割込みターゲットプロセッサの設定
  *
- *  prcsは，ターゲットとするプロセッサを表すビットのビット毎論理和で指
- *  定する．
+ *  affinityは，ターゲットとするプロセッサを表すビットのビット毎論理和
+ *  で指定する．
  *		プロセッサ0 : 0x01
  *		プロセッサ1 : 0x02
  *		プロセッサ2 : 0x04
  *		プロセッサ3 : 0x08
+ *
+ *  この関数は，カーネルの初期化中に呼び出すことを想定しているため，
+ *  GICの操作後にメモリ同期バリアを入れていない．
  */
 Inline void
-gicd_set_target(INTNO intno, uint_t prcs)
+gicd_set_target(INTNO intno, uint_t affinity)
 {
 	uint_t		shift = (intno % 4) * 8;
 	uint32_t	reg;
 
 	reg = sil_rew_mem(GICD_ITARGETSR(intno / 4));
 	reg &= ~(0xffU << shift);
-	reg |= (prcs << shift);
+	reg |= (affinity << shift);
 	sil_wrw_mem(GICD_ITARGETSR(intno / 4), reg);
 }
 

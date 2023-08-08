@@ -112,7 +112,7 @@ typedef struct www_rwbuf {
 
 /* タスク */
 
-extern void	www_srv_task (intptr_t exinf);
+extern void	www_srv_task (EXINF exinf);
 
 /*
  *  変数

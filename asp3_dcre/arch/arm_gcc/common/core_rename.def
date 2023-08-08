@@ -27,6 +27,11 @@ xlog_fsr
 default_int_handler
 default_exc_handler
 
+# core_kernel_impl.h
+lock_cpu
+unlock_cpu
+sense_lock
+
 # mpcore_kernel_impl.c
 mpcore_initialize
 mpcore_terminate

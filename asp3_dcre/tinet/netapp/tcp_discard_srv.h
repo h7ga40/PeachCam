@@ -71,6 +71,6 @@ extern uint8_t tcp_discard_srv_rwbuf[];
 
 /* タスク */
 
-extern void tcp_discard_srv_task(intptr_t exinf);
+extern void tcp_discard_srv_task(EXINF exinf);
 
 #endif	/* of #ifndef _TCP_DISCARD_SRV_H_ */

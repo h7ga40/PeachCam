@@ -5,7 +5,7 @@
  * 
  *  Copyright (C) 2000-2004 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2006-2018 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2006-2022 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -56,9 +56,9 @@
 /*
  *  使用する命令セットの定義
  */
-#ifdef USE_ARM_FPU
-	.fpu	vfpv3
-#endif /* USE_ARM_FPU */
+#if defined(USE_ARM_FPU_ALWAYS) || defined(USE_ARM_FPU_SELECTIVE)
+	.fpu	ASM_ARM_FPU_TYPE
+#endif /* defined(USE_ARM_FPU_ALWAYS) || defined(USE_ARM_FPU_SELECTIVE) */
 
 /*
  *  例外ベクタ
@@ -115,14 +115,16 @@ ALABEL(dispatch)
 	push	{r4-r11}				/* 非スクラッチレジスタの保存 */
 	ldr		r0, =p_runtsk			/* p_runtsk → r0 */
 	ldr		r0, [r0]
-#ifdef USE_ARM_FPU
-	ldr		r2, [r0,#TCB_p_tinib]	/* p_runtsk->p_tinib → r2 */
-	ldr		r1, [r2,#TINIB_tskatr]	/* p_runtsk->p_tinib->tskatr → r1 */
-	tst		r1, #TA_FPU
+#ifdef USE_ARM_FPU_ALWAYS
+	vpush	{d8-d15}				/* 非スクラッチFPUレジスタの保存 */
+#endif /* USE_ARM_FPU_ALWAYS */
+#ifdef USE_ARM_FPU_SELECTIVE
+	vmrs	r1, fpexc
+	tst		r1, #FPEXC_ENABLE
 	beq		1f
 	vpush	{d8-d15}				/* 非スクラッチFPUレジスタの保存 */
 1:
-#endif /* USE_ARM_FPU */
+#endif /* USE_ARM_FPU_SELECTIVE */
 	str		sp, [r0,#TCB_sp]		/* スタックポインタを保存 */
 	adr		r1, dispatch_r
 	str		r1, [r0,#TCB_pc]		/* 実行再開番地を保存 */
@@ -133,7 +135,10 @@ ALABEL(dispatch_r)
 	 * 【この時点のレジスタ状態】
 	 *  r4：p_runtsk（タスク切換え後）
 	 */
-#ifdef USE_ARM_FPU
+#ifdef USE_ARM_FPU_ALWAYS
+	vpop	{d8-d15}				/* 非スクラッチFPUレジスタの復帰 */
+#endif /* USE_ARM_FPU_ALWAYS */
+#ifdef USE_ARM_FPU_SELECTIVE
 	ldr		r2, [r4,#TCB_p_tinib]	/* p_runtsk->p_tinib → r2 */
 	ldr		r1, [r2,#TINIB_tskatr]	/* p_runtsk->p_tinib->tskatr → r1 */
 	tst		r1, #TA_FPU
@@ -144,7 +149,7 @@ ALABEL(dispatch_r)
 	beq		1f
 	vpop	{d8-d15}				/* 非スクラッチFPUレジスタの復帰 */
 1:
-#endif /* USE_ARM_FPU */
+#endif /* USE_ARM_FPU_SELECTIVE */
 	pop		{r4-r11}				/* 非スクラッチレジスタの復帰 */
 #ifdef TOPPERS_SUPPORT_OVRHDR
 	bl		ovrtimer_start
@@ -171,7 +176,7 @@ ALABEL(start_dispatch)
 	 *  各種のデバイス（特に割込みコントローラ）の設定が完了するのを待つ．
 	 */
 	asm_data_sync_barrier r0
-	
+
 	/*
 	 *	タスクコンテキストに切り換える．
 	 */
@@ -182,8 +187,7 @@ ALABEL(start_dispatch)
 	/*
 	 *  IDが1のタスクのスタック領域に切り換える．
 	 */
-	ldr		r0, =tcb_table			/* tcb_table[0] → r0 */
-	ldr		r2, [r0,#TCB_p_tinib]	/* tcb_table[0].p_tinib → r2 */
+	ldr		r2, =tinib_table		/* tinib_table[0] → r2 */
 	ldr		r0, [r2,#TINIB_stk]
 	ldr		r1, [r2,#TINIB_stksz]
 	add		sp, r0, r1
@@ -262,12 +266,11 @@ ALABEL(dispatcher_1)
 /*
  *  カーネルの終了処理の呼出し
  *
- *  割込みロック状態にし，使用するスタックを非タスクコンテキスト用のスタッ
- *  ク領域に切り替え，exit_kernelを呼び出す．
+ *  使用するスタックを非タスクコンテキスト用のスタック領域に切り替え，
+ *  例外ネストカウントを1にして，exit_kernelを呼び出す．
  */
 	AGLOBAL(call_exit_kernel)
 ALABEL(call_exit_kernel)
-	msr		cpsr_c, #(CPSR_SVC_MODE AOR CPSR_INTLOCK)
 	ldr		r0, =istkpt				/* 非タスクコンテキスト用のスタックに */
 	ldr		sp, [r0]
 	ldr		r0, =excpt_nest_count	/* 例外ネストカウントを1に */
@@ -293,14 +296,14 @@ ALABEL(start_r)
 									/* CPUロック解除状態に */
 	ldr		lr, =ext_tsk			/* タスク本体からの戻り番地を設定 */
 	ldr		r2, [r4,#TCB_p_tinib]	/* p_runtsk->p_tinib → r2 */
-#ifdef USE_ARM_FPU
+#ifdef USE_ARM_FPU_SELECTIVE
 	ldr		r1, [r2,#TINIB_tskatr]	/* p_runtsk->p_tinib->tskatr → r1 */
 	tst		r1, #TA_FPU
 	vmrs	r0, fpexc
 	biceq	r0, r0, #FPEXC_ENABLE
 	orrne	r0, r0, #FPEXC_ENABLE
 	vmsr	fpexc, r0				/* FPEXCを設定 */
-#endif /* USE_ARM_FPU */
+#endif /* USE_ARM_FPU_SELECTIVE */
 	ldr		r0, [r2,#TINIB_exinf]	/* exinfをパラメータに */
 	ldr		r1, [r2,#TINIB_task]	/* タスク起動番地にジャンプ */
 	bx		r1
@@ -357,8 +360,15 @@ ALABEL(irq_handler)
 	 */
 	and		r1, sp, #4
 	sub		sp, sp, r1
+#ifdef USE_ARM_FPU_ALWAYS
+#ifdef USE_ARM_FPU_D32
+	vpush	{d16-d31}
+#endif /* USE_ARM_FPU_D32 */
+	vpush	{d0-d7}					/* スクラッチFPUレジスタの保存 */
+	vmrs	r0, fpscr
+#endif /* USE_ARM_FPU_ALWAYS */
 	push	{r0,r1}					/* スタックポインタの調整値を保存 */
-									/* r0はスペース確保のため */
+									/* r0の場所には，FPSCRまたはFPEXCを保存 */
 	/*
 	 *  例外ネストカウントをインクリメントする．割込みが非タスクコンテキ
 	 *  ストで発生した場合には，irq_handler_1へ分岐する．
@@ -370,6 +380,16 @@ ALABEL(irq_handler)
 	teq		r3, #1					/* 割込みが非タスクコンテキストで発生 */
 	bne		irq_handler_1			/*			  ならirq_handler_1に分岐 */
 
+#ifdef USE_ARM_FPU_SELECTIVE
+	/*
+	 *  FPEXCを保存し，FPUをディスエーブルする．
+	 */
+	vmrs	r2, fpexc
+	str		r2, [sp]				/* FPEXCを保存（r0の場所）*/
+	bic		r2, r2, #FPEXC_ENABLE
+	vmsr	fpexc, r2				/* FPEXCを設定 */
+#endif /* USE_ARM_FPU_SELECTIVE */
+
 #ifdef TOPPERS_SUPPORT_OVRHDR
 	/*
 	 *  オーバランタイマを停止する．
@@ -377,16 +397,6 @@ ALABEL(irq_handler)
 	bl		ovrtimer_stop
 #endif /* TOPPERS_SUPPORT_OVRHDR */
 
-#ifdef USE_ARM_FPU
-	/*
-	 *  FPUをディスエーブルする．
-	 */
-	vmrs	r0, fpexc
-	str		r0, [sp]				/* FPEXCを保存（r0の場所）*/
-	bic		r0, r0, #FPEXC_ENABLE
-	vmsr	fpexc, r0				/* FPEXCを設定 */
-#endif /* USE_ARM_FPU */
-	
 	/*
 	 *  非タスクコンテキスト用のスタックに切り換える．
 	 */
@@ -399,8 +409,8 @@ ALABEL(irq_handler_1)
 	/*
 	 *  割込みコントローラを操作し，割込み番号を取得する．
 	 *
-	 *  irc_begin_intは，スタックトップ（r0の場所）に，irc_end_intで用
-	 *  いる情報を保存する．
+	 *  irc_begin_intは，スタック上，またはスタックの先頭（r0の場所）に，
+	 *  irc_end_intで用いる情報を保存する場合がある．
 	 */
 	bl		irc_begin_int
 #if TNUM_INHNO <= 256 || __TARGET_ARCH_ARM <= 6
@@ -482,14 +492,6 @@ ALABEL(irq_handler_2)
 	pop		{r0,r3}
 	mov   	sp, r3
 
-#ifdef USE_ARM_FPU
-	/*
-	 *  FPUを元に戻す．
-	 */
-	ldr		r0, [sp]				/* FPEXCを復帰 */
-	vmsr	fpexc, r0
-#endif /* USE_ARM_FPU */
-	
 	/*
 	 *  p_runtskがNULLか判定する．
 	 */
@@ -503,16 +505,32 @@ ALABEL(irq_handler_2)
 	 */
 	pop		{r0,r1}					/* スタックポインタの調整を元に戻す */
 	add		sp, sp, r1
+#ifdef USE_ARM_FPU_ALWAYS
+#ifdef USE_ARM_FPU_D32
+ 	add		sp, sp, #232			/* スクラッチレジスタ等を捨てる */
+#else /* USE_ARM_FPU_D32 */
+ 	add		sp, sp, #104			/* スクラッチレジスタ等を捨てる */
+#endif /* USE_ARM_FPU_D32 */
+#else /* USE_ARM_FPU_ALWAYS */
 	add		sp, sp, #40				/* スクラッチレジスタ等を捨てる */
+#endif /* USE_ARM_FPU_ALWAYS */
 	b		dispatcher_0
 
-	/*
-	 *  ディスパッチが必要か判定する．
-	 */
 ALABEL(irq_handler_3)
 	/*
 	 * 【この時点のレジスタ状態】
 	 *  r0：p_runtsk
+	 */
+#ifdef USE_ARM_FPU_SELECTIVE
+	/*
+	 *  FPUを元に戻す．
+	 */
+	ldr		r3, [sp]				/* FPEXCを復帰 */
+	vmsr	fpexc, r3
+#endif /* USE_ARM_FPU_SELECTIVE */
+
+	/*
+	 *  ディスパッチが必要か判定する．
 	 */
 	ldr		r1, =p_schedtsk			/* p_schedtsk → r1 */
 	ldr		r1, [r1]
@@ -521,21 +539,26 @@ ALABEL(irq_handler_3)
 
 	/*
 	 *  コンテキストを保存する．
+	 *
+	 * 【この時点のレジスタ状態】
+	 *  r0：p_runtsk
+	 *  r3：FPEXC（USE_ARM_FPU_SELECTIVEの場合）
 	 */
 	push	{r6-r11}				/* 残りのレジスタの保存 */
-#ifdef USE_ARM_FPU
-	ldr		r2, [r0,#TCB_p_tinib]	/* p_runtsk->p_tinib → r2 */
-	ldr		r1, [r2,#TINIB_tskatr]	/* p_runtsk->p_tinib->tskatr → r1 */
-	tst		r1, #TA_FPU
-	beq		1f						/* TA_FPU属性でない場合は分岐 */
+#ifdef USE_ARM_FPU_ALWAYS
+	vpush	{d8-d15}				/* 非スクラッチFPUレジスタの保存 */
+#endif /* USE_ARM_FPU_ALWAYS */
+#ifdef USE_ARM_FPU_SELECTIVE
+	tst		r3, #FPEXC_ENABLE
+	beq		1f
 #ifdef USE_ARM_FPU_D32
 	vpush	{d16-d31}
 #endif /* USE_ARM_FPU_D32 */
 	vpush	{d0-d15}				/* 全FPUレジスタの保存 */
-	vmrs	r1, fpscr
-	push	{r1,r2}					/* FPSCRの保存 */
-1:									/* r2はアラインメントのため */
-#endif /* USE_ARM_FPU */
+	vmrs	r2, fpscr
+	push	{r1,r2}					/* FPSCRを保存 */
+1:									/* r1はアラインメントのため */
+#endif /* USE_ARM_FPU_SELECTIVE */
 	str		sp, [r0,#TCB_sp]		/* スタックポインタを保存 */
 	adr		r1, ret_int_r			/* 実行再開番地を保存 */
 	str		r1, [r0,#TCB_pc]
@@ -548,7 +571,10 @@ ALABEL(ret_int_r)
 	 * 【この時点のレジスタ状態】
 	 *  r4：p_runtsk（タスク切換え後）
 	 */
-#ifdef USE_ARM_FPU
+#ifdef USE_ARM_FPU_ALWAYS
+	vpop	{d8-d15}				/* 非スクラッチ全FPUレジスタの復帰 */
+#endif /* USE_ARM_FPU_ALWAYS */
+#ifdef USE_ARM_FPU_SELECTIVE
 	ldr		r2, [r4,#TCB_p_tinib]	/* p_runtsk->p_tinib → r2 */
 	ldr		r1, [r2,#TINIB_tskatr]	/* p_runtsk->p_tinib->tskatr → r1 */
 	tst		r1, #TA_FPU
@@ -557,14 +583,14 @@ ALABEL(ret_int_r)
 	orrne	r0, r0, #FPEXC_ENABLE
 	vmsr	fpexc, r0				/* FPEXCを設定 */
 	beq		1f						/* TA_FPU属性でない場合は分岐 */
-	pop		{r1,r2}					/* FPSCRの復帰 */
-	vmsr	fpscr, r1
+	pop		{r1,r2}
+	vmsr	fpscr, r2				/* FPSCRを復帰 */
 	vpop	{d0-d15}				/* 全FPUレジスタの復帰 */
 #ifdef USE_ARM_FPU_D32
 	vpop	{d16-d31}
 #endif /* USE_ARM_FPU_D32 */
 1:
-#endif /* USE_ARM_FPU */
+#endif /* USE_ARM_FPU_SELECTIVE */
 	pop		{r6-r11}				/* 残りのレジスタの復帰 */
 
 ALABEL(irq_handler_4)
@@ -583,8 +609,15 @@ ALABEL(irq_handler_4)
 	 *  表しているため，CPSRを元に戻してリターンすればよい．
 	 */
 ALABEL(irq_handler_5)
-	pop		{r0,r1}					/* スタックポインタの調整を元に戻す */
-	add		sp, sp, r1
+	pop		{r0,r1}
+#ifdef USE_ARM_FPU_ALWAYS
+	vmsr	fpscr, r0				/* FPSCRを復帰 */
+	vpop	{d0-d7}					/* スクラッチFPUレジスタの復帰 */
+#ifdef USE_ARM_FPU_D32
+	vpop	{d16-d31}
+#endif /* USE_ARM_FPU_D32 */
+#endif /* USE_ARM_FPU_ALWAYS */
+	add		sp, sp, r1				/* スタックポインタの調整を元に戻す */
 
 #if __TARGET_ARCH_ARM < 6
 	pop		{r0}					/* 戻り先のcpsrをspsrに設定 */
@@ -752,13 +785,13 @@ ALABEL(dabort_handler)
 	 *
 	 *  データアボートが，CPU例外の入口（start_exc_entryとend_exc_entry
 	 *  の間）で発生した場合には，fatal_dabort_handlerに分岐する．アボー
-	 *  トモードのspを汎用レジスタの代わりに使用する．
+	 *  トモードのspを汎用レジスタの代わりに使用する（r13と記述している）．
 	 */
-	ldr		sp, =start_exc_entry+8
-	cmp		lr, sp
+	adr		r13, start_exc_entry+8
+	cmp		lr, r13
 	bcc		dabort_handler_1
-	ldr		sp, =end_exc_entry+8
-	cmp		lr, sp
+	adr		r13, end_exc_entry+8
+	cmp		lr, r13
 	bcc		fatal_dabort_handler
 
 ALABEL(dabort_handler_1)
@@ -799,7 +832,6 @@ ALABEL(dabort_handler_1)
 #endif /* __TARGET_ARCH_ARM < 6 */
 	mov		r4, #EXCNO_DABORT
 	b		exc_handler_1
-#endif /* OMIT_DABORT_HANDLER */
 
 /*
  *  CPU例外の入口で発生したデータアボート
@@ -853,15 +885,16 @@ ALABEL(fatal_dabort_handler)
 #endif /* __TARGET_ARCH_ARM < 6 */
 
 	/*
-	 *  例外ネストカウントの最上位ビットを1にする．
+	 *  例外ネストカウントをインクリメントする．
 	 */
 	ldr		r2, =excpt_nest_count
 	ldr		r3, [r2]
-	orr		r3, r3, #0x80000000
+	add		r3, r3, #1
 	str		r3, [r2]
 
-	mov		r4, #EXCNO_DABORT
+	mov		r4, #EXCNO_FATAL
 	b		exc_handler_1
+#endif /* OMIT_DABORT_HANDLER */
 
 /*
  *  FIQ
@@ -938,15 +971,22 @@ ALABEL(exc_handler_1)
 	 */
 	and		r1, sp, #4
 	sub		sp, sp, r1
-	push	{r0,r1}					/* スタックポインタの調整値を保存 */
-									/* r0はスペース確保のため */
+#ifdef USE_ARM_FPU_ALWAYS
+#ifdef USE_ARM_FPU_D32
+	vpush	{d16-d31}
+#endif /* USE_ARM_FPU_D32 */
+	vpush	{d0-d7}					/* スクラッチFPUレジスタの保存 */
+	vmrs	r0, fpscr
+#endif /* USE_ARM_FPU_ALWAYS */
+	push	{r0,r1}					/* スタックポインタの調整値とFPSCRを保存 */
+
 	/*
 	 *  カーネル管理外のCPU例外か判定する
 	 *
 	 *  カーネル管理外のCPU例外は，カーネル実行中，全割込みロック状態，
 	 *  CPUロック状態，カーネル管理外の割込みハンドラ実行中に発生した
 	 *  CPU例外である．ARMコアの場合は，戻り先のCPSRのIビットかFビット
-	 *  のいずれかがセットされているなら，これ該当する．
+	 *  のいずれかがセットされているなら，これに該当する．
 	 */
 	ldr		r1, [r5,#T_EXCINF_cpsr]		/* 例外フレームからcpsrを取得 */
 	ands	r1, r1, #CPSR_FIQ_IRQ_BIT
@@ -968,6 +1008,16 @@ ALABEL(exc_handler_1)
 	teq		r3, #1					/* CPU例外発生前が非タスクコンテキスト */
 	bne		exc_handler_2			/*			   ならexc_handler_2に分岐 */
 
+#ifdef USE_ARM_FPU_SELECTIVE
+	/*
+	 *  FPEXCを保存し，FPUをディスエーブルする．
+	 */
+	vmrs	r2, fpexc
+	str		r2, [sp]				/* FPEXCを保存（r0の場所）*/
+	bic		r2, r2, #FPEXC_ENABLE
+	vmsr	fpexc, r2				/* FPEXCを設定 */
+#endif /* USE_ARM_FPU_SELECTIVE */
+
 #ifdef TOPPERS_SUPPORT_OVRHDR
 	/*
 	 *  オーバランタイマを停止する．
@@ -975,16 +1025,6 @@ ALABEL(exc_handler_1)
 	bl		ovrtimer_stop
 #endif /* TOPPERS_SUPPORT_OVRHDR */
 
-#ifdef USE_ARM_FPU
-	/*
-	 *  FPUをディスエーブルする．
-	 */
-	vmrs	r0, fpexc
-	str		r0, [sp]				/* FPEXCを保存（r0の場所）*/
-	bic		r0, r0, #FPEXC_ENABLE
-	vmsr	fpexc, r0				/* FPEXCを設定 */
-#endif /* USE_ARM_FPU */
-	
 	/*
 	 *  非タスクコンテキスト用のスタックに切り換える．
 	 */
@@ -1003,8 +1043,8 @@ ALABEL(exc_handler_2)
 	/*
 	 *  （必要なら）割込みコントローラを操作する．
 	 *
-	 *  irc_begin_excは，スタックトップ（r0の場所）に，irc_end_excで用
-	 *  いる情報を保存する．
+	 *  irc_begin_excは，スタック上，またはスタックの先頭（r0の場所）に，
+	 *  irc_end_excで用いる情報を保存する場合がある．
 	 */
 	bl		irc_begin_exc
 
@@ -1085,14 +1125,6 @@ ALABEL(exc_handler_2)
 	pop		{r0,r3}
 	mov		sp, r3
 
-#ifdef USE_ARM_FPU
-	/*
-	 *  FPUを元に戻す．
-	 */
-	ldr		r0, [sp]				/* FPEXCを復帰 */
-	vmsr	fpexc, r0
-#endif /* USE_ARM_FPU */
-	
 	/*
 	 *  p_runtskがNULLか判定する．
 	 */
@@ -1106,16 +1138,32 @@ ALABEL(exc_handler_2)
 	 */
 	pop		{r0,r1}					/* スタックポインタの調整を元に戻す */
 	add		sp, sp, r1
+#ifdef USE_ARM_FPU_ALWAYS
+#ifdef USE_ARM_FPU_D32
+	add		sp, sp, #240			/* スクラッチレジスタとCPU例外が発生した */
+#else /* USE_ARM_FPU_D32 */			/*	状況を判断するための追加情報を捨てる */
+ 	add		sp, sp, #112			/* スクラッチレジスタとCPU例外が発生した */
+#endif /* USE_ARM_FPU_D32 */		/*	状況を判断するための追加情報を捨てる */
+#else /* USE_ARM_FPU_ALWAYS */
 	add		sp, sp, #48				/* スクラッチレジスタとCPU例外が発生した */
-	b		dispatcher_0			/*	状況を判断するための追加情報を捨てる */
+#endif /* USE_ARM_FPU_ALWAYS */		/*	状況を判断するための追加情報を捨てる */
+	b		dispatcher_0
 
-	/*
-	 *  ディスパッチが必要か判定する．
-	 */
 ALABEL(exc_handler_3)
 	/*
 	 * 【この時点のレジスタ状態】
 	 *  r0：p_runtsk
+	 */
+#ifdef USE_ARM_FPU_SELECTIVE
+	/*
+	 *  FPUを元に戻す．
+	 */
+	ldr		r3, [sp]				/* FPEXCを復帰 */
+	vmsr	fpexc, r3
+#endif /* USE_ARM_FPU_SELECTIVE */
+
+	/*
+	 *  ディスパッチが必要か判定する．
 	 */
 	ldr		r1, =p_schedtsk			/* p_schedtsk → r1 */
 	ldr		r1, [r1]
@@ -1124,21 +1172,25 @@ ALABEL(exc_handler_3)
 
 	/*
 	 *  コンテキストを保存する．
+	 *
+	 * 【この時点のレジスタ状態】
+	 *  r3：FPEXC（USE_ARM_FPU_SELECTIVEの場合）
 	 */
 	push	{r6-r11}				/* 残りのレジスタの保存 */
-#ifdef USE_ARM_FPU
-	ldr		r2, [r0,#TCB_p_tinib]	/* p_runtsk->p_tinib → r2 */
-	ldr		r1, [r2,#TINIB_tskatr]	/* p_runtsk->p_tinib->tskatr → r1 */
-	tst		r1, #TA_FPU
-	beq		1f						/* TA_FPU属性でない場合は分岐 */
+#ifdef USE_ARM_FPU_ALWAYS
+	vpush	{d8-d15}				/* 非スクラッチFPUレジスタの保存 */
+#endif /* USE_ARM_FPU_ALWAYS */
+#ifdef USE_ARM_FPU_SELECTIVE
+	tst		r3, #FPEXC_ENABLE
+	beq		1f
 #ifdef USE_ARM_FPU_D32
 	vpush	{d16-d31}
 #endif /* USE_ARM_FPU_D32 */
 	vpush	{d0-d15}				/* 全FPUレジスタの保存 */
-	vmrs	r1, fpscr
-	push	{r1,r2}					/* FPSCRの保存 */
-1:									/* r2はアラインメントのため */
-#endif /* USE_ARM_FPU */
+	vmrs	r2, fpscr
+	push	{r1,r2}					/* FPSCRを保存 */
+1:									/* r1はアラインメントのため */
+#endif /* USE_ARM_FPU_SELECTIVE */
 	str		sp, [r0,#TCB_sp]		/* スタックポインタを保存 */
 	adr		r1, ret_exc_r			/* 実行再開番地を保存 */
 	str		r1, [r0,#TCB_pc]
@@ -1151,7 +1203,10 @@ ALABEL(ret_exc_r)
 	 * 【この時点のレジスタ状態】
 	 *  r4：p_runtsk（タスク切換え後）
 	 */
-#ifdef USE_ARM_FPU
+#ifdef USE_ARM_FPU_ALWAYS
+	vpop	{d8-d15}				/* 非スクラッチ全FPUレジスタの復帰 */
+#endif /* USE_ARM_FPU_ALWAYS */
+#ifdef USE_ARM_FPU_SELECTIVE
 	ldr		r2, [r4,#TCB_p_tinib]	/* p_runtsk->p_tinib → r2 */
 	ldr		r1, [r2,#TINIB_tskatr]	/* p_runtsk->p_tinib->tskatr → r1 */
 	tst		r1, #TA_FPU
@@ -1160,14 +1215,14 @@ ALABEL(ret_exc_r)
 	orrne	r0, r0, #FPEXC_ENABLE
 	vmsr	fpexc, r0				/* FPEXCを設定 */
 	beq		1f						/* TA_FPU属性でない場合は分岐 */
-	pop		{r1,r2}					/* FPSCRの復帰 */
-	vmsr	fpscr, r1
+	pop		{r1,r2}
+	vmsr	fpscr, r2				/* FPSCRを復帰 */
 	vpop	{d0-d15}				/* 全FPUレジスタの復帰 */
 #ifdef USE_ARM_FPU_D32
 	vpop	{d16-d31}
 #endif /* USE_ARM_FPU_D32 */
 1:
-#endif /* USE_ARM_FPU */
+#endif /* USE_ARM_FPU_SELECTIVE */
 	pop		{r6-r11}				/* 残りのレジスタの復帰 */
 
 ALABEL(exc_handler_4)
@@ -1186,8 +1241,15 @@ ALABEL(exc_handler_4)
 	 *  表しているため，CPSRを元に戻してリターンすればよい．
 	 */
 ALABEL(exc_handler_5)
-	pop		{r0,r1}					/* スタックポインタの調整を元に戻す */
-	add		sp, sp, r1
+	pop		{r0,r1}
+#ifdef USE_ARM_FPU_ALWAYS
+	vmsr	fpscr, r0				/* FPSCRを復帰 */
+	vpop	{d0-d7}					/* スクラッチFPUレジスタの復帰 */
+#ifdef USE_ARM_FPU_D32
+	vpop	{d16-d31}
+#endif /* USE_ARM_FPU_D32 */
+#endif /* USE_ARM_FPU_ALWAYS */
+	add		sp, sp, r1				/* スタックポインタの調整を元に戻す */
 	add		sp, sp, #8				/* スタック上の情報を捨てる */
 
 #if __TARGET_ARCH_ARM < 6
@@ -1221,16 +1283,16 @@ ALABEL(nk_exc_handler_1)
 	teq		r3, #1					/* CPU例外発生前が非タスクコンテキスト */
 	bne		nk_exc_handler_2		/*		 	ならnk_exc_handler_2に分岐 */
 
-#ifdef USE_ARM_FPU
+#ifdef USE_ARM_FPU_SELECTIVE
 	/*
-	 *  FPUをディスエーブルする．
+	 *  FPEXCを保存し，FPUをディスエーブルする．
 	 */
-	vmrs	r0, fpexc
-	str		r0, [sp]				/* FPEXCを保存（r0の場所）*/
-	bic		r0, r0, #FPEXC_ENABLE
-	vmsr	fpexc, r0				/* FPEXCを設定 */
-#endif /* USE_ARM_FPU */
-	
+	vmrs	r2, fpexc
+	str		r2, [sp]				/* FPEXCを保存（r0の場所）*/
+	bic		r2, r2, #FPEXC_ENABLE
+	vmsr	fpexc, r2				/* FPEXCを設定 */
+#endif /* USE_ARM_FPU_SELECTIVE */
+
 	/*
 	 *  非タスクコンテキスト用のスタックに切り換える．
 	 */
@@ -1272,15 +1334,15 @@ ALABEL(nk_exc_handler_2)
 	pop		{r0,r3}
 	mov		sp, r3
 
-#ifdef USE_ARM_FPU
+#ifdef USE_ARM_FPU_SELECTIVE
 	/*
 	 *  FPUを元に戻す．
 	 */
 	ldr		r0, [sp]				/* FPEXCを復帰 */
 	vmsr	fpexc, r0
-#endif /* USE_ARM_FPU */
+#endif /* USE_ARM_FPU_SELECTIVE */
 	b		exc_handler_5
-	
+
 /*
  *  ステータスレジスタの操作関数
  *
@@ -1307,11 +1369,11 @@ ALABEL(_kernel_set_cpsr)
 /*
  *  微少時間待ち
  *
- *  キャッシュラインのどの場所にあるかのよって実行時間が変わるため，大
- *  きめの単位でアラインしている．
+ *  ダブルワード（64ビット）のどちらに命令があるかのよって実行時間が変
+ *  わる可能性があると考え，64ビット境界にアラインしている．
  */
 	ATEXT
-	AALIGN(8)
+	AALIGN(3)
 	AGLOBAL(sil_dly_nse)
 ALABEL(sil_dly_nse)
 	mov		r1, #0

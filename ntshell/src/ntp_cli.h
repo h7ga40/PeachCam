@@ -48,7 +48,7 @@
 
 /* タスク */
 
-extern void	ntp_cli_task(intptr_t exinf);
+extern void	ntp_cli_task(EXINF exinf);
 
 /* NTPタイムスタンプ */
 typedef struct ntp_timestamp {

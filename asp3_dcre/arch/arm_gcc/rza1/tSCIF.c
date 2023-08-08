@@ -301,7 +301,10 @@ eTerminate_main(CELLIDX idx)
 		 *  送信FIFOが空になるまで待つ
 		 */
 		while ((sil_reh_mem(SCIF_SCFSR(ATTR_baseAddress))
-											& SCIF_SCFSR_TEND) == 0U) ;
+											& SCIF_SCFSR_TEND) == 0U) {
+			sil_dly_nse(100);
+		}
+
 		/*
 		 *  ポートのクローズ
 		 */

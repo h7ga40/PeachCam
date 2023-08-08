@@ -40,6 +40,13 @@
 #undef default_exc_handler
 
 /*
+ *  core_kernel_impl.h
+ */
+#undef lock_cpu
+#undef unlock_cpu
+#undef sense_lock
+
+/*
  *  mpcore_kernel_impl.c
  */
 #undef mpcore_initialize

@@ -158,7 +158,7 @@
  */
 
 void
-udp_output_task (intptr_t exinf)
+udp_output_task (EXINF exinf)
 {
 	ID	tskid;
 	int_t	ix;

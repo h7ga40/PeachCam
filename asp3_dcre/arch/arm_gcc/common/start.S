@@ -4,7 +4,7 @@
  * 
  *  Copyright (C) 2000-2003 by Embedded and Real-Time Systems Laboratory
  *                              Toyohashi Univ. of Technology, JAPAN
- *  Copyright (C) 2005-2016 by Embedded and Real-Time Systems Laboratory
+ *  Copyright (C) 2005-2022 by Embedded and Real-Time Systems Laboratory
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  * 
  *  上記著作権者は，以下の(1)～(4)の条件を満たす場合に限り，本ソフトウェ
@@ -51,6 +51,13 @@
 #include "kernel_impl.h"
 #include "core_asm.inc"
 
+/*
+ *  使用する命令セットの定義
+ */
+#if defined(USE_ARM_FPU_ALWAYS) || defined(USE_ARM_FPU_SELECTIVE)
+	.fpu	ASM_ARM_FPU_TYPE
+#endif /* defined(USE_ARM_FPU_ALWAYS) || defined(USE_ARM_FPU_SELECTIVE) */
+
 	ATEXT
 	AALIGN(2)
 	AGLOBAL(start)
@@ -70,16 +77,48 @@ ALABEL(start)
 	mov		fp, #0				/* ARMモード用フレームポインタ（r11）*/
 	mov		r7, #0				/* Thumbモード用フレームポインタ（r7）*/
 
+#if defined(USE_ARM_FPU_ALWAYS) || defined(USE_ARM_FPU_SELECTIVE)
 	/*
-	 *  hardware_init_hookの呼出し（0でない場合）
+	 *  FPU（CP10とCP11）をアクセス可能に設定する．
+	 *
+	 *	CP15_READ_CPACR(reg);
+	 *	reg |= (CP15_CPACR_CP10_FULLACCESS | CP15_CPACR_CP11_FULLACCESS);
+	 *	CP15_WRITE_CPACR(reg);
+	 */
+	mrc		p15, 0, r0, c1, c0, 2
+	orr		r0, r0, #(CP15_CPACR_CP10_FULLACCESS | CP15_CPACR_CP11_FULLACCESS)
+	mcr		p15, 0, r0, c1, c0, 2
+	asm_inst_sync_barrier r0
+#endif /* defined(USE_ARM_FPU_ALWAYS) || defined(USE_ARM_FPU_SELECTIVE) */
+
+#ifdef USE_ARM_FPU_ALWAYS
+	/*
+	 *  FPUをイネーブルする．
+	 *
+	 *	set_fpexc(current_fpexc() | FPEXC_ENABLE);
+	 */
+	vmrs	r0, fpexc
+	orr		r0, r0, #FPEXC_ENABLE
+	vmsr	fpexc, r0
+#endif /* USE_ARM_FPU_ALWAYS */
+#ifdef USE_ARM_FPU_SELECTIVE
+	/*
+	 *  FPUをディスエーブルする．
+	 *
+	 *	set_fpexc(current_fpexc() & ~FPEXC_ENABLE);
+	 */
+	vmrs	r0, fpexc
+	bic		r0, r0, #FPEXC_ENABLE
+	vmsr	fpexc, r0
+#endif /* USE_ARM_FPU_SELECTIVE */
+
+	/*
+	 *  hardware_init_hookの呼出し
 	 *
 	 *  ターゲットハードウェアに依存して必要な初期化処理がある場合は，
 	 *  hardware_init_hookという関数を用意する．
 	 */
-	ldr		r0, =hardware_init_hook
-	cmp		r0, #0
-	movne	lr, pc
-	bxne	r0
+	bl		hardware_init_hook
 
 #ifndef TOPPERS_OMIT_BSS_INIT
 	/*
@@ -108,8 +147,8 @@ ALABEL(start_3)
 	/*
 	 *  dataセクションの初期化（ROM化対応）
 	 *
-	 *  DATA_STARTからDATA_ENDまでに，IDATA_START以降からコピーする．
-	 *  IDATA_STARTからIDATA_ENDまでを，DATA_START以降にコピーする．
+	 *  DATA_STARTからDATA_ENDまでに，IDATA_START以降のデータをコピーす
+	 *  る．
 	 */
 	ldr		r0, =DATA_START
 	ldr		r2, =DATA_END
@@ -130,17 +169,32 @@ ALABEL(start_5)
 #endif /* TOPPERS_OMIT_DATA_INIT */
 
 	/*
-	 *  software_init_hookの呼出し（0でない場合）
+	 *  software_init_hookの呼出し
 	 *
 	 *  ソフトウェア環境（特にライブラリ）に依存して必要な初期化処理が
-	 *  ある場合は，software_init_hookという関数を用意すればよい．
+	 *  ある場合は，software_init_hookという関数を用意する．
 	 */
-	ldr		r0, =software_init_hook
-	cmp		r0, #0
-	movne	lr, pc
-	bxne	r0
+	bl		software_init_hook
 
 	/*
 	 *  カーネルの起動
 	 */
 	b		sta_ker
+
+/*
+ *  デフォルトのhardware_init_hook（weak定義）
+ */
+	ATEXT
+	AALIGN(2)
+	AWEAK(hardware_init_hook)
+ALABEL(hardware_init_hook)
+	bx		lr
+
+/*
+ *  デフォルトのsoftware_init_hook（weak定義）
+ */
+	ATEXT
+	AALIGN(2)
+	AWEAK(software_init_hook)
+ALABEL(software_init_hook)
+	bx		lr

@@ -347,7 +347,7 @@ tcp_echo_srv_rcv (ID cepid, ID repid)
  */
 
 void
-tcp_echo_srv_snd_task(intptr_t exinf)
+tcp_echo_srv_snd_task(EXINF exinf)
 {
 	ER		error;
 	ID		tskid, cepid;
@@ -516,7 +516,7 @@ tcp_echo_srv_rcv (ID cepid, ID repid)
  */
 
 void
-tcp_echo_srv_snd_task(intptr_t exinf)
+tcp_echo_srv_snd_task(EXINF exinf)
 {
 	ID		tskid, cepid;
 	ER		error;
@@ -687,7 +687,7 @@ get_tcp_cep (ID *cepid)
  */
 
 void
-tcp_echo_srv_rcv_task (intptr_t exinf)
+tcp_echo_srv_rcv_task (EXINF exinf)
 {
 	ID	tskid, cepid, repid;
 	ER	error = E_OK;
@@ -723,7 +723,7 @@ tcp_echo_srv_rcv_task (intptr_t exinf)
 #else	/* of #ifdef USE_TCP_EXTENTIONS */
 
 void
-tcp_echo_srv_rcv_task(intptr_t exinf)
+tcp_echo_srv_rcv_task(EXINF exinf)
 {
 	ID	tskid;
 

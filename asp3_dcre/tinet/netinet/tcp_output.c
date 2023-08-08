@@ -975,7 +975,7 @@ tcptsk_free_swbufq (T_TCP_CEP *cep)
  */
 
 void
-tcp_output_task (intptr_t exinf)
+tcp_output_task (EXINF exinf)
 {
 	static int_t last_ix = 0;
 

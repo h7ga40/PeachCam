@@ -77,7 +77,7 @@ extern uint8_t tcp_discard_cli_rwbuf[];
 
 /* タスク */
 
-extern void tcp_discard_cli_task(intptr_t exinf);
+extern void tcp_discard_cli_task(EXINF exinf);
 
 /* 関数 */
 

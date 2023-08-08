@@ -1,5 +1,6 @@
 TARGET_ARCH_ARM,__TARGET_ARCH_ARM
-USE_ARM_FPU,true,bool,defined(USE_ARM_FPU),false
+USE_ARM_FPU_ALWAYS,true,bool,defined(USE_ARM_FPU_ALWAYS),false
+USE_ARM_FPU_SELECTIVE,true,bool,defined(USE_ARM_FPU_SELECTIVE),false
 USE_ARM_FPU_D32,true,bool,defined(USE_ARM_FPU_D32),false
 USE_INTCFG_TABLE,true,bool,defined(USE_INTCFG_TABLE),false
 TA_FPU

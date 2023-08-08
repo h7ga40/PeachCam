@@ -146,7 +146,7 @@ send_udp_discard (ID cepid, T_IN_ADDR *ipaddr, uint16_t portno)
  */
 
 void
-udp_discard_cli_task (intptr_t exinf)
+udp_discard_cli_task (EXINF exinf)
 {
 	T_IN_ADDR	addr;
 	ID		tskid, cepid;

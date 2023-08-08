@@ -278,7 +278,7 @@ wakeup_tcp_echo_srv (char apip)
  */
 
 void
-tcp_echo_srv_task (intptr_t exinf)
+tcp_echo_srv_task (EXINF exinf)
 {
 	ID	tskid;
 	ER	error = E_OK;

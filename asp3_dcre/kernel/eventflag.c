@@ -542,7 +542,7 @@ ini_flg(ID flgid)
 {
 	FLGCB	*p_flgcb;
 	ER		ercd;
-    
+
 	LOG_INI_FLG_ENTER(flgid);
 	CHECK_TSKCTX_UNL();
 	CHECK_ID(VALID_FLGID(flgid));

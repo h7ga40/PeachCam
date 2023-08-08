@@ -1,5 +1,5 @@
 PACKAGE asp3
-VERSION 3.2.0
+VERSION 3.7.1
 
 configure.rb
 MANIFEST
@@ -9,8 +9,11 @@ doc/asp_spec.txt
 doc/configurator.txt
 doc/design.txt
 doc/extension.txt
+doc/inherit_design.txt
 doc/migration.txt
+doc/mutex_design.txt
 doc/porting.txt
+doc/simtimer.txt
 doc/user.txt
 doc/version.txt
 
@@ -87,7 +90,6 @@ tecs_kernel/init_tecs.c
 tecs_kernel/kernel.cdl
 tecs_kernel/tAlarmNotifier.c
 tecs_kernel/tAlarmNotifier_inline.h
-tecs_kernel/tCpuExceptionHandler.c
 tecs_kernel/tCyclicNotifier.c
 tecs_kernel/tCyclicNotifier_inline.h
 tecs_kernel/tDataqueue_inline.h
@@ -95,7 +97,6 @@ tecs_kernel/tEventflag_inline.h
 tecs_kernel/tFixedSizeMemoryPool_inline.h
 tecs_kernel/tISR.c
 tecs_kernel/tInitializeRoutine.c
-tecs_kernel/tInterruptHandler.c
 tecs_kernel/tInterruptRequest_inline.h
 tecs_kernel/tKernel_inline.h
 tecs_kernel/tMutex_inline.h
@@ -118,6 +119,8 @@ syssvc/tBanner.cdl
 syssvc/tBannerMain.c
 syssvc/tLogTask.cdl
 syssvc/tLogTaskMain.c
+syssvc/tPutLogSIOPort.c
+syssvc/tPutLogSIOPort.cdl
 syssvc/tSerialAdapter.c
 syssvc/tSerialAdapter.cdl
 syssvc/tSerialPort.cdl
@@ -128,7 +131,8 @@ syssvc/tSysLogAdapter.c
 syssvc/tSysLogAdapter.cdl
 syssvc/tTestService.c
 syssvc/tTestService.cdl
-syssvc/tBuiltInTestAdaptor.c
+syssvc/tTestServiceAdapter.c
+syssvc/tTestServiceAdapter.cdl
 syssvc/test_svc.h
 
 library/log_output.c
@@ -159,5 +163,6 @@ sample/tSample2.h
 
 INCLUDE cfg/MANIFEST
 INCLUDE test/MANIFEST
+INCLUDE test_cfg/MANIFEST
 INCLUDE extension/MANIFEST
 INCLUDE target/dummy_gcc/MANIFEST

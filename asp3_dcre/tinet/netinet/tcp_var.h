@@ -941,6 +941,6 @@ extern void tcp_input_trace  (T_NET_BUF *input,  T_TCP_CEP *cep);
 
 /* TCP 出力タスク */
 
-extern void	tcp_output_task(intptr_t exinf);
+extern void	tcp_output_task(EXINF exinf);
 
 #endif	/* of #ifndef _TCP_VAR_H_ */
