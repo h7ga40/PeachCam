@@ -85,7 +85,7 @@ static T_IN4_ADDR igmp_send_addrs[NUM_IGMP_ENTRY];
 static bool_t igmp_send_report_v2(T_IN4_ADDR dst);
 static int16_t igmp_get_timer(T_IGMP_ENTRY *entry);
 
-ER igmp_set_loop(T_UDP_CEP *cep, uint8_t optval)
+ER igmp_set_loop(T_UDP4_CEP *cep, uint8_t optval)
 {
 	switch (optval) {
 	case 0:
@@ -99,7 +99,7 @@ ER igmp_set_loop(T_UDP_CEP *cep, uint8_t optval)
 	return E_PAR;
 }
 
-ER igmp_get_loop(T_UDP_CEP *cep, uint8_t *optval)
+ER igmp_get_loop(T_UDP4_CEP *cep, uint8_t *optval)
 {
 	if (optval == NULL)
 		return E_PAR;
@@ -109,14 +109,14 @@ ER igmp_get_loop(T_UDP_CEP *cep, uint8_t *optval)
 	return E_OK;
 }
 
-ER igmp_set_ttl(T_UDP_CEP *cep, uint8_t optval)
+ER igmp_set_ttl(T_UDP4_CEP *cep, uint8_t optval)
 {
 	cep->igmp_ttl = optval;
 
 	return E_OK;
 }
 
-ER igmp_get_ttl(T_UDP_CEP *cep, uint8_t *optval)
+ER igmp_get_ttl(T_UDP4_CEP *cep, uint8_t *optval)
 {
 	if (optval == NULL)
 		return E_PAR;
@@ -126,7 +126,7 @@ ER igmp_get_ttl(T_UDP_CEP *cep, uint8_t *optval)
 	return E_OK;
 }
 
-ER igmp_set_if(T_UDP_CEP *cep, T_IN4_ADDR *optval)
+ER igmp_set_if(T_UDP4_CEP *cep, T_IN4_ADDR *optval)
 {
 	if (optval == NULL)
 		return E_PAR;
@@ -136,7 +136,7 @@ ER igmp_set_if(T_UDP_CEP *cep, T_IN4_ADDR *optval)
 	return E_OK;
 }
 
-ER igmp_get_if(T_UDP_CEP *cep, T_IN4_ADDR *optval)
+ER igmp_get_if(T_UDP4_CEP *cep, T_IN4_ADDR *optval)
 {
 	if (optval == NULL)
 		return E_PAR;
@@ -146,7 +146,7 @@ ER igmp_get_if(T_UDP_CEP *cep, T_IN4_ADDR *optval)
 	return E_OK;
 }
 
-ER igmp_add_membership(T_UDP_CEP *cep, T_IP_MREQ *optval)
+ER igmp_add_membership(T_UDP4_CEP *cep, T_IP_MREQ *optval)
 {
 	T_IGMP_ENTRY *entry = NULL;
 	int		i;
@@ -174,7 +174,7 @@ ER igmp_add_membership(T_UDP_CEP *cep, T_IP_MREQ *optval)
 	return ret;
 }
 
-ER igmp_drop_membership(T_UDP_CEP *cep, T_IP_MREQ *optval)
+ER igmp_drop_membership(T_UDP4_CEP *cep, T_IP_MREQ *optval)
 {
 	T_IGMP_ENTRY *entry = NULL;
 	int		i;
@@ -202,12 +202,12 @@ ER igmp_drop_membership(T_UDP_CEP *cep, T_IP_MREQ *optval)
 	return ret;
 }
 
-ER igmp_set_ip_msfilter(T_UDP_CEP *cep, const T_IP_MSFILTER *optval)
+ER igmp_set_ip_msfilter(T_UDP4_CEP *cep, const T_IP_MSFILTER *optval)
 {
 	return E_PAR;
 }
 
-ER igmp_get_ip_msfilter(T_UDP_CEP *cep, T_IP_MSFILTER *optval)
+ER igmp_get_ip_msfilter(T_UDP4_CEP *cep, T_IP_MSFILTER *optval)
 {
 	return E_PAR;
 }

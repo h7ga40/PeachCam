@@ -135,16 +135,16 @@ typedef struct ip_msfilter
 #define MCAST_INCLUDE     1
 #define MCAST_EXCLUDE     2
 
-extern ER igmp_set_loop(T_UDP_CEP *cep, uint8_t optval);
-extern ER igmp_get_loop(T_UDP_CEP *cep, uint8_t *optval);
-extern ER igmp_set_ttl(T_UDP_CEP *cep, uint8_t optval);
-extern ER igmp_get_ttl(T_UDP_CEP *cep, uint8_t *optval);
-extern ER igmp_set_if(T_UDP_CEP *cep, T_IN4_ADDR *optval);
-extern ER igmp_get_if(T_UDP_CEP *cep, T_IN4_ADDR *optval);
-extern ER igmp_add_membership(T_UDP_CEP *cep, T_IP_MREQ *optval);
-extern ER igmp_drop_membership(T_UDP_CEP *cep, T_IP_MREQ *optval);
-extern ER igmp_set_ip_msfilter(T_UDP_CEP *cep, const T_IP_MSFILTER *optval);
-extern ER igmp_get_ip_msfilter(T_UDP_CEP *cep, T_IP_MSFILTER *optval);
+extern ER igmp_set_loop(T_UDP4_CEP *cep, uint8_t optval);
+extern ER igmp_get_loop(T_UDP4_CEP *cep, uint8_t *optval);
+extern ER igmp_set_ttl(T_UDP4_CEP *cep, uint8_t optval);
+extern ER igmp_get_ttl(T_UDP4_CEP *cep, uint8_t *optval);
+extern ER igmp_set_if(T_UDP4_CEP *cep, T_IN4_ADDR *optval);
+extern ER igmp_get_if(T_UDP4_CEP *cep, T_IN4_ADDR *optval);
+extern ER igmp_add_membership(T_UDP4_CEP *cep, T_IP_MREQ *optval);
+extern ER igmp_drop_membership(T_UDP4_CEP *cep, T_IP_MREQ *optval);
+extern ER igmp_set_ip_msfilter(T_UDP4_CEP *cep, const T_IP_MSFILTER *optval);
+extern ER igmp_get_ip_msfilter(T_UDP4_CEP *cep, T_IP_MSFILTER *optval);
 
 /*
  *  IGMP グループエントリ
